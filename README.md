@@ -6,26 +6,26 @@ en el noroeste peninsular y Portugal.
 Este repositorio es una implementación nueva escrita desde cero. No contiene
 código copiado de Meshtastic-es-map ni de otros mapas sin licencia compatible.
 
-## Licenzas
+## Licencias
 
 Copyright © 2026 Elena Musk.
 
-O software propio deste repositorio distribúese baixo a licenza
-[GNU Affero General Public License v3.0 ou posterior](LICENSE)
+El software propio de este repositorio se distribuye bajo la licencia
+[GNU Affero General Public License v3.0 o posterior](LICENSE)
 (`AGPL-3.0-or-later`).
 
-A documentación propia distribúese baixo
+La documentación propia se distribuye bajo
 [Creative Commons Atribución-CompartirIgual 4.0 Internacional](LICENSES/CC-BY-SA-4.0.txt)
 (`CC-BY-SA-4.0`).
 
-Os compoñentes de terceiros conservan as súas respectivas licenzas.
-Os avisos e atribucións están recollidos en
+Los componentes de terceros conservan sus respectivas licencias.
+Los avisos y atribuciones están recogidos en
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-Estas licenzas non se aplican aos datos, identificadores, posicións,
-observacións, teselas cartográficas nin outros materiais obtidos de
-fontes externas. Eses contidos permanecen sometidos ás condicións das
-súas fontes respectivas. A distribución de licenzas explícase con máis
+Estas licencias no se aplican a los datos, identificadores, posiciones,
+observaciones, teselas cartográficas ni otros materiales obtenidos de
+fuentes externas. Esos contenidos permanecen sometidos a las condiciones de
+sus fuentes respectivas. La distribución de licencias se explica con más
 detalle en [LICENSES/README.md](LICENSES/README.md).
 
 ## Objetivos iniciales
@@ -73,8 +73,8 @@ detalle, estadísticas, traceroutes dirigidos, geolocalización local,
 agrupaciones diferenciadas por red, navegación móvil, controles táctiles y
 soporte para alto contraste. El detalle de los nodos Meshtastic incluye
 avisos automáticos de configuración cuando existe análisis disponible.
-A primeira versión estable está publicada en `https://mapa.mesh.gal/`.
-O mapa anterior permanece separado en `https://mesh.tuiter.ovh/`.
+La primera versión estable está publicada en `https://mapa.mesh.gal/`.
+El mapa anterior permanece separado en `https://mesh.tuiter.ovh/`.
 
 El comportamiento implementado y los pendientes funcionales están
 documentados en [docs/FUNCTIONAL.md](docs/FUNCTIONAL.md).
@@ -101,7 +101,7 @@ set +a
 El identificador canónico completo debe añadirse previamente a
 exclusions.json.
 
-## Estado da versión estable
+## Estado de la versión estable
 
 La política de retención SQLite está cerrada, documentada, validada y
 desplegada sobre la base operativa. Las observaciones completas de nodos y
@@ -128,10 +128,10 @@ del mapa leen esa ruta mediante `MESH_CONFIGURATION_WARNINGS_PATH`; no existe
 dependencia operativa del contenedor, almacenamiento ni código del mapa
 anterior.
 
-A primeira versión estable está publicada e mantén separado o mapa
-anterior. As melloras posteriores desenvolveranse sen alterar o contrato
-público nin presentar como activas funcións que aínda non estean
-implementadas e verificadas.
+La primera versión estable está publicada y mantiene separado el mapa
+anterior. Las mejoras posteriores se desarrollarán sin alterar el contrato
+público ni presentar como activas funciones que aún no estén implementadas y
+verificadas.
 
 El mapa de alcance observado mediante RF o MQTT y una futura versión completa
 de España se desarrollarán posteriormente como proyectos separados.
