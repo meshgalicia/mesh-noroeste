@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mapa.mesh.gal/schemas/configuration-warnings-v1.schema.json",
+  "title": "Avisos de configuración de Mesh Noroeste",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "generated_at",
+    "analysis",
+    "nodes"
+  ],
+  "properties": {
+    "schema": {
+      "const": "mesh-noroeste.configuration-warnings/v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "available",
+        "updated_at",
+        "eligible_nodes",
+        "analyzed_nodes",
+        "nodes_with_warnings"
+      ],
+      "properties": {
+        "source": {
+          "const": "meshview_es"
+        },
+        "updated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "eligible_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "analyzed_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nodes_with_warnings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "available": {
+          "type": "boolean"
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "warnings"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^meshtastic:![0-9a-f]{8}$"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "key",
+                "severity"
+              ],
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                },
+                "severity": {
+                  "enum": [
+                    "medium",
+                    "high",
+                    "critical"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

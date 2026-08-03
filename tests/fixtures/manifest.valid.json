@@ -1,0 +1,12 @@
+{
+  "schema": "mesh-noroeste.manifest/v1",
+  "generation": "20260725T120000Z-0123456789abcdef0123456789abcdef",
+  "generated_at": "2026-07-25T12:00:00Z",
+  "documents": {
+    "nodes.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/nodes.json",
+    "edges.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/edges.json",
+    "stats.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/stats.json",
+    "meta.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/meta.json",
+    "configuration-warnings.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/configuration-warnings.json"
+  }
+}

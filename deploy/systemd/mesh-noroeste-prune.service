@@ -1,0 +1,17 @@
+[Unit]
+Description=Rota el historial SQLite de Mesh Noroeste
+ConditionFileIsExecutable=/srv/mesh-noroeste/scripts/prune-database.sh
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/mesh-noroeste
+ExecStart=/srv/mesh-noroeste/scripts/prune-database.sh
+TimeoutStartSec=10min
+UMask=0022
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateNetwork=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/mesh-noroeste/state
+ReadWritePaths=/run/lock

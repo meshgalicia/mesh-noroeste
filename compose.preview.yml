@@ -1,0 +1,32 @@
+name: mesh-noroeste-preview
+
+services:
+  web:
+    image: nginx:alpine
+    container_name: mesh-noroeste-web
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:8096:80"
+
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+    networks:
+      s3net:
+        aliases:
+          - mesh-noroeste-web
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -q -O /dev/null http://127.0.0.1/ || exit 1
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  s3net:
+    external: true

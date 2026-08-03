@@ -1,0 +1,13 @@
+[Unit]
+Description=Recoge MeshCore Map cada 3 horas
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=3h
+RandomizedDelaySec=5min
+AccuracySec=1min
+Persistent=true
+Unit=mesh-noroeste-update@meshcore.service
+
+[Install]
+WantedBy=timers.target

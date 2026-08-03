@@ -1,0 +1,13 @@
+[Unit]
+Description=Recoge Malha Portugal cada 30 minutos
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+RandomizedDelaySec=2min
+AccuracySec=30s
+Persistent=true
+Unit=mesh-noroeste-update@malha.service
+
+[Install]
+WantedBy=timers.target

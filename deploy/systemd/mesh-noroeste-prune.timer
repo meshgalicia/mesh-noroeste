@@ -1,0 +1,12 @@
+[Unit]
+Description=Rota diariamente SQLite de Mesh Noroeste
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=30min
+AccuracySec=5min
+Persistent=true
+Unit=mesh-noroeste-prune.service
+
+[Install]
+WantedBy=timers.target

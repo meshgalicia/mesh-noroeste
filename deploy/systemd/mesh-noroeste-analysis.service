@@ -1,0 +1,19 @@
+[Unit]
+Description=Analiza la configuración Meshtastic para Mesh Noroeste
+After=network-online.target
+Wants=network-online.target
+ConditionFileIsExecutable=/srv/mesh-noroeste/scripts/update-configuration-analysis.py
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/mesh-noroeste
+EnvironmentFile=/etc/mesh-noroeste/mesh-noroeste.env
+Environment=MESH_CONFIGURATION_WARNINGS_PATH=/srv/mesh-noroeste/cache/configuration-analysis.json
+ExecStart=/srv/mesh-noroeste/scripts/update-configuration-analysis.py
+TimeoutStartSec=20min
+UMask=0022
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/mesh-noroeste/cache

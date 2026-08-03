@@ -1,0 +1,524 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mesh Noroeste nodes.json v1",
+  "description": "Documento público normalizado de nodos Meshtastic y MeshCore.",
+  "type": "object",
+  "required": [
+    "schema",
+    "generated_at",
+    "nodes"
+  ],
+  "properties": {
+    "schema": {
+      "const": "mesh-noroeste.data/v1"
+    },
+    "generated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "nullable_timestamp": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "nullable_string": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "nullable_number": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "source": {
+      "enum": [
+        "meshview_es",
+        "malha_pt",
+        "ozulo_map",
+        "meshcore_map"
+      ]
+    },
+    "source_ids": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "meshview_es": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "malha_pt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "ozulo_map": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "meshcore_map": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "additionalProperties": false
+    },
+    "metrics": {
+      "type": "object",
+      "required": [
+        "battery_percent",
+        "voltage_v",
+        "channel_utilization_percent",
+        "air_util_tx_percent",
+        "snr_db",
+        "rssi_dbm"
+      ],
+      "properties": {
+        "battery_percent": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "voltage_v": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "channel_utilization_percent": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "air_util_tx_percent": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "snr_db": {
+          "$ref": "#/$defs/nullable_number"
+        },
+        "rssi_dbm": {
+          "$ref": "#/$defs/nullable_number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "radio": {
+      "type": "object",
+      "required": [
+        "channel",
+        "firmware",
+        "hops_away",
+        "mqtt_gateway",
+        "frequency_mhz",
+        "bandwidth_khz",
+        "spreading_factor",
+        "coding_rate"
+      ],
+      "properties": {
+        "channel": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "firmware": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "hops_away": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "mqtt_gateway": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "frequency_mhz": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "bandwidth_khz": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "spreading_factor": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "coding_rate": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "object",
+      "required": [
+        "active",
+        "recent",
+        "historical",
+        "has_position"
+      ],
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "recent": {
+          "type": "boolean"
+        },
+        "historical": {
+          "type": "boolean"
+        },
+        "has_position": {
+          "type": "boolean"
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "active": {
+              "const": true
+            },
+            "recent": {
+              "const": false
+            },
+            "historical": {
+              "const": false
+            }
+          }
+        },
+        {
+          "properties": {
+            "active": {
+              "const": false
+            },
+            "recent": {
+              "const": true
+            },
+            "historical": {
+              "const": false
+            }
+          }
+        },
+        {
+          "properties": {
+            "active": {
+              "const": false
+            },
+            "recent": {
+              "const": false
+            },
+            "historical": {
+              "const": true
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "node": {
+      "type": "object",
+      "required": [
+        "id",
+        "network",
+        "source_ids",
+        "sources",
+        "short_name",
+        "long_name",
+        "hardware",
+        "role",
+        "node_type",
+        "latitude",
+        "longitude",
+        "altitude_m",
+        "position_precision_bits",
+        "first_seen",
+        "last_seen",
+        "position_updated_at",
+        "metrics",
+        "radio",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "network": {
+          "enum": [
+            "meshtastic",
+            "meshcore"
+          ]
+        },
+        "source_ids": {
+          "$ref": "#/$defs/source_ids"
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/source"
+          }
+        },
+        "short_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        },
+        "long_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500
+        },
+        "hardware": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        },
+        "role": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        },
+        "node_type": {
+          "oneOf": [
+            {
+              "enum": [
+                "client",
+                "repeater",
+                "room_server",
+                "sensor",
+                "unknown"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latitude": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": -90,
+          "maximum": 90
+        },
+        "longitude": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": -180,
+          "maximum": 180
+        },
+        "altitude_m": {
+          "$ref": "#/$defs/nullable_number"
+        },
+        "position_precision_bits": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 32
+        },
+        "first_seen": {
+          "$ref": "#/$defs/nullable_timestamp"
+        },
+        "last_seen": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "position_updated_at": {
+          "$ref": "#/$defs/nullable_timestamp"
+        },
+        "metrics": {
+          "$ref": "#/$defs/metrics"
+        },
+        "radio": {
+          "$ref": "#/$defs/radio"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "network": {
+                "const": "meshtastic"
+              }
+            },
+            "required": [
+              "network"
+            ]
+          },
+          "then": {
+            "properties": {
+              "id": {
+                "pattern": "^meshtastic:![0-9a-f]{8}$"
+              },
+              "node_type": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "network": {
+                "const": "meshcore"
+              }
+            },
+            "required": [
+              "network"
+            ]
+          },
+          "then": {
+            "properties": {
+              "id": {
+                "pattern": "^meshcore:\\S+$"
+              },
+              "role": {
+                "type": "null"
+              },
+              "node_type": {
+                "enum": [
+                  "client",
+                  "repeater",
+                  "room_server",
+                  "sensor",
+                  "unknown"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "latitude": {
+                  "type": "number"
+                },
+                "longitude": {
+                  "type": "number"
+                },
+                "position_updated_at": {
+                  "$ref": "#/$defs/timestamp"
+                },
+                "status": {
+                  "properties": {
+                    "has_position": {
+                      "const": true
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "latitude": {
+                  "type": "null"
+                },
+                "longitude": {
+                  "type": "null"
+                },
+                "position_updated_at": {
+                  "type": "null"
+                },
+                "status": {
+                  "properties": {
+                    "has_position": {
+                      "const": false
+                    }
+                  }
+                },
+                "position_precision_bits": {
+                  "type": "null"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "not": {
+            "properties": {
+              "latitude": {
+                "const": 0
+              },
+              "longitude": {
+                "const": 0
+              }
+            },
+            "required": [
+              "latitude",
+              "longitude"
+            ]
+          }
+        }
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mesh Noroeste stats.json v1",
+  "description": "Estadísticas públicas y estado de las fuentes.",
+  "type": "object",
+  "required": [
+    "schema",
+    "generated_at",
+    "totals",
+    "networks",
+    "sources"
+  ],
+  "properties": {
+    "schema": {
+      "const": "mesh-noroeste.data/v1"
+    },
+    "generated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "totals": {
+      "$ref": "#/$defs/totals"
+    },
+    "networks": {
+      "type": "object",
+      "required": [
+        "meshtastic",
+        "meshcore"
+      ],
+      "properties": {
+        "meshtastic": {
+          "$ref": "#/$defs/network_stats"
+        },
+        "meshcore": {
+          "$ref": "#/$defs/network_stats"
+        }
+      },
+      "additionalProperties": false
+    },
+    "sources": {
+      "type": "object",
+      "required": [
+        "meshview_es",
+        "malha_pt",
+        "ozulo_map",
+        "meshcore_map"
+      ],
+      "properties": {
+        "meshview_es": {
+          "$ref": "#/$defs/source_stats"
+        },
+        "malha_pt": {
+          "$ref": "#/$defs/source_stats"
+        },
+        "ozulo_map": {
+          "$ref": "#/$defs/source_stats"
+        },
+        "meshcore_map": {
+          "$ref": "#/$defs/source_stats"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "nullable_timestamp": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "counter": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "totals": {
+      "type": "object",
+      "required": [
+        "nodes",
+        "active_nodes",
+        "recent_nodes",
+        "historical_nodes",
+        "positioned_nodes",
+        "edges"
+      ],
+      "properties": {
+        "nodes": {
+          "$ref": "#/$defs/counter"
+        },
+        "active_nodes": {
+          "$ref": "#/$defs/counter"
+        },
+        "recent_nodes": {
+          "$ref": "#/$defs/counter"
+        },
+        "historical_nodes": {
+          "$ref": "#/$defs/counter"
+        },
+        "positioned_nodes": {
+          "$ref": "#/$defs/counter"
+        },
+        "edges": {
+          "$ref": "#/$defs/counter"
+        }
+      },
+      "additionalProperties": false
+    },
+    "network_stats": {
+      "type": "object",
+      "required": [
+        "nodes",
+        "active_nodes",
+        "recent_nodes",
+        "historical_nodes",
+        "positioned_nodes",
+        "edges"
+      ],
+      "properties": {
+        "nodes": {
+          "$ref": "#/$defs/counter"
+        },
+        "active_nodes": {
+          "$ref": "#/$defs/counter"
+        },
+        "recent_nodes": {
+          "$ref": "#/$defs/counter"
+        },
+        "historical_nodes": {
+          "$ref": "#/$defs/counter"
+        },
+        "positioned_nodes": {
+          "$ref": "#/$defs/counter"
+        },
+        "edges": {
+          "$ref": "#/$defs/counter"
+        }
+      },
+      "additionalProperties": false
+    },
+    "source_stats": {
+      "type": "object",
+      "required": [
+        "last_success",
+        "last_error_at",
+        "last_error",
+        "records_received"
+      ],
+      "properties": {
+        "last_success": {
+          "$ref": "#/$defs/nullable_timestamp"
+        },
+        "last_error_at": {
+          "$ref": "#/$defs/nullable_timestamp"
+        },
+        "last_error": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        },
+        "records_received": {
+          "$ref": "#/$defs/counter"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

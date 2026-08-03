@@ -1,0 +1,100 @@
+{
+  "schema": "mesh-noroeste.data/v1",
+  "generated_at": "2026-07-25T12:00:00Z",
+  "nodes": [
+    {
+      "id": "meshtastic:!a35b4144",
+      "network": "meshtastic",
+      "source_ids": {
+        "meshview_es": "!a35b4144",
+        "malha_pt": "!a35b4144"
+      },
+      "sources": [
+        "meshview_es",
+        "malha_pt"
+      ],
+      "short_name": "BRUMA",
+      "long_name": "Bruma Connection",
+      "hardware": "HELTEC_V4",
+      "role": "CLIENT_MUTE",
+      "node_type": null,
+      "latitude": 43.123456,
+      "longitude": -8.123456,
+      "altitude_m": 120,
+      "first_seen": "2026-07-20T09:10:00Z",
+      "last_seen": "2026-07-25T11:58:00Z",
+      "position_updated_at": "2026-07-25T11:50:00Z",
+      "metrics": {
+        "battery_percent": 76,
+        "voltage_v": 4.02,
+        "channel_utilization_percent": 8.5,
+        "air_util_tx_percent": 1.2,
+        "snr_db": 7.25,
+        "rssi_dbm": -91
+      },
+      "radio": {
+        "channel": "LongFast",
+        "firmware": "2.x",
+        "hops_away": 2,
+        "mqtt_gateway": false,
+        "frequency_mhz": null,
+        "bandwidth_khz": null,
+        "spreading_factor": null,
+        "coding_rate": null
+      },
+      "status": {
+        "active": true,
+        "recent": false,
+        "historical": false,
+        "has_position": true
+      },
+      "position_precision_bits": 14
+    },
+    {
+      "id": "meshcore:02ab34cd",
+      "network": "meshcore",
+      "source_ids": {
+        "meshcore_map": "02ab34cd"
+      },
+      "sources": [
+        "meshcore_map"
+      ],
+      "short_name": "MC01",
+      "long_name": "MeshCore Repeater",
+      "hardware": null,
+      "role": null,
+      "node_type": "repeater",
+      "latitude": null,
+      "longitude": null,
+      "altitude_m": null,
+      "first_seen": "2026-07-24T08:00:00Z",
+      "last_seen": "2026-07-25T10:00:00Z",
+      "position_updated_at": null,
+      "metrics": {
+        "battery_percent": null,
+        "voltage_v": null,
+        "channel_utilization_percent": null,
+        "air_util_tx_percent": null,
+        "snr_db": null,
+        "rssi_dbm": null
+      },
+      "radio": {
+        "channel": null,
+        "firmware": null,
+        "hops_away": null,
+        "mqtt_gateway": null,
+        "frequency_mhz": 869.618,
+        "bandwidth_khz": 62.5,
+        "spreading_factor": 8,
+        "coding_rate": 8
+      },
+      "status": {
+        "active": true,
+        "recent": false,
+        "historical": false,
+        "has_position": false
+      },
+      "position_precision_bits": null
+    }
+  ]
+}

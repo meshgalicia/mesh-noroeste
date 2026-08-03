@@ -1,0 +1,12 @@
+[Unit]
+Description=Crea diariamente un backup de Mesh Noroeste
+
+[Timer]
+OnCalendar=*-*-* 23:15:00
+RandomizedDelaySec=15min
+AccuracySec=1min
+Persistent=true
+Unit=mesh-noroeste-backup.service
+
+[Install]
+WantedBy=timers.target

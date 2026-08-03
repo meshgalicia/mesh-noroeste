@@ -1,0 +1,17 @@
+[Unit]
+Description=Crea un backup consistente de Mesh Noroeste
+ConditionFileIsExecutable=/srv/mesh-noroeste/scripts/backup-database.sh
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/mesh-noroeste
+ExecStart=/srv/mesh-noroeste/scripts/backup-database.sh
+TimeoutStartSec=15min
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateNetwork=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/mesh-noroeste/state
+ReadWritePaths=/run/lock

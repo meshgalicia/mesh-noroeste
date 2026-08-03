@@ -1,0 +1,13 @@
+[Unit]
+Description=Analiza la configuración Meshtastic cada 6 horas
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=6h
+RandomizedDelaySec=10min
+AccuracySec=1min
+Persistent=true
+Unit=mesh-noroeste-analysis.service
+
+[Install]
+WantedBy=timers.target

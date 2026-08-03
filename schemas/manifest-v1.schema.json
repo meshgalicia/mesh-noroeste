@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mesh Noroeste manifest.json v1",
+  "description": "Manifiesto que activa una generación completa de documentos públicos.",
+  "type": "object",
+  "required": [
+    "schema",
+    "generation",
+    "generated_at",
+    "documents"
+  ],
+  "properties": {
+    "schema": {
+      "const": "mesh-noroeste.manifest/v1"
+    },
+    "generation": {
+      "type": "string",
+      "pattern": "^[0-9A-Za-z][0-9A-Za-z.-]*$"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "documents": {
+      "type": "object",
+      "required": [
+        "nodes.json",
+        "edges.json",
+        "stats.json",
+        "meta.json",
+        "configuration-warnings.json"
+      ],
+      "properties": {
+        "nodes.json": {
+          "type": "string",
+          "pattern": "^generations/[0-9A-Za-z][0-9A-Za-z.-]*/nodes\\.json$"
+        },
+        "edges.json": {
+          "type": "string",
+          "pattern": "^generations/[0-9A-Za-z][0-9A-Za-z.-]*/edges\\.json$"
+        },
+        "stats.json": {
+          "type": "string",
+          "pattern": "^generations/[0-9A-Za-z][0-9A-Za-z.-]*/stats\\.json$"
+        },
+        "meta.json": {
+          "type": "string",
+          "pattern": "^generations/[0-9A-Za-z][0-9A-Za-z.-]*/meta\\.json$"
+        },
+        "configuration-warnings.json": {
+          "type": "string",
+          "pattern": "^generations/[0-9A-Za-z][0-9A-Za-z.-]*/configuration-warnings\\.json$"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,13 @@
+[Unit]
+Description=Recoge O Zulo cada 30 minutos
+
+[Timer]
+OnBootSec=7min
+OnUnitActiveSec=30min
+RandomizedDelaySec=2min
+AccuracySec=30s
+Persistent=true
+Unit=mesh-noroeste-update@ozulo.service
+
+[Install]
+WantedBy=timers.target

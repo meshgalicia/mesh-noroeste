@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mesh Noroeste edges.json v1",
+  "description": "Documento público normalizado de conexiones Meshtastic y MeshCore.",
+  "type": "object",
+  "required": [
+    "schema",
+    "generated_at",
+    "edges"
+  ],
+  "properties": {
+    "schema": {
+      "const": "mesh-noroeste.data/v1"
+    },
+    "generated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/edge"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "nullable_number": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "metrics": {
+      "type": "object",
+      "required": [
+        "snr_db",
+        "rssi_dbm"
+      ],
+      "properties": {
+        "snr_db": {
+          "$ref": "#/$defs/nullable_number"
+        },
+        "rssi_dbm": {
+          "$ref": "#/$defs/nullable_number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "edge": {
+      "type": "object",
+      "required": [
+        "id",
+        "network",
+        "source",
+        "from_id",
+        "to_id",
+        "edge_type",
+        "directed",
+        "last_seen",
+        "metrics"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "network": {
+          "enum": [
+            "meshtastic",
+            "meshcore"
+          ]
+        },
+        "source": {
+          "enum": [
+            "meshview_es",
+            "malha_pt",
+            "ozulo_map",
+            "meshcore_map"
+          ]
+        },
+        "from_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "to_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "edge_type": {
+          "enum": [
+            "neighbor",
+            "traceroute",
+            "observed",
+            "unknown"
+          ]
+        },
+        "directed": {
+          "type": "boolean"
+        },
+        "last_seen": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "metrics": {
+          "$ref": "#/$defs/metrics"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "network": {
+                "const": "meshtastic"
+              }
+            },
+            "required": [
+              "network"
+            ]
+          },
+          "then": {
+            "properties": {
+              "id": {
+                "pattern": "^meshtastic:"
+              },
+              "source": {
+                "enum": [
+                  "meshview_es",
+                  "malha_pt",
+                  "ozulo_map"
+                ]
+              },
+              "from_id": {
+                "pattern": "^meshtastic:![0-9a-f]{8}$"
+              },
+              "to_id": {
+                "pattern": "^meshtastic:![0-9a-f]{8}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "network": {
+                "const": "meshcore"
+              }
+            },
+            "required": [
+              "network"
+            ]
+          },
+          "then": {
+            "properties": {
+              "id": {
+                "pattern": "^meshcore:"
+              },
+              "source": {
+                "const": "meshcore_map"
+              },
+              "from_id": {
+                "pattern": "^meshcore:\\S+$"
+              },
+              "to_id": {
+                "pattern": "^meshcore:\\S+$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "edge_type": {
+                "const": "neighbor"
+              }
+            },
+            "required": [
+              "edge_type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "directed": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "edge_type": {
+                "const": "traceroute"
+              }
+            },
+            "required": [
+              "edge_type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "directed": {
+                "const": true
+              }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    }
+  }
+}

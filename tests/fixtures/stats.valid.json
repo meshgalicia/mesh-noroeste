@@ -1,0 +1,56 @@
+{
+  "schema": "mesh-noroeste.data/v1",
+  "generated_at": "2026-07-25T12:00:00Z",
+  "totals": {
+    "nodes": 150,
+    "active_nodes": 110,
+    "recent_nodes": 30,
+    "historical_nodes": 10,
+    "positioned_nodes": 142,
+    "edges": 215
+  },
+  "networks": {
+    "meshtastic": {
+      "nodes": 100,
+      "active_nodes": 70,
+      "recent_nodes": 22,
+      "historical_nodes": 8,
+      "positioned_nodes": 95,
+      "edges": 215
+    },
+    "meshcore": {
+      "nodes": 50,
+      "active_nodes": 40,
+      "recent_nodes": 8,
+      "historical_nodes": 2,
+      "positioned_nodes": 47,
+      "edges": 0
+    }
+  },
+  "sources": {
+    "meshview_es": {
+      "last_success": "2026-07-25T11:58:00Z",
+      "last_error_at": null,
+      "last_error": null,
+      "records_received": 85
+    },
+    "malha_pt": {
+      "last_success": "2026-07-25T11:57:00Z",
+      "last_error_at": "2026-07-24T18:12:00Z",
+      "last_error": "HTTP 502 temporal",
+      "records_received": 46
+    },
+    "ozulo_map": {
+      "last_success": "2026-07-25T11:56:00Z",
+      "last_error_at": null,
+      "last_error": null,
+      "records_received": 64
+    },
+    "meshcore_map": {
+      "last_success": "2026-07-25T11:59:00Z",
+      "last_error_at": null,
+      "last_error": null,
+      "records_received": 50
+    }
+  }
+}

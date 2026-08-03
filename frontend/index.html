@@ -1,0 +1,1013 @@
+<!doctype html>
+<html lang="gl">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+  <meta
+    name="description"
+    content="Mapa rexional independente de nodos Meshtastic e MeshCore no noroeste peninsular."
+  >
+  <meta name="theme-color" content="#006b8f">
+
+  <title>Mesh Noroeste</title>
+
+  <link rel="icon" href="./favicon.ico" sizes="32x32">
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  >
+  <link
+    rel="stylesheet"
+    href="./vendor/leaflet.markercluster/MarkerCluster.css?v=1.5.3-local1"
+  >
+  <link
+    rel="stylesheet"
+    href="./vendor/leaflet.markercluster/MarkerCluster.Default.css?v=1.5.3-local1"
+  >
+  <link rel="stylesheet" href="./styles.css?v=20260730-overlap1">
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    crossorigin=""
+    defer
+  ></script>
+  <script
+    src="./vendor/leaflet.markercluster/leaflet.markercluster.js?v=1.5.3-local1"
+    defer
+  ></script>
+  <script src="./app.js?v=20260803-meshcore-links1" defer></script>
+</head>
+
+<body>
+  <noscript>
+    <p class="noscript">
+      Este mapa precisa JavaScript para cargar e representar os datos.
+    </p>
+  </noscript>
+
+  <div class="app-shell">
+    <aside
+      id="sidebar-panel"
+      class="sidebar"
+      aria-label="Controis do mapa"
+    >
+      <header class="brand">
+        <div class="brand-copy">
+          <p class="eyebrow">Rede LoRa rexional</p>
+          <h1>Mesh Noroeste</h1>
+        </div>
+
+        <div class="brand-actions">
+          <p
+            id="data-status"
+            class="data-status"
+            role="status"
+            aria-live="polite"
+          >
+            Cargando…
+          </p>
+
+          <button
+            id="sidebar-toggle"
+            class="panel-toggle"
+            type="button"
+            aria-controls="sidebar-controls"
+            aria-expanded="true"
+            aria-label="Ocultar controis"
+            title="Ocultar controis"
+          >
+            <span
+              id="sidebar-toggle-label"
+              class="panel-toggle-label"
+            >
+              Ocultar controis
+            </span>
+
+            <span
+              class="panel-toggle-icon"
+              aria-hidden="true"
+            >›</span>
+          </button>
+        </div>
+      </header>
+
+      <nav
+        id="desktop-collapsed-nav"
+        class="desktop-collapsed-nav"
+        aria-label="Atallos dos controis"
+        hidden
+      >
+        <button
+          class="desktop-rail-button"
+          type="button"
+          data-desktop-target="search"
+          aria-controls="sidebar-panel"
+          aria-label="Abrir Buscar nodo"
+          title="Buscar nodo"
+        >
+          <span class="desktop-rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <circle cx="10.5" cy="10.5" r="6.5"></circle>
+              <path d="m15.5 15.5 5 5"></path>
+            </svg>
+          </span>
+        </button>
+
+        <button
+          class="desktop-rail-button"
+          type="button"
+          data-desktop-target="network"
+          aria-controls="sidebar-panel"
+          aria-label="Abrir Rede"
+          title="Rede"
+        >
+          <span class="desktop-rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <circle cx="6" cy="12" r="2.5"></circle>
+              <circle cx="18" cy="6" r="2.5"></circle>
+              <circle cx="18" cy="18" r="2.5"></circle>
+              <path d="m8.3 10.8 7.4-3.6M8.3 13.2l7.4 3.6"></path>
+            </svg>
+          </span>
+        </button>
+
+        <button
+          class="desktop-rail-button"
+          type="button"
+          data-desktop-target="filters"
+          aria-controls="sidebar-panel"
+          aria-label="Abrir Lenda e filtros"
+          title="Lenda e filtros"
+        >
+          <span class="desktop-rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 6h16M7 12h10M10 18h4"></path>
+              <circle cx="9" cy="6" r="1.5"></circle>
+              <circle cx="15" cy="12" r="1.5"></circle>
+              <circle cx="12" cy="18" r="1.5"></circle>
+            </svg>
+          </span>
+        </button>
+
+        <button
+          class="desktop-rail-button"
+          type="button"
+          data-desktop-target="layers"
+          aria-controls="sidebar-panel"
+          aria-label="Abrir Mapa"
+          title="Mapa"
+        >
+          <span class="desktop-rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="m12 4 8 4-8 4-8-4 8-4Z"></path>
+              <path d="m4 12 8 4 8-4M4 16l8 4 8-4"></path>
+            </svg>
+          </span>
+        </button>
+
+        <button
+          class="desktop-rail-button"
+          type="button"
+          data-desktop-target="info"
+          aria-controls="sidebar-panel"
+          aria-label="Abrir Información"
+          title="Información"
+        >
+          <span class="desktop-rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 10v7M12 7h.01"></path>
+            </svg>
+          </span>
+        </button>
+      </nav>
+
+      <header class="mobile-sheet-heading">
+        <strong id="mobile-sheet-title">Controis</strong>
+
+        <button
+          id="mobile-sheet-close"
+          class="mobile-sheet-close"
+          type="button"
+          aria-label="Pechar o panel"
+        >
+          ×
+        </button>
+      </header>
+
+      <div
+        id="sidebar-controls"
+        class="sidebar-controls"
+      >
+      <section
+        class="control-section"
+        data-mobile-panel="network"
+      >
+        <h2>Rede</h2>
+
+        <fieldset
+          id="network-filter"
+          class="segmented-control"
+        >
+          <legend class="visually-hidden">
+            Seleccionar rede
+          </legend>
+
+          <label>
+            <input
+              type="radio"
+              name="network"
+              value="both"
+              checked
+            >
+            <span>Ambas</span>
+          </label>
+
+          <label>
+            <input
+              type="radio"
+              name="network"
+              value="meshtastic"
+            >
+            <span>Meshtastic</span>
+          </label>
+
+          <label>
+            <input
+              type="radio"
+              name="network"
+              value="meshcore"
+            >
+            <span>MeshCore</span>
+          </label>
+        </fieldset>
+      </section>
+
+      <section
+        class="control-section"
+        data-mobile-panel="search"
+        role="search"
+        aria-labelledby="node-search-label"
+      >
+        <label
+          id="node-search-label"
+          class="search-label"
+          for="node-search"
+        >
+          Buscar nodo
+        </label>
+
+        <input
+          id="node-search"
+          class="search-input"
+          type="search"
+          autocomplete="off"
+          placeholder="Nome, identificador ou hardware"
+          aria-controls="search-results"
+          aria-describedby="node-search-help"
+        >
+
+        <p
+          id="node-search-help"
+          class="visually-hidden"
+        >
+          Escribe polo menos dous caracteres e usa Tab
+          para percorrer os resultados.
+        </p>
+
+        <p
+          id="node-search-status"
+          class="visually-hidden"
+          role="status"
+          aria-live="polite"
+        ></p>
+
+        <ul
+          id="search-results"
+          class="search-results"
+          aria-label="Resultados da busca"
+          hidden
+        ></ul>
+      </section>
+
+      <span id="age-details-home" hidden></span>
+
+      <details
+        id="age-details"
+        class="control-section filter-details"
+        data-mobile-panel="filters"
+      >
+        <summary>
+          <span>Antigüidade</span>
+          <small id="age-summary">Todas</small>
+        </summary>
+
+        <div
+          id="status-filter"
+          class="check-list details-content"
+        >
+          <label>
+            <input
+              type="checkbox"
+              name="age"
+              value="hour"
+              checked
+            >
+            <span class="age-dot age-hour"></span>
+            Menos de 1 hora
+          </label>
+
+          <label>
+            <input
+              type="checkbox"
+              name="age"
+              value="day"
+              checked
+            >
+            <span class="age-dot age-day"></span>
+            Entre 1 e 24 horas
+          </label>
+
+          <label>
+            <input
+              type="checkbox"
+              name="age"
+              value="week"
+              checked
+            >
+            <span class="age-dot age-week"></span>
+            Entre 1 e 7 días
+          </label>
+
+          <label>
+            <input
+              type="checkbox"
+              name="age"
+              value="month"
+              checked
+            >
+            <span class="age-dot age-month"></span>
+            Entre 7 e 30 días
+          </label>
+        </div>
+      </details>
+
+      <section
+        class="control-section"
+        data-mobile-panel="layers"
+      >
+        <h2>Mapa</h2>
+
+        <p class="control-subheading">Conexións</p>
+
+        <label class="toggle-row">
+          <input
+            id="traceroutes-toggle"
+            type="checkbox"
+            aria-controls="traceroute-controls"
+            aria-expanded="false"
+          >
+          <span>Mostrar traceroutes</span>
+        </label>
+
+        <div
+          id="traceroute-controls"
+          class="traceroute-filters"
+          role="group"
+          aria-label="Filtros dos traceroutes"
+          hidden
+        >
+          <label for="traceroute-source">
+            Fonte
+          </label>
+
+          <select id="traceroute-source">
+            <option value="ozulo_map">
+              Comunidade O Zulo
+            </option>
+            <option value="meshview_es" selected>
+              Meshview España
+            </option>
+            <option value="malha_pt">
+              Malha Portugal
+            </option>
+            <option value="all">
+              Todas as fontes
+            </option>
+          </select>
+
+          <label for="traceroute-age">
+            Antigüidade
+          </label>
+
+          <select id="traceroute-age">
+            <option value="day" selected>
+              Últimas 24 horas
+            </option>
+            <option value="week">
+              Últimos 7 días
+            </option>
+            <option value="all">
+              Todo o histórico
+            </option>
+          </select>
+        </div>
+
+        <label class="toggle-row">
+          <input
+            id="neighbors-toggle"
+            type="checkbox"
+          >
+          <span>Mostrar veciños</span>
+        </label>
+
+        <p class="control-subheading">Capa base</p>
+
+        <div
+          id="basemap-filter"
+          class="segmented-control basemap-control"
+          role="radiogroup"
+          aria-label="Capa base do mapa"
+        >
+          <label>
+            <input
+              type="radio"
+              name="basemap"
+              value="street"
+              checked
+            >
+            <span>Mapa</span>
+          </label>
+
+          <label>
+            <input
+              type="radio"
+              name="basemap"
+              value="satellite"
+            >
+            <span>Satélite</span>
+          </label>
+        </div>
+
+        <p class="control-subheading">Vista</p>
+
+        <button
+          id="fit-map"
+          class="secondary-button"
+          type="button"
+        >
+          Axustar aos nodos visibles
+        </button>
+
+        <p class="control-subheading">Localización</p>
+
+        <button
+          id="locate-me"
+          class="secondary-button"
+          type="button"
+          aria-describedby="location-status"
+        >
+          A miña posición
+        </button>
+
+        <p
+          id="location-status"
+          class="location-status"
+          role="status"
+          aria-live="polite"
+        >
+          A localización úsase só no navegador; non se
+          garda nin se envía.
+        </p>
+      </section>
+
+      <span id="legend-details-home" hidden></span>
+
+      <details
+        id="legend-details"
+        class="control-section filter-details"
+        data-mobile-panel="filters"
+      >
+        <summary>
+          <span>Tipos de nodos e símbolos</span>
+          <small id="type-summary">Todos</small>
+        </summary>
+
+        <div class="details-content">
+          <p class="legend-heading">
+            Características Meshtastic
+          </p>
+
+          <button
+            id="mqtt-gateway-filter"
+            class="feature-filter"
+            type="button"
+            aria-pressed="false"
+            aria-describedby="mqtt-gateway-help"
+          >
+            <span
+              class="legend-symbol mqtt-gateway"
+              aria-hidden="true"
+            ></span>
+
+            <span class="feature-filter-copy">
+              <strong>Gateway MQTT</strong>
+              <small
+                id="mqtt-gateway-summary"
+                aria-live="polite"
+              >0 dispoñibles</small>
+              <small id="mqtt-gateway-help">
+                O aro violeta identifica gateways confirmados;
+                a cor e a forma interiores indican o rol.
+              </small>
+            </span>
+          </button>
+
+          <div class="legend-toolbar">
+            <p>
+              Activa ou oculta roles e tipos directamente
+              desde a lenda.
+            </p>
+
+            <button
+              id="type-filter-reset"
+              class="compact-button"
+              type="button"
+            >
+              Mostrar todos
+            </button>
+          </div>
+
+          <div
+            id="type-filter"
+            class="legend-filter-list"
+            aria-label="Filtros por rol e tipo"
+          >
+            <p class="legend-heading">Roles Meshtastic</p>
+
+            <button
+              class="legend-filter"
+              type="button"
+              data-category="meshtastic:CLIENT"
+              aria-pressed="true"
+            >
+              <span class="legend-symbol meshtastic-client"></span>
+              <span><code>CLIENT</code> · Cliente</span>
+            </button>
+
+            <button
+              class="legend-filter"
+              type="button"
+              data-category="meshtastic:CLIENT_BASE"
+              aria-pressed="true"
+            >
+              <span class="legend-symbol meshtastic-client-base"></span>
+              <span><code>CLIENT_BASE</code> · Cliente base</span>
+            </button>
+
+            <button
+              class="legend-filter"
+              type="button"
+              data-category="meshtastic:CLIENT_MUTE"
+              aria-pressed="true"
+            >
+              <span class="legend-symbol meshtastic-client-mute"></span>
+              <span><code>CLIENT_MUTE</code> · Cliente silencioso</span>
+            </button>
+
+            <button
+              class="legend-filter"
+              type="button"
+              data-category="meshtastic:ROUTER"
+              aria-pressed="true"
+            >
+              <span class="legend-symbol meshtastic-router"></span>
+              <span><code>ROUTER</code> · Router</span>
+            </button>
+
+            <button
+              class="legend-filter"
+              type="button"
+              data-category="meshtastic:ROUTER_LATE"
+              aria-pressed="true"
+            >
+              <span class="legend-symbol meshtastic-router-late"></span>
+              <span><code>ROUTER_LATE</code> · Router tardío</span>
+            </button>
+
+            <button
+              class="legend-filter"
+              type="button"
+              data-category="meshtastic:TRACKER"
+              aria-pressed="true"
+            >
+              <span class="legend-symbol meshtastic-tracker"></span>
+              <span><code>TRACKER</code> · Rastreador</span>
+            </button>
+
+            <button
+              class="legend-filter"
+              type="button"
+              data-category="meshtastic:unknown"
+              aria-pressed="true"
+            >
+              <span class="legend-symbol meshtastic-unknown"></span>
+              <span>Sen rol publicado</span>
+            </button>
+
+            <p class="legend-heading">Tipos MeshCore</p>
+
+            <button
+              class="legend-filter"
+              type="button"
+              data-category="meshcore:repeater"
+              aria-pressed="true"
+            >
+              <span class="legend-symbol meshcore-repeater"></span>
+              <span>Repetidor MeshCore</span>
+            </button>
+
+            <button
+              class="legend-filter"
+              type="button"
+              data-category="meshcore:room_server"
+              aria-pressed="true"
+            >
+              <span class="legend-symbol meshcore-room"></span>
+              <span>Room Server MeshCore</span>
+            </button>
+
+            <button
+              class="legend-filter"
+              type="button"
+              data-category="meshcore:client"
+              aria-pressed="true"
+            >
+              <span class="legend-symbol meshcore-client"></span>
+              <span>Cliente MeshCore</span>
+            </button>
+
+            <button
+              class="legend-filter"
+              type="button"
+              data-category="meshcore:unknown"
+              aria-pressed="true"
+            >
+              <span class="legend-symbol meshcore-unknown"></span>
+              <span>Tipo MeshCore descoñecido</span>
+            </button>
+          </div>
+
+          <span
+            id="legend-information-home"
+            hidden
+          ></span>
+
+          <section
+            id="legend-information"
+            data-mobile-panel="filters"
+          >
+            <p class="legend-heading">Agrupacións</p>
+
+          <div
+            class="cluster-legend"
+            aria-label="Tipos de agrupación"
+          >
+            <span>
+              <span class="legend-cluster meshtastic">12</span>
+              Meshtastic
+            </span>
+
+            <span>
+              <span class="legend-cluster meshcore">12</span>
+              MeshCore
+            </span>
+
+            <span>
+              <span class="legend-cluster mixed">12</span>
+              Mixto
+            </span>
+          </div>
+
+          <p class="legend-heading">Outros elementos</p>
+
+          <div class="legend-list compact-legend">
+            <p>
+              <span class="legend-line"></span>
+              Traceroute dirixido
+            </p>
+
+            <p>
+              <span class="legend-line neighbor-line"></span>
+              Veciñanza
+            </p>
+
+            <p>
+              <span class="legend-symbol user-location"></span>
+              A túa posición aproximada
+            </p>
+          </div>
+          </section>
+        </div>
+      </details>
+
+      <section
+        class="control-section"
+        data-mobile-panel="info"
+      >
+        <h2>Resumo visible</h2>
+
+        <p
+          id="mobile-data-status"
+          class="mobile-data-status"
+          role="status"
+          aria-live="polite"
+        >
+          Cargando…
+        </p>
+
+        <div class="stat-grid" aria-live="polite">
+          <article>
+            <strong id="visible-count">0</strong>
+            <span>Nodos</span>
+          </article>
+
+          <article>
+            <strong id="meshtastic-count">0</strong>
+            <span>Meshtastic</span>
+          </article>
+
+          <article>
+            <strong id="meshcore-count">0</strong>
+            <span>MeshCore</span>
+          </article>
+
+          <article>
+            <strong id="edge-count">0</strong>
+            <span>Conexións</span>
+          </article>
+        </div>
+      </section>
+
+      <details
+        id="source-details"
+        class="control-section filter-details"
+        data-mobile-panel="info"
+      >
+        <summary>
+          <span>Estado das fontes</span>
+        </summary>
+
+        <dl
+          id="source-status"
+          class="source-status details-content"
+        ></dl>
+      </details>
+
+      <footer
+        class="credits"
+        data-mobile-panel="info"
+      >
+        <p>
+          Datos: Meshview España, Malha Portugal,
+          Comunidade O Zulo e MeshCore Map.
+        </p>
+
+        <p>
+          Cartografía: © contribuidores de
+          <a
+            href="https://www.openstreetmap.org/copyright"
+            rel="noopener noreferrer"
+          >OpenStreetMap</a>. Proxecto independente.
+        </p>
+
+        <p>
+          O mapa agrega datos técnicos xa publicados polas fontes
+          indicadas. Para solicitar a exclusión dun nodo, escribe a
+          <a
+            href="mailto:elena@tuiterx.rocks?subject=Retirada%20de%20nodo%20en%20Mesh%20Noroeste"
+          >elena@tuiterx.rocks</a>
+          ou contacta no
+          <a
+            href="https://t.me/+ulPcpc4QDYc2ZTE0"
+            rel="noopener noreferrer"
+          >grupo de Telegram</a>, indicando o identificador completo
+          do nodo.
+        </p>
+      </footer>
+      </div>
+    </aside>
+
+    <button
+      id="mobile-backdrop"
+      class="mobile-backdrop"
+      type="button"
+      tabindex="-1"
+      aria-hidden="true"
+      hidden
+    ></button>
+
+    <main class="map-region">
+      <div
+        id="map"
+        role="region"
+        aria-label="Mapa interactivo de nodos Meshtastic e MeshCore"
+      ></div>
+
+      <nav
+        id="mobile-toolbar"
+        class="mobile-toolbar"
+        aria-label="Controis rápidos do mapa"
+      >
+        <button
+          class="mobile-tab"
+          type="button"
+          data-mobile-target="search"
+          aria-controls="sidebar-panel"
+          aria-expanded="false"
+          aria-pressed="false"
+        >
+          <span class="mobile-tab-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <circle cx="10.5" cy="10.5" r="6.5"></circle>
+              <path d="m15.5 15.5 5 5"></path>
+            </svg>
+          </span>
+          <span>Buscar</span>
+        </button>
+
+        <button
+          class="mobile-tab"
+          type="button"
+          data-mobile-target="network"
+          aria-controls="sidebar-panel"
+          aria-expanded="false"
+          aria-pressed="false"
+        >
+          <span class="mobile-tab-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <circle cx="6" cy="12" r="2.5"></circle>
+              <circle cx="18" cy="6" r="2.5"></circle>
+              <circle cx="18" cy="18" r="2.5"></circle>
+              <path d="m8.3 10.8 7.4-3.6M8.3 13.2l7.4 3.6"></path>
+            </svg>
+          </span>
+          <span>Rede</span>
+        </button>
+
+        <button
+          class="mobile-tab"
+          type="button"
+          data-mobile-target="filters"
+          aria-controls="sidebar-panel"
+          aria-expanded="false"
+          aria-pressed="false"
+        >
+          <span class="mobile-tab-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 6h16M7 12h10M10 18h4"></path>
+              <circle cx="9" cy="6" r="1.5"></circle>
+              <circle cx="15" cy="12" r="1.5"></circle>
+              <circle cx="12" cy="18" r="1.5"></circle>
+            </svg>
+          </span>
+          <span>Lenda e filtros</span>
+        </button>
+
+        <button
+          class="mobile-tab"
+          type="button"
+          data-mobile-target="layers"
+          aria-controls="sidebar-panel"
+          aria-expanded="false"
+          aria-pressed="false"
+        >
+          <span class="mobile-tab-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="m12 4 8 4-8 4-8-4 8-4Z"></path>
+              <path d="m4 12 8 4 8-4M4 16l8 4 8-4"></path>
+            </svg>
+          </span>
+          <span>Mapa</span>
+        </button>
+
+        <button
+          class="mobile-tab"
+          type="button"
+          data-mobile-target="info"
+          aria-controls="sidebar-panel"
+          aria-expanded="false"
+          aria-pressed="false"
+        >
+          <span class="mobile-tab-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 10v7M12 7h.01"></path>
+            </svg>
+          </span>
+          <span>Info</span>
+        </button>
+      </nav>
+
+      <div
+        id="filter-empty-panel"
+        class="map-message"
+        role="status"
+        hidden
+      >
+        <strong>Non hai nodos visibles.</strong>
+        <span>
+          Revisa a rede, a antigüidade, o rol, o tipo
+          ou o filtro de gateways MQTT.
+        </span>
+      </div>
+
+      <div
+        id="loading-panel"
+        class="map-message"
+        role="status"
+        aria-live="polite"
+      >
+        <strong>Cargando o mapa</strong>
+        <span>Descargando nodos e conexións…</span>
+      </div>
+
+      <div
+        id="error-panel"
+        class="map-message error"
+        role="alert"
+        hidden
+      ></div>
+
+      <aside
+        id="detail-panel"
+        class="detail-panel"
+        aria-label="Detalle do nodo"
+        hidden
+      >
+        <header>
+          <div>
+            <p
+              id="detail-network"
+              class="detail-network"
+            ></p>
+            <h2 id="detail-title">Nodo</h2>
+          </div>
+
+          <div class="detail-actions">
+            <button
+              id="detail-size-toggle"
+              class="detail-size-toggle"
+              type="button"
+              aria-controls="detail-content"
+              aria-expanded="false"
+            >
+              Ampliar
+            </button>
+
+            <button
+              id="detail-close"
+              class="icon-button"
+              type="button"
+              aria-label="Pechar o detalle"
+            >
+              ×
+            </button>
+          </div>
+        </header>
+
+        <div id="detail-content"></div>
+      </aside>
+    </main>
+  </div>
+
+  <aside
+    id="privacy-notice"
+    class="privacy-notice"
+    role="note"
+    aria-label="Información sobre privacidade"
+    hidden
+  >
+    <p>
+      <strong>Privacidade:</strong> este mapa non utiliza cookies
+      nin ferramentas de seguimento. As preferencias gárdanse só
+      neste navegador. Se autorizas a localización, úsase unicamente
+      no teu dispositivo e non se envía.
+    </p>
+
+    <button
+      id="privacy-dismiss"
+      class="privacy-dismiss"
+      type="button"
+      aria-label="Pechar o aviso de privacidade"
+    >
+      Entendido
+    </button>
+  </aside>
+</body>
+</html>

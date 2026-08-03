@@ -1,0 +1,48 @@
+{
+  "schema": "mesh-noroeste.data/v1",
+  "generated_at": "2026-07-25T12:00:00Z",
+  "edges": [
+    {
+      "id": "meshtastic:neighbor:!a35b4144:!b1234567",
+      "network": "meshtastic",
+      "source": "meshview_es",
+      "from_id": "meshtastic:!a35b4144",
+      "to_id": "meshtastic:!b1234567",
+      "edge_type": "neighbor",
+      "directed": false,
+      "last_seen": "2026-07-25T11:58:00Z",
+      "metrics": {
+        "snr_db": 5.5,
+        "rssi_dbm": -98
+      }
+    },
+    {
+      "id": "meshtastic:traceroute:!a35b4144:!c7654321",
+      "network": "meshtastic",
+      "source": "malha_pt",
+      "from_id": "meshtastic:!a35b4144",
+      "to_id": "meshtastic:!c7654321",
+      "edge_type": "traceroute",
+      "directed": true,
+      "last_seen": "2026-07-25T11:55:00Z",
+      "metrics": {
+        "snr_db": null,
+        "rssi_dbm": null
+      }
+    },
+    {
+      "id": "meshcore:observed:02ab34cd:03ef5678",
+      "network": "meshcore",
+      "source": "meshcore_map",
+      "from_id": "meshcore:02ab34cd",
+      "to_id": "meshcore:03ef5678",
+      "edge_type": "observed",
+      "directed": false,
+      "last_seen": "2026-07-25T11:50:00Z",
+      "metrics": {
+        "snr_db": null,
+        "rssi_dbm": null
+      }
+    }
+  ]
+}

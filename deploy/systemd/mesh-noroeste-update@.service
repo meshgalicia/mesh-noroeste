@@ -1,0 +1,21 @@
+[Unit]
+Description=Actualiza Mesh Noroeste desde %i
+After=network-online.target
+Wants=network-online.target
+ConditionFileIsExecutable=/srv/mesh-noroeste/scripts/update-map.sh
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/mesh-noroeste
+EnvironmentFile=/etc/mesh-noroeste/mesh-noroeste.env
+Environment=MESH_CONFIGURATION_WARNINGS_PATH=/srv/mesh-noroeste/cache/configuration-analysis.json
+ExecStart=/srv/mesh-noroeste/scripts/update-map.sh %i
+TimeoutStartSec=10min
+UMask=0022
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/srv/mesh-noroeste/state
+ReadWritePaths=/srv/mesh-noroeste/frontend/data
+ReadWritePaths=/srv/mesh-noroeste/cache
+ReadWritePaths=/run/lock

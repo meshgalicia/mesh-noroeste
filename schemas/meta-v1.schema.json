@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mesh Noroeste meta.json v1",
+  "description": "Metadatos públicos de la aplicación y de la región.",
+  "type": "object",
+  "required": [
+    "schema",
+    "generated_at",
+    "application",
+    "region",
+    "retention"
+  ],
+  "properties": {
+    "schema": {
+      "const": "mesh-noroeste.data/v1"
+    },
+    "generated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "application": {
+      "$ref": "#/$defs/application"
+    },
+    "region": {
+      "$ref": "#/$defs/region"
+    },
+    "retention": {
+      "$ref": "#/$defs/retention"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "application": {
+      "type": "object",
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "const": "Mesh Noroeste"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "bounds": {
+      "type": "object",
+      "required": [
+        "south",
+        "west",
+        "north",
+        "east"
+      ],
+      "properties": {
+        "south": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "west": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "north": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "east": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      },
+      "additionalProperties": false
+    },
+    "region": {
+      "type": "object",
+      "required": [
+        "name",
+        "bounds"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "bounds": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/bounds"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "retention": {
+      "type": "object",
+      "required": [
+        "active_hours",
+        "recent_days",
+        "historical_days"
+      ],
+      "properties": {
+        "active_hours": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "recent_days": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "historical_days": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
