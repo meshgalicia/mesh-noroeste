@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import time
 from typing import Any, Mapping
 
 from mesh_noroeste import __version__
@@ -23,6 +24,8 @@ from mesh_noroeste.exclusions import load_exclusions
 from mesh_noroeste.http_client import (
     DEFAULT_MAX_BYTES,
     DEFAULT_TIMEOUT_SECONDS,
+    FetchError,
+    JsonFetchResult,
     fetch_bytes,
     fetch_json,
 )
@@ -88,6 +91,67 @@ MESHCORE_MAP_URL = (
     "nodes?binary=1&short=1"
 )
 MESHCORE_MAP_ACCEPT = "application/msgpack"
+
+MESHVIEW_RETRY_DELAYS = (1.0, 3.0)
+MESHVIEW_TRANSIENT_HTTP_CODES = (
+    "500",
+    "502",
+    "503",
+    "504",
+)
+
+
+def _meshview_fetch_error_is_transient(
+    error: FetchError,
+) -> bool:
+    message = str(error)
+
+    if (
+        "Tiempo de espera agotado" in message
+        or "Error de red" in message
+    ):
+        return True
+
+    return any(
+        f"Error HTTP {code}" in message
+        for code in MESHVIEW_TRANSIENT_HTTP_CODES
+    )
+
+
+def _fetch_meshview_json(
+    url: str,
+    *,
+    timeout: float,
+    max_bytes: int,
+    sleeper: Callable[[float], Any],
+) -> JsonFetchResult:
+    delays: tuple[float | None, ...] = (
+        *MESHVIEW_RETRY_DELAYS,
+        None,
+    )
+
+    for delay in delays:
+        try:
+            return fetch_json(
+                url,
+                timeout=timeout,
+                max_bytes=max_bytes,
+            )
+        except FetchError as error:
+            if (
+                delay is None
+                or not _meshview_fetch_error_is_transient(
+                    error
+                )
+            ):
+                raise
+
+            sleeper(delay)
+
+    raise AssertionError(
+        "O bucle de reintentos de Meshview rematou "
+        "sen resultado."
+    )
 
 
 def _current_utc_timestamp() -> str:
@@ -182,6 +246,7 @@ def collect_meshview_es(
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     max_bytes: int = DEFAULT_MAX_BYTES,
     clock: Callable[[], Any] = _current_utc_timestamp,
+    sleeper: Callable[[float], Any] = time.sleep,
 ) -> CollectionResult:
     """Descarga, adapta y almacena Meshview España."""
 
@@ -211,25 +276,29 @@ def collect_meshview_es(
     )
 
     try:
-        fetched_nodes = fetch_json(
+        fetched_nodes = _fetch_meshview_json(
             url,
             timeout=timeout,
             max_bytes=max_bytes,
+            sleeper=sleeper,
         )
-        fetched_position_packets = fetch_json(
+        fetched_position_packets = _fetch_meshview_json(
             position_packets_url,
             timeout=timeout,
             max_bytes=max_bytes,
+            sleeper=sleeper,
         )
-        fetched_traceroutes = fetch_json(
+        fetched_traceroutes = _fetch_meshview_json(
             traceroute_url,
             timeout=timeout,
             max_bytes=max_bytes,
+            sleeper=sleeper,
         )
-        fetched_neighbors = fetch_json(
+        fetched_neighbors = _fetch_meshview_json(
             neighbor_url,
             timeout=timeout,
             max_bytes=max_bytes,
+            sleeper=sleeper,
         )
 
         collected_at = clock()

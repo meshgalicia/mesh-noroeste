@@ -602,20 +602,18 @@ class ApplicationTests(unittest.TestCase):
                             "2026-07-25T12:00:00Z",
                         )
                     )
-                    call_index = 0
+                    sleep_delays: list[float] = []
 
                     def fetch_side_effect(
                         url: str,
                         **kwargs: object,
                     ) -> JsonFetchResult:
-                        nonlocal call_index
-                        current = call_index
-                        call_index += 1
+                        if url == urls[failed_index]:
+                            raise FetchError(
+                                "Error HTTP 503 temporal"
+                            )
 
-                        if current == failed_index:
-                            raise FetchError("HTTP 503 temporal")
-
-                        return fetched[current]
+                        return fetched[urls.index(url)]
 
                     with patch(
                         "mesh_noroeste.application.fetch_json",
@@ -628,6 +626,7 @@ class ApplicationTests(unittest.TestCase):
                             collect_meshview_es(
                                 settings=settings,
                                 clock=lambda: next(timestamps),
+                                sleeper=sleep_delays.append,
                             )
 
                     database_path = (
@@ -653,21 +652,37 @@ class ApplicationTests(unittest.TestCase):
                                 "2026-07-25T12:00:00Z"
                             ),
                             "last_error": (
-                                "FetchError: HTTP 503 temporal"
+                                "FetchError: Error HTTP 503 temporal"
                             ),
                             "records_received": 0,
                         },
                     )
-                    self.assertEqual(
-                        mocked_fetch.call_args_list,
+                    expected_calls = [
+                        call(
+                            url,
+                            timeout=20.0,
+                            max_bytes=20 * 1024 * 1024,
+                        )
+                        for url in urls[:failed_index]
+                    ]
+                    expected_calls.extend(
                         [
                             call(
-                                url,
+                                urls[failed_index],
                                 timeout=20.0,
                                 max_bytes=20 * 1024 * 1024,
                             )
-                            for url in urls[:failed_index + 1]
-                        ],
+                        ]
+                        * 3
+                    )
+
+                    self.assertEqual(
+                        mocked_fetch.call_args_list,
+                        expected_calls,
+                    )
+                    self.assertEqual(
+                        sleep_delays,
+                        [1.0, 3.0],
                     )
 
     def test_collect_malha_saves_nodes_edges_and_run(
