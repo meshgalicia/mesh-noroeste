@@ -86,6 +86,25 @@
       },
       "additionalProperties": false
     },
+    "source_last_seen": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "meshview_es": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "malha_pt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "ozulo_map": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "meshcore_map": {
+          "$ref": "#/$defs/timestamp"
+        }
+      },
+      "additionalProperties": false
+    },
     "metrics": {
       "type": "object",
       "required": [
@@ -301,6 +320,9 @@
         },
         "source_ids": {
           "$ref": "#/$defs/source_ids"
+        },
+        "source_last_seen": {
+          "$ref": "#/$defs/source_last_seen"
         },
         "sources": {
           "type": "array",

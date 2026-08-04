@@ -2196,6 +2196,88 @@ function detailSection(title, rows) {
   return section;
 }
 
+function sourceLinkIsRecent(node, source) {
+  const observed = Date.parse(
+    node.source_last_seen?.[source] || ""
+  );
+  const reference = state.generatedAt?.getTime();
+  const recentDays = Number(
+    state.meta?.retention?.recent_days
+  );
+
+  if (
+    !Number.isFinite(observed)
+    || !Number.isFinite(reference)
+    || !Number.isFinite(recentDays)
+    || recentDays < 1
+  ) {
+    return true;
+  }
+
+  const ageMilliseconds = Math.max(
+    0,
+    reference - observed
+  );
+
+  return (
+    ageMilliseconds
+    <= recentDays * 24 * 60 * 60 * 1000
+  );
+}
+
+function meshtasticNodeLinks(node) {
+  if (
+    node.network !== "meshtastic"
+    || !Array.isArray(node.sources)
+  ) {
+    return [];
+  }
+
+  const idMatch = /^meshtastic:!([0-9a-f]{8})$/.exec(node.id);
+
+  if (!idMatch) {
+    return [];
+  }
+
+  const nodeNumber = String(Number.parseInt(idMatch[1], 16));
+  const links = [];
+
+  if (
+    node.sources.includes("meshview_es")
+    && sourceLinkIsRecent(node, "meshview_es")
+  ) {
+    links.push({
+      label: "Abrir en Meshview España",
+      url: "https://meshview.meshtastic.es/node/" + nodeNumber,
+    });
+  }
+
+  if (
+    node.sources.includes("malha_pt")
+    && sourceLinkIsRecent(node, "malha_pt")
+  ) {
+    links.push({
+      label: "Abrir en Malha Portugal",
+      url: "https://malha.meshtastic.pt/node/" + nodeNumber,
+    });
+  }
+
+  if (
+    node.sources.includes("ozulo_map")
+    && sourceLinkIsRecent(node, "ozulo_map")
+  ) {
+    links.push({
+      label: "Abrir en Meshview de O Zulo",
+      url: (
+        "https://meshview.mesh.comunidadeozulo.org/node/"
+        + nodeNumber
+      ),
+    });
+  }
+
+  return links;
+}
+
 function meshcoreContactUrl(node) {
   if (node.network !== "meshcore") {
     return null;
@@ -2240,6 +2322,44 @@ async function copyText(text) {
   if (!copied) {
     throw new Error("Non se puido copiar o texto.");
   }
+}
+
+function externalNodeLinksSection(node) {
+  const links = meshtasticNodeLinks(node);
+
+  if (links.length === 0) {
+    return null;
+  }
+
+  const section = document.createElement("section");
+  const heading = document.createElement("h3");
+  const description = document.createElement("p");
+
+  section.className = "detail-section";
+  heading.textContent = "Fichas externas";
+
+  description.className = "connection-summary";
+  description.textContent = (
+    "Consulta este nodo nos mapas públicos das fontes "
+    + "que o recollen."
+  );
+
+  section.append(heading, description);
+
+  for (const link of links) {
+    const openButton = document.createElement("button");
+
+    openButton.className = "secondary-button";
+    openButton.type = "button";
+    openButton.textContent = link.label;
+    openButton.addEventListener("click", () => {
+      window.location.href = link.url;
+    });
+
+    section.append(openButton);
+  }
+
+  return section;
 }
 
 function meshcoreAppSection(node) {
@@ -2557,6 +2677,7 @@ function showNodeDetail(node) {
         ["Estado", statusLabel(node)],
       ]
     ),
+    externalNodeLinksSection(node),
     meshcoreAppSection(node),
     detailSection(
       "Actividade",

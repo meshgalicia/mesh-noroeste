@@ -168,6 +168,7 @@ def validate_nodes(document: dict[str, Any]) -> None:
 
         sources = node["sources"]
         source_ids = node["source_ids"]
+        source_last_seen = node.get("source_last_seen")
 
         if set(sources) != set(source_ids):
             raise AssertionError(
@@ -175,6 +176,17 @@ def validate_nodes(document: dict[str, Any]) -> None:
                 f"sources={sources}, "
                 f"source_ids={list(source_ids)}"
             )
+
+        if source_last_seen is not None:
+            if set(sources) != set(source_last_seen):
+                raise AssertionError(
+                    f"Datas por fonte incoherentes en {node_id}: "
+                    f"sources={sources}, "
+                    f"source_last_seen={list(source_last_seen)}"
+                )
+
+            for observed_at in source_last_seen.values():
+                parse_timestamp(observed_at)
 
         status = node["status"]
 

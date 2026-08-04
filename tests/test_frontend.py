@@ -133,7 +133,7 @@ class FrontendStaticTests(unittest.TestCase):
             self.parser.links,
         )
         self.assertIn(
-            "./app.js?v=20260803-meshcore-links1",
+            "./app.js?v=20260804-source-freshness1",
             self.parser.scripts,
         )
 
@@ -354,6 +354,46 @@ class FrontendStaticTests(unittest.TestCase):
         ):
             self.assertIn(selector, self.css)
 
+    def test_meshtastic_nodes_offer_source_links(
+        self,
+    ) -> None:
+        for expected in (
+            "function sourceLinkIsRecent(node, source)",
+            "node.source_last_seen?.[source]",
+            "state.meta?.retention?.recent_days",
+            "reference - observed",
+            "function meshtasticNodeLinks(node)",
+            'node.network !== "meshtastic"',
+            "!Array.isArray(node.sources)",
+            r"/^meshtastic:!([0-9a-f]{8})$/",
+            "Number.parseInt(idMatch[1], 16)",
+            'node.sources.includes("meshview_es")',
+            'sourceLinkIsRecent(node, "meshview_es")',
+            '"https://meshview.meshtastic.es/node/"',
+            '"Abrir en Meshview España"',
+            'node.sources.includes("malha_pt")',
+            'sourceLinkIsRecent(node, "malha_pt")',
+            '"https://malha.meshtastic.pt/node/"',
+            '"Abrir en Malha Portugal"',
+            'node.sources.includes("ozulo_map")',
+            'sourceLinkIsRecent(node, "ozulo_map")',
+            '"https://meshview.mesh.comunidadeozulo.org/node/"',
+            '"Abrir en Meshview de O Zulo"',
+            "function externalNodeLinksSection(node)",
+            'heading.textContent = "Fichas externas"',
+            '"Consulta este nodo nos mapas públicos das fontes "',
+            '"que o recollen."',
+            "window.location.href = link.url",
+            "externalNodeLinksSection(node),",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, self.javascript)
+
+        self.assertIn(
+            "./app.js?v=20260804-source-freshness1",
+            self.parser.scripts,
+        )
+
     def test_meshcore_detail_offers_contact_link(
         self,
     ) -> None:
@@ -381,7 +421,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.javascript)
 
         self.assertIn(
-            "./app.js?v=20260803-meshcore-links1",
+            "./app.js?v=20260804-source-freshness1",
             self.parser.scripts,
         )
 
@@ -1255,7 +1295,7 @@ class FrontendStaticTests(unittest.TestCase):
             if (
                 "leaflet@1.9.4/dist/leaflet.js" in source
                 or "leaflet.markercluster.js" in source
-                or source == "./app.js?v=20260803-meshcore-links1"
+                or source == "./app.js?v=20260804-source-freshness1"
             ):
                 dependencies.append((source, tag))
 
@@ -1269,7 +1309,7 @@ class FrontendStaticTests(unittest.TestCase):
                 "dist/leaflet.js",
                 "./vendor/leaflet.markercluster/"
                 "leaflet.markercluster.js?v=1.5.3-local1",
-                "./app.js?v=20260803-meshcore-links1",
+                "./app.js?v=20260804-source-freshness1",
             ],
         )
 

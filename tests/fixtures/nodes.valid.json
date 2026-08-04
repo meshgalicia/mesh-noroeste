@@ -9,6 +9,10 @@
         "meshview_es": "!a35b4144",
         "malha_pt": "!a35b4144"
       },
+      "source_last_seen": {
+        "meshview_es": "2026-07-25T11:58:00Z",
+        "malha_pt": "2026-07-25T11:00:00Z"
+      },
       "sources": [
         "meshview_es",
         "malha_pt"
@@ -55,6 +59,9 @@
       "network": "meshcore",
       "source_ids": {
         "meshcore_map": "02ab34cd"
+      },
+      "source_last_seen": {
+        "meshcore_map": "2026-07-25T10:00:00Z"
       },
       "sources": [
         "meshcore_map"

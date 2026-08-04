@@ -837,6 +837,11 @@ def merge_observations(
         for source in sources
     }
 
+    source_last_seen = {
+        source: latest_by_source[source].observed_at
+        for source in sources
+    }
+
     position_candidates = [
         observation
         for observation in ordered
@@ -903,6 +908,7 @@ def merge_observations(
         "id": node_id,
         "network": network,
         "source_ids": source_ids,
+        "source_last_seen": source_last_seen,
         "sources": sources,
         "short_name": _latest_non_null(
             ordered,

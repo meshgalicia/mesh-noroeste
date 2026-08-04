@@ -300,6 +300,13 @@ class MergeTests(unittest.TestCase):
             },
         )
         self.assertEqual(
+            node["source_last_seen"],
+            {
+                "meshview_es": "2026-07-25T10:00:00Z",
+                "malha_pt": "2026-07-25T11:00:00Z",
+            },
+        )
+        self.assertEqual(
             node["short_name"],
             "BRUMA",
         )
