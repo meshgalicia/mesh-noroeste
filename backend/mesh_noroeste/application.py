@@ -16,6 +16,7 @@ from mesh_noroeste.configuration_warnings import (
 )
 from mesh_noroeste.domain import (
     EdgeObservation,
+    NeighborObservation,
     NodeObservation,
 )
 from mesh_noroeste.exclusions import load_exclusions
@@ -45,6 +46,7 @@ from mesh_noroeste.meshview_es import (
 from mesh_noroeste.ozulo_map import (
     parse_ozulo_map_edges,
     parse_ozulo_map_nodes,
+    parse_ozulo_neighbor_packets,
 )
 from mesh_noroeste.publication import (
     build_public_documents,
@@ -75,6 +77,10 @@ OZULO_MAP_NODES_URL = (
 OZULO_MAP_EDGES_URL = (
     "https://mapa.mesh.comunidadeozulo.org/"
     "data/edges.json"
+)
+OZULO_NEIGHBOR_PACKETS_URL = (
+    "https://meshview.mesh.comunidadeozulo.org/"
+    "api/packets?portnum=71&limit=500"
 )
 
 MESHCORE_MAP_URL = (
@@ -111,6 +117,22 @@ def _allowed_edge_observations(
     excluded_node_ids: frozenset[str],
 ) -> tuple[EdgeObservation, ...]:
     """Descarta conexións con algún extremo excluído."""
+
+    return tuple(
+        observation
+        for observation in observations
+        if (
+            observation.from_id not in excluded_node_ids
+            and observation.to_id not in excluded_node_ids
+        )
+    )
+
+
+def _allowed_neighbor_observations(
+    observations: Iterable[NeighborObservation],
+    excluded_node_ids: frozenset[str],
+) -> tuple[NeighborObservation, ...]:
+    """Descarta NeighborInfo con algún extremo excluído."""
 
     return tuple(
         observation
@@ -434,6 +456,7 @@ def collect_ozulo_map(
     database_path: Path | str | None = None,
     nodes_url: str = OZULO_MAP_NODES_URL,
     edges_url: str = OZULO_MAP_EDGES_URL,
+    neighbor_packets_url: str = OZULO_NEIGHBOR_PACKETS_URL,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     max_bytes: int = DEFAULT_MAX_BYTES,
     clock: Callable[[], Any] = _current_utc_timestamp,
@@ -476,6 +499,11 @@ def collect_ozulo_map(
             timeout=timeout,
             max_bytes=max_bytes,
         )
+        fetched_neighbor_packets = fetch_json(
+            neighbor_packets_url,
+            timeout=timeout,
+            max_bytes=max_bytes,
+        )
 
         node_observations = parse_ozulo_map_nodes(
             fetched_nodes.document,
@@ -483,6 +511,10 @@ def collect_ozulo_map(
         )
         edge_observations = parse_ozulo_map_edges(
             fetched_edges.document,
+            source="ozulo_map",
+        )
+        neighbor_observations = parse_ozulo_neighbor_packets(
+            fetched_neighbor_packets.document,
             source="ozulo_map",
         )
 
@@ -494,6 +526,10 @@ def collect_ozulo_map(
             edge_observations,
             excluded_node_ids,
         )
+        allowed_neighbors = _allowed_neighbor_observations(
+            neighbor_observations,
+            excluded_node_ids,
+        )
 
         inserted_nodes = store.save(
             allowed_nodes
@@ -501,6 +537,9 @@ def collect_ozulo_map(
         inserted_edges = store.replace_edges(
             "ozulo_map",
             allowed_edges,
+        )
+        inserted_neighbors = store.save_neighbors(
+            allowed_neighbors
         )
 
     except Exception as exc:
@@ -525,10 +564,12 @@ def collect_ozulo_map(
     records_received = (
         len(node_observations)
         + len(edge_observations)
+        + len(neighbor_observations)
     )
     records_inserted = (
         inserted_nodes
         + inserted_edges
+        + inserted_neighbors
     )
 
     store.finish_source_run(
@@ -546,6 +587,7 @@ def collect_ozulo_map(
         bytes_received=(
             fetched_nodes.bytes_received
             + fetched_edges.bytes_received
+            + fetched_neighbor_packets.bytes_received
         ),
         records_received=records_received,
         records_inserted=records_inserted,
@@ -707,6 +749,9 @@ def publish_from_store(
     edge_observations = tuple(
         store.load_all_edges()
     )
+    neighbor_observations = tuple(
+        store.load_all_neighbors()
+    )
     source_statistics = store.source_statistics()
     excluded_node_ids = load_exclusions(
         settings.exclusions_path
@@ -720,6 +765,7 @@ def publish_from_store(
         documents = build_public_documents(
             observations,
             edge_observations=edge_observations,
+            neighbor_observations=neighbor_observations,
             generated_at=generated_at,
             settings=settings,
             application_version=application_version,
@@ -733,6 +779,7 @@ def publish_from_store(
         documents = build_public_documents(
             observations,
             edge_observations=edge_observations,
+            neighbor_observations=neighbor_observations,
             generated_at=generated_at,
             settings=settings,
             application_version=application_version,

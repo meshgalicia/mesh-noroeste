@@ -7,6 +7,7 @@ import unittest
 from mesh_noroeste.domain import (
     classify_temporal_status,
     make_edge_observation,
+    make_neighbor_observation,
     make_observation,
     merge_observations,
 )
@@ -468,6 +469,93 @@ class MergeTests(unittest.TestCase):
         )
 
         self.assertIsNone(node)
+
+
+class NeighborObservationTests(unittest.TestCase):
+    def test_neighbor_info_is_normalized(self) -> None:
+        observation = make_neighbor_observation(
+            source=" OZULO_MAP ",
+            from_source_id=2956739956,
+            to_source_id=2905611713,
+            observed_at="2026-08-04T08:41:13+00:00",
+            snr_db="4.0",
+        )
+
+        self.assertEqual(observation.source, "ozulo_map")
+        self.assertEqual(
+            observation.from_source_id,
+            "!b03c4574",
+        )
+        self.assertEqual(
+            observation.to_source_id,
+            "!ad301dc1",
+        )
+        self.assertEqual(
+            observation.from_id,
+            "meshtastic:!b03c4574",
+        )
+        self.assertEqual(
+            observation.to_id,
+            "meshtastic:!ad301dc1",
+        )
+        self.assertEqual(
+            observation.id,
+            (
+                "meshtastic:neighbor_info:"
+                "!b03c4574:!ad301dc1"
+            ),
+        )
+        self.assertEqual(
+            observation.observed_at,
+            "2026-08-04T08:41:13Z",
+        )
+        self.assertEqual(observation.snr_db, 4.0)
+
+    def test_neighbor_info_preserves_direction(self) -> None:
+        observation = make_neighbor_observation(
+            source="ozulo_map",
+            from_source_id="b03c4574",
+            to_source_id="16d157e4",
+            observed_at=NOW,
+            snr_db=6.5,
+        )
+
+        self.assertEqual(
+            observation.from_source_id,
+            "!b03c4574",
+        )
+        self.assertEqual(
+            observation.to_source_id,
+            "!16d157e4",
+        )
+
+    def test_neighbor_info_rejects_self_observation(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            "propio nodo emisor",
+        ):
+            make_neighbor_observation(
+                source="ozulo_map",
+                from_source_id="b03c4574",
+                to_source_id="!B03C4574",
+                observed_at=NOW,
+                snr_db=4.0,
+            )
+
+    def test_neighbor_info_requires_snr(self) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            "snr_db é obrigatorio",
+        ):
+            make_neighbor_observation(
+                source="ozulo_map",
+                from_source_id="b03c4574",
+                to_source_id="ad301dc1",
+                observed_at=NOW,
+                snr_db=None,
+            )
 
 
 class EdgeObservationTests(unittest.TestCase):

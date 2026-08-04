@@ -22,6 +22,7 @@ from mesh_noroeste.configuration_warnings import (
 )
 from mesh_noroeste.domain import (
     EdgeObservation,
+    NeighborObservation,
     NodeObservation,
     SOURCE_ORDER,
     merge_observations,
@@ -41,6 +42,7 @@ SCHEMA_ID = "mesh-noroeste.data/v1"
 PUBLIC_DOCUMENT_NAMES = (
     "nodes.json",
     "edges.json",
+    "neighbor-info.json",
     "stats.json",
     "meta.json",
     "configuration-warnings.json",
@@ -401,11 +403,66 @@ def _public_edge_documents(
     return published
 
 
+def _public_neighbor_documents(
+    observations: tuple[NeighborObservation, ...],
+    excluded_node_ids: set[str],
+) -> list[dict[str, Any]]:
+    """Ordena e filtra o histórico público de NeighborInfo."""
+
+    unique: dict[
+        tuple[str, str, str, str],
+        NeighborObservation,
+    ] = {}
+
+    for observation in observations:
+        if not isinstance(
+            observation,
+            NeighborObservation,
+        ):
+            raise TypeError(
+                "Todas as observacións NeighborInfo deben ser "
+                "NeighborObservation"
+            )
+
+        if (
+            observation.from_id in excluded_node_ids
+            or observation.to_id in excluded_node_ids
+        ):
+            continue
+
+        identity = (
+            observation.source,
+            observation.from_id,
+            observation.to_id,
+            observation.observed_at,
+        )
+
+        unique[identity] = observation
+
+    return [
+        {
+            "source": observation.source,
+            "network": observation.network,
+            "from_id": observation.from_id,
+            "to_id": observation.to_id,
+            "observed_at": observation.observed_at,
+            "snr_db": observation.snr_db,
+        }
+        for _, observation in sorted(
+            unique.items(),
+            key=lambda item: item[0],
+        )
+    ]
+
+
 def build_public_documents(
     observations: Iterable[NodeObservation],
     *,
     edge_observations: Iterable[
         EdgeObservation
+    ] = (),
+    neighbor_observations: Iterable[
+        NeighborObservation
     ] = (),
     generated_at: Any,
     settings: Settings,
@@ -426,6 +483,9 @@ def build_public_documents(
 
     received = tuple(observations)
     received_edges = tuple(edge_observations)
+    received_neighbors = tuple(
+        neighbor_observations
+    )
 
     if isinstance(
         excluded_node_ids,
@@ -582,6 +642,17 @@ def build_public_documents(
         "edges": edges,
     }
 
+    neighbor_info = _public_neighbor_documents(
+        received_neighbors,
+        excluded_ids,
+    )
+
+    neighbor_info_document = {
+        "schema": SCHEMA_ID,
+        "generated_at": normalized_generated_at,
+        "observations": neighbor_info,
+    }
+
     network_stats = {
         "meshtastic": _network_statistics(
             nodes,
@@ -664,6 +735,7 @@ def build_public_documents(
     return {
         "nodes.json": nodes_document,
         "edges.json": edges_document,
+        "neighbor-info.json": neighbor_info_document,
         "stats.json": stats_document,
         "meta.json": meta_document,
         "configuration-warnings.json": warnings_document,

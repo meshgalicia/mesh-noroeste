@@ -294,6 +294,36 @@ class NodeObservation:
 
 
 @dataclass(frozen=True, slots=True)
+class NeighborObservation:
+    """Anuncio NeighborInfo emitido por un nodo Meshtastic."""
+
+    source: str
+    from_source_id: str
+    to_source_id: str
+    observed_at: str
+    snr_db: float
+
+    @property
+    def network(self) -> str:
+        return "meshtastic"
+
+    @property
+    def from_id(self) -> str:
+        return f"meshtastic:{self.from_source_id}"
+
+    @property
+    def to_id(self) -> str:
+        return f"meshtastic:{self.to_source_id}"
+
+    @property
+    def id(self) -> str:
+        return (
+            "meshtastic:neighbor_info:"
+            f"{self.from_source_id}:{self.to_source_id}"
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class EdgeObservation:
     """Observación normalizada de una conexión entre nodos."""
 
@@ -320,6 +350,63 @@ class EdgeObservation:
             f"{self.network}:{self.edge_type}:"
             f"{self.from_source_id}:{self.to_source_id}"
         )
+
+
+def make_neighbor_observation(
+    *,
+    source: str,
+    from_source_id: str | int,
+    to_source_id: str | int,
+    observed_at: datetime | str | int | float,
+    snr_db: Any,
+) -> NeighborObservation:
+    """Crea unha observación normalizada dun anuncio NeighborInfo."""
+
+    if not isinstance(source, str):
+        raise TypeError("source debe ser texto")
+
+    normalized_source = source.strip().lower()
+
+    if normalized_source not in SOURCE_ORDER:
+        raise ValueError(
+            f"Fuente no admitida: {source!r}"
+        )
+
+    if normalized_source == "meshcore_map":
+        raise ValueError(
+            "meshcore_map no pode producir NeighborInfo"
+        )
+
+    normalized_from = normalize_meshtastic_id(
+        from_source_id
+    )
+    normalized_to = normalize_meshtastic_id(
+        to_source_id
+    )
+
+    if normalized_from == normalized_to:
+        raise ValueError(
+            "NeighborInfo non pode observar "
+            "o propio nodo emisor"
+        )
+
+    normalized_snr = _optional_number(
+        snr_db,
+        "snr_db",
+    )
+
+    if normalized_snr is None:
+        raise ValueError(
+            "snr_db é obrigatorio en NeighborInfo"
+        )
+
+    return NeighborObservation(
+        source=normalized_source,
+        from_source_id=normalized_from,
+        to_source_id=normalized_to,
+        observed_at=normalize_timestamp(observed_at),
+        snr_db=normalized_snr,
+    )
 
 
 def make_edge_observation(

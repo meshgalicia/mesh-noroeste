@@ -10,13 +10,31 @@ from typing import Any
 
 from mesh_noroeste.domain import (
     EdgeObservation,
+    NeighborObservation,
     NodeObservation,
     make_edge_observation,
+    make_neighbor_observation,
     make_observation,
 )
 
 
 _PUBLIC_ID = re.compile(r"^![0-9a-f]{8}$")
+_NEIGHBOR_BLOCK = re.compile(
+    r"neighbors\s*\{(?P<body>[^}]*)\}",
+    re.IGNORECASE,
+)
+_PAYLOAD_NODE_ID = re.compile(
+    r"^node_id:\s*(?P<node_id>\d+)\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_NEIGHBOR_NODE_ID = re.compile(
+    r"\bnode_id:\s*(?P<node_id>\d+)\b",
+    re.IGNORECASE,
+)
+_NEIGHBOR_SNR = re.compile(
+    r"\bsnr:\s*(?P<snr>-?\d+(?:\.\d+)?)\b",
+    re.IGNORECASE,
+)
 
 
 class OzuloMapError(ValueError):
@@ -281,6 +299,15 @@ def parse_ozulo_map_nodes(
             if latitude is not None
             else None
         )
+        position_precision_bits = (
+            _optional_integer(
+                record.get("precision_bits"),
+                "precision_bits",
+                index,
+            )
+            if latitude is not None
+            else None
+        )
 
         try:
             observation = make_observation(
@@ -317,11 +344,7 @@ def parse_ozulo_map_nodes(
                     index,
                     kind="Nodo",
                 ),
-                position_precision_bits=_optional_integer(
-                    record.get("precision_bits"),
-                    "precision_bits",
-                    index,
-                ),
+                position_precision_bits=position_precision_bits,
                 position_updated_at=position_updated_at,
                 metrics={
                     "battery_percent": _optional_number(
@@ -396,6 +419,178 @@ def parse_ozulo_map_nodes(
         observations.append(observation)
 
     return tuple(observations)
+
+
+def parse_ozulo_neighbor_packets(
+    document: Any,
+    *,
+    source: str,
+) -> tuple[NeighborObservation, ...]:
+    """Normaliza os anuncios NeighborInfo publicados por O Zulo."""
+
+    if not isinstance(source, str):
+        raise TypeError("source debe ser texto")
+
+    if not isinstance(document, Mapping):
+        raise OzuloMapError(
+            "A raíz de paquetes de O Zulo debe ser un obxecto"
+        )
+
+    records = document.get("packets")
+
+    if not isinstance(records, list):
+        raise OzuloMapError(
+            "O campo 'packets' de O Zulo debe ser unha lista"
+        )
+
+    observations: list[NeighborObservation] = []
+    seen: set[tuple[str, str, str, str]] = set()
+
+    for index, record in enumerate(records):
+        if not isinstance(record, Mapping):
+            raise OzuloMapError(
+                f"Paquete {index}: debe ser un obxecto"
+            )
+
+        portnum = _required(
+            record,
+            "portnum",
+            index,
+            kind="Paquete",
+        )
+
+        if (
+            isinstance(portnum, bool)
+            or not isinstance(portnum, int)
+            or portnum != 71
+        ):
+            raise OzuloMapError(
+                f"Paquete {index}: portnum debe ser 71"
+            )
+
+        from_node_id = _required(
+            record,
+            "from_node_id",
+            index,
+            kind="Paquete",
+        )
+
+        if (
+            isinstance(from_node_id, bool)
+            or not isinstance(from_node_id, int)
+            or not 0 <= from_node_id <= 0xFFFFFFFF
+        ):
+            raise OzuloMapError(
+                f"Paquete {index}: from_node_id debe ser "
+                "un enteiro Meshtastic válido"
+            )
+
+        imported_at = _required(
+            record,
+            "import_time_us",
+            index,
+            kind="Paquete",
+        )
+
+        if (
+            isinstance(imported_at, bool)
+            or not isinstance(imported_at, int)
+            or imported_at < 0
+        ):
+            raise OzuloMapError(
+                f"Paquete {index}: import_time_us debe ser "
+                "un enteiro positivo"
+            )
+
+        payload = _required(
+            record,
+            "payload",
+            index,
+            kind="Paquete",
+        )
+
+        if not isinstance(payload, str):
+            raise OzuloMapError(
+                f"Paquete {index}: payload debe ser texto"
+            )
+
+        emitter_match = _PAYLOAD_NODE_ID.search(payload)
+
+        if emitter_match is None:
+            raise OzuloMapError(
+                f"Paquete {index}: payload non declara node_id"
+            )
+
+        payload_node_id = int(
+            emitter_match.group("node_id")
+        )
+
+        if payload_node_id != from_node_id:
+            raise OzuloMapError(
+                f"Paquete {index}: node_id do payload non "
+                "coincide con from_node_id"
+            )
+
+        for neighbor_index, block_match in enumerate(
+            _NEIGHBOR_BLOCK.finditer(payload)
+        ):
+            body = block_match.group("body")
+            node_match = _NEIGHBOR_NODE_ID.search(body)
+            snr_match = _NEIGHBOR_SNR.search(body)
+
+            if node_match is None:
+                raise OzuloMapError(
+                    f"Paquete {index}, veciño {neighbor_index}: "
+                    "falta node_id"
+                )
+
+            if snr_match is None:
+                raise OzuloMapError(
+                    f"Paquete {index}, veciño {neighbor_index}: "
+                    "falta snr"
+                )
+
+            try:
+                observation = make_neighbor_observation(
+                    source=source,
+                    from_source_id=from_node_id,
+                    to_source_id=int(
+                        node_match.group("node_id")
+                    ),
+                    observed_at=imported_at,
+                    snr_db=float(
+                        snr_match.group("snr")
+                    ),
+                )
+            except (TypeError, ValueError) as exc:
+                raise OzuloMapError(
+                    f"Paquete {index}, veciño "
+                    f"{neighbor_index}: {exc}"
+                ) from exc
+
+            identity = (
+                observation.source,
+                observation.from_source_id,
+                observation.to_source_id,
+                observation.observed_at,
+            )
+
+            if identity in seen:
+                continue
+
+            seen.add(identity)
+            observations.append(observation)
+
+    return tuple(
+        sorted(
+            observations,
+            key=lambda observation: (
+                observation.observed_at,
+                observation.from_source_id,
+                observation.to_source_id,
+            ),
+        )
+    )
 
 
 def parse_ozulo_map_edges(

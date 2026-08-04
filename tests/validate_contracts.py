@@ -38,6 +38,10 @@ PAIRS = (
         ROOT / "tests/fixtures/edges.valid.json",
     ),
     (
+        ROOT / "schemas/neighbor-info-v1.schema.json",
+        ROOT / "tests/fixtures/neighbor-info.valid.json",
+    ),
+    (
         ROOT / "schemas/stats-v1.schema.json",
         ROOT / "tests/fixtures/stats.valid.json",
     ),
@@ -126,6 +130,7 @@ def validate_manifest(
     expected_names = {
         "nodes.json",
         "edges.json",
+        "neighbor-info.json",
         "stats.json",
         "meta.json",
         "configuration-warnings.json",
@@ -288,6 +293,45 @@ def validate_edges(document: dict[str, Any]) -> None:
         parse_timestamp(edge["last_seen"])
 
     print("OK semántica: edges.valid.json")
+
+
+def validate_neighbor_info(
+    document: dict[str, Any],
+) -> None:
+    identities: set[tuple[str, str, str, str]] = set()
+
+    for observation in document["observations"]:
+        source = observation["source"]
+        from_id = observation["from_id"]
+        to_id = observation["to_id"]
+        observed_at = observation["observed_at"]
+
+        if from_id == to_id:
+            raise AssertionError(
+                "NeighborInfo non pode observar o propio emisor"
+            )
+
+        identity = (
+            source,
+            from_id,
+            to_id,
+            observed_at,
+        )
+
+        if identity in identities:
+            raise AssertionError(
+                "Observación NeighborInfo duplicada: "
+                f"{identity}"
+            )
+
+        identities.add(identity)
+        parse_timestamp(observed_at)
+
+    parse_timestamp(document["generated_at"])
+
+    print(
+        "OK semántica: neighbor-info.valid.json"
+    )
 
 
 def validate_stats(document: dict[str, Any]) -> None:
@@ -475,6 +519,9 @@ def main() -> int:
     edges = load_json(
         ROOT / "tests/fixtures/edges.valid.json"
     )
+    neighbor_info = load_json(
+        ROOT / "tests/fixtures/neighbor-info.valid.json"
+    )
     stats = load_json(
         ROOT / "tests/fixtures/stats.valid.json"
     )
@@ -489,6 +536,7 @@ def main() -> int:
     validate_manifest(manifest)
     validate_nodes(nodes)
     validate_edges(edges)
+    validate_neighbor_info(neighbor_info)
     validate_stats(stats)
     validate_meta(meta)
     validate_configuration_warnings(warnings)

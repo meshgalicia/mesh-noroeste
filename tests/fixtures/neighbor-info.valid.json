@@ -1,0 +1,22 @@
+{
+  "schema": "mesh-noroeste.data/v1",
+  "generated_at": "2026-08-04T09:35:13Z",
+  "observations": [
+    {
+      "source": "ozulo_map",
+      "network": "meshtastic",
+      "from_id": "meshtastic:!b03c4574",
+      "to_id": "meshtastic:!ad301dc1",
+      "observed_at": "2026-08-03T21:38:04Z",
+      "snr_db": 1.0
+    },
+    {
+      "source": "ozulo_map",
+      "network": "meshtastic",
+      "from_id": "meshtastic:!b03c4574",
+      "to_id": "meshtastic:!ad301dc1",
+      "observed_at": "2026-08-04T03:38:05Z",
+      "snr_db": 4.0
+    }
+  ]
+}

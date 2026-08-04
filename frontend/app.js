@@ -14,6 +14,7 @@ const PUBLIC_CONFIGURATION_WARNINGS_SCHEMA = (
 const DATA_DOCUMENT_NAMES = Object.freeze({
   nodes: "nodes.json",
   edges: "edges.json",
+  neighborInfo: "neighbor-info.json",
   stats: "stats.json",
   meta: "meta.json",
   configurationWarnings: (
@@ -24,6 +25,7 @@ const DATA_DOCUMENT_NAMES = Object.freeze({
 const DATA_DOCUMENT_SCHEMAS = Object.freeze({
   nodes: PUBLIC_DATA_SCHEMA,
   edges: PUBLIC_DATA_SCHEMA,
+  neighborInfo: PUBLIC_DATA_SCHEMA,
   stats: PUBLIC_DATA_SCHEMA,
   meta: PUBLIC_DATA_SCHEMA,
   configurationWarnings: (
@@ -323,6 +325,9 @@ const elements = {
     "#traceroute-age"
   ),
   neighbors: document.querySelector("#neighbors-toggle"),
+  neighborInfo: document.querySelector(
+    "#neighbor-info-toggle"
+  ),
   basemapInputs: Array.from(
     document.querySelectorAll('input[name="basemap"]')
   ),
@@ -1882,6 +1887,39 @@ function addVisibleEdge(edge) {
   }
 }
 
+function addNeighborInfo(observation) {
+  const fromNode = state.nodeById.get(
+    observation.from_id
+  );
+  const toNode = state.nodeById.get(
+    observation.to_id
+  );
+
+  if (!fromNode || !toNode) {
+    return;
+  }
+
+  const selected = edgeTouchesSelectedNode(
+    observation
+  );
+
+  L.polyline(
+    [
+      [fromNode.latitude, fromNode.longitude],
+      [toNode.latitude, toNode.longitude],
+    ],
+    {
+      pane: "routes",
+      renderer: state.renderer,
+      color: selected ? "#9c2f6f" : "#c2255c",
+      weight: selected ? 2.4 : 1.8,
+      opacity: selected ? 0.94 : 0.62,
+      dashArray: "2 6",
+      interactive: false,
+    }
+  ).addTo(state.edgeLayer);
+}
+
 
 function edgeEndpointsAreVisible(edge) {
   return (
@@ -1977,6 +2015,13 @@ function renderVisibleEdges() {
   const candidateEdges = state.edges.filter(
     edgeEndpointsAreVisible
   );
+  const visibleNeighborInfo = (
+    elements.neighborInfo.checked
+      ? state.neighborInfo.filter(
+          edgeEndpointsAreVisible
+        )
+      : []
+  );
   const selectedEdges = candidateEdges.filter(
     edgeTouchesSelectedNode
   );
@@ -1994,6 +2039,10 @@ function renderVisibleEdges() {
     addVisibleEdge(edge);
   }
 
+  for (const observation of visibleNeighborInfo) {
+    addNeighborInfo(observation);
+  }
+
   for (
     const edge of edgesInRenderOrder(selectedEdges)
   ) {
@@ -2001,7 +2050,9 @@ function renderVisibleEdges() {
   }
 
   updateVisibleStatistics(
-    regularEdges.length + selectedEdges.length
+    regularEdges.length
+    + selectedEdges.length
+    + visibleNeighborInfo.length
   );
 }
 
@@ -2910,6 +2961,17 @@ function validateDocuments(documents, manifest) {
   }
 
   if (
+    !Array.isArray(
+      documents.neighborInfo.observations
+    )
+  ) {
+    throw new Error(
+      "neighbor-info.json non contén unha lista "
+      + "de observacións."
+    );
+  }
+
+  if (
     !documents.stats.totals
     || !documents.stats.sources
   ) {
@@ -3690,6 +3752,11 @@ function bindControls() {
     () => applyFilters()
   );
 
+  elements.neighborInfo.addEventListener(
+    "change",
+    () => applyFilters()
+  );
+
   elements.fitMap.addEventListener(
     "click",
     fitVisibleNodes
@@ -3779,6 +3846,7 @@ async function initialize() {
     const [
       nodes,
       edges,
+      neighborInfo,
       stats,
       meta,
       configurationWarnings,
@@ -3788,6 +3856,9 @@ async function initialize() {
       ),
       fetchJson(
         documentUrl(DATA_DOCUMENT_NAMES.edges)
+      ),
+      fetchJson(
+        documentUrl(DATA_DOCUMENT_NAMES.neighborInfo)
       ),
       fetchJson(
         documentUrl(DATA_DOCUMENT_NAMES.stats)
@@ -3805,6 +3876,7 @@ async function initialize() {
     const documents = {
       nodes,
       edges,
+      neighborInfo,
       stats,
       meta,
       configurationWarnings,
@@ -3823,6 +3895,7 @@ async function initialize() {
     state.generatedAt = generatedAt;
     state.nodes = nodes.nodes;
     state.edges = edges.edges;
+    state.neighborInfo = neighborInfo.observations;
     state.stats = stats;
     state.meta = meta;
     state.configurationWarnings = configurationWarnings;

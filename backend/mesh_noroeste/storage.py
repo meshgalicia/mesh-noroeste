@@ -16,8 +16,10 @@ from mesh_noroeste.normalization import canonical_node_id
 from mesh_noroeste.domain import (
     SOURCE_ORDER,
     EdgeObservation,
+    NeighborObservation,
     NodeObservation,
     make_edge_observation,
+    make_neighbor_observation,
     make_observation,
 )
 from mesh_noroeste.normalization import (
@@ -25,7 +27,7 @@ from mesh_noroeste.normalization import (
 )
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 @contextmanager
@@ -138,6 +140,22 @@ def _create_indexes(
             idx_edge_observations_endpoints
         ON edge_observations (
             network,
+            from_source_id,
+            to_source_id
+        );
+
+        CREATE INDEX IF NOT EXISTS
+            idx_neighbor_observations_pair_time
+        ON neighbor_observations (
+            source,
+            from_source_id,
+            to_source_id,
+            observed_at
+        );
+
+        CREATE INDEX IF NOT EXISTS
+            idx_neighbor_observations_endpoints
+        ON neighbor_observations (
             from_source_id,
             to_source_id
         );
@@ -410,6 +428,7 @@ class ObservationStore:
                 2,
                 3,
                 4,
+                5,
                 SCHEMA_VERSION,
             }:
                 raise RuntimeError(
@@ -597,6 +616,59 @@ class ObservationStore:
                     idx_edge_observations_endpoints
                 ON edge_observations (
                     network,
+                    from_source_id,
+                    to_source_id
+                );
+
+                CREATE TABLE IF NOT EXISTS
+                    neighbor_observations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                        source TEXT NOT NULL
+                            CHECK (
+                                source IN (
+                                    'meshview_es',
+                                    'malha_pt',
+                                    'ozulo_map'
+                                )
+                            ),
+
+                        from_source_id TEXT NOT NULL,
+                        to_source_id TEXT NOT NULL,
+                        observed_at TEXT NOT NULL,
+                        snr_db REAL NOT NULL,
+
+                        inserted_at TEXT NOT NULL DEFAULT (
+                            strftime(
+                                '%Y-%m-%dT%H:%M:%SZ',
+                                'now'
+                            )
+                        ),
+
+                        UNIQUE (
+                            source,
+                            from_source_id,
+                            to_source_id,
+                            observed_at
+                        ),
+
+                        CHECK (
+                            from_source_id <> to_source_id
+                        )
+                    );
+
+                CREATE INDEX IF NOT EXISTS
+                    idx_neighbor_observations_pair_time
+                ON neighbor_observations (
+                    source,
+                    from_source_id,
+                    to_source_id,
+                    observed_at
+                );
+
+                CREATE INDEX IF NOT EXISTS
+                    idx_neighbor_observations_endpoints
+                ON neighbor_observations (
                     from_source_id,
                     to_source_id
                 );
@@ -1340,6 +1412,125 @@ class ObservationStore:
             )
 
             return inserted
+
+
+    def save_neighbors(
+        self,
+        observations: Iterable[NeighborObservation],
+    ) -> int:
+        """Garda observacións NeighborInfo e devolve cantas inseriu."""
+
+        received = tuple(observations)
+
+        if not received:
+            return 0
+
+        for observation in received:
+            if not isinstance(
+                observation,
+                NeighborObservation,
+            ):
+                raise TypeError(
+                    "Todas as observacións deben ser "
+                    "NeighborObservation"
+                )
+
+        self.initialize()
+
+        rows = [
+            (
+                observation.source,
+                observation.from_source_id,
+                observation.to_source_id,
+                observation.observed_at,
+                observation.snr_db,
+            )
+            for observation in received
+        ]
+
+        with _open_connection(
+            self.database_path
+        ) as connection:
+            changes_before = connection.total_changes
+
+            connection.executemany(
+                """
+                INSERT OR IGNORE INTO neighbor_observations (
+                    source,
+                    from_source_id,
+                    to_source_id,
+                    observed_at,
+                    snr_db
+                )
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                rows,
+            )
+
+            return (
+                connection.total_changes
+                - changes_before
+            )
+
+
+    def load_all_neighbors(
+        self,
+    ) -> list[NeighborObservation]:
+        """Carga todas as observacións NeighborInfo almacenadas."""
+
+        self.initialize()
+
+        with _open_connection(
+            self.database_path
+        ) as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    source,
+                    from_source_id,
+                    to_source_id,
+                    observed_at,
+                    snr_db
+                FROM neighbor_observations
+                ORDER BY
+                    source ASC,
+                    from_source_id ASC,
+                    to_source_id ASC,
+                    observed_at ASC,
+                    id ASC
+                """
+            )
+
+            return [
+                make_neighbor_observation(
+                    source=row["source"],
+                    from_source_id=row[
+                        "from_source_id"
+                    ],
+                    to_source_id=row[
+                        "to_source_id"
+                    ],
+                    observed_at=row["observed_at"],
+                    snr_db=row["snr_db"],
+                )
+                for row in rows
+            ]
+
+
+    def count_neighbors(self) -> int:
+        """Devolve o número de observacións NeighborInfo."""
+
+        self.initialize()
+
+        with _open_connection(
+            self.database_path
+        ) as connection:
+            return connection.execute(
+                """
+                SELECT COUNT(*)
+                FROM neighbor_observations
+                """
+            ).fetchone()[0]
 
 
     def load_all_edges(

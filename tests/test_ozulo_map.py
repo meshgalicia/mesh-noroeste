@@ -8,6 +8,7 @@ from mesh_noroeste.ozulo_map import (
     OzuloMapError,
     parse_ozulo_map_edges,
     parse_ozulo_map_nodes,
+    parse_ozulo_neighbor_packets,
 )
 
 
@@ -111,6 +112,27 @@ class OzuloMapTests(unittest.TestCase):
             observation.position_updated_at
         )
 
+    def test_precision_without_position_is_omitted(self) -> None:
+        item = node_record()
+        item["latitude"] = None
+        item["longitude"] = None
+        item["altitude"] = None
+        item["precision_bits"] = 13
+
+        observation = parse_ozulo_map_nodes(
+            {"nodes": [item]},
+            source="ozulo_map",
+        )[0]
+
+        self.assertIsNone(observation.latitude)
+        self.assertIsNone(observation.longitude)
+        self.assertIsNone(
+            observation.position_precision_bits
+        )
+        self.assertIsNone(
+            observation.position_updated_at
+        )
+
     def test_invalid_node_root_is_rejected(self) -> None:
         with self.assertRaisesRegex(
             OzuloMapError,
@@ -118,6 +140,146 @@ class OzuloMapTests(unittest.TestCase):
         ):
             parse_ozulo_map_nodes(
                 [],
+                source="ozulo_map",
+            )
+
+    def test_neighbor_packets_preserve_history(self) -> None:
+        observations = parse_ozulo_neighbor_packets(
+            {
+                "latest_import_time": 1_785_814_685,
+                "packets": [
+                    {
+                        "id": 1,
+                        "import_time_us": 1_785_793_084_412_839,
+                        "from_node_id": 2_956_739_956,
+                        "to_node_id": 1,
+                        "portnum": 71,
+                        "payload": (
+                            "node_id: 2956739956\n"
+                            "neighbors {\n"
+                            "  node_id: 2905611713\n"
+                            "  snr: 1.0\n"
+                            "}\n"
+                        ),
+                    },
+                    {
+                        "id": 2,
+                        "import_time_us": 1_785_814_685_059_745,
+                        "from_node_id": 2_956_739_956,
+                        "to_node_id": 1,
+                        "portnum": 71,
+                        "payload": (
+                            "node_id: 2956739956\n"
+                            "neighbors {\n"
+                            "  node_id: 2905611713\n"
+                            "  snr: 4.0\n"
+                            "}\n"
+                            "neighbors {\n"
+                            "  node_id: 899165990\n"
+                            "  snr: 6.75\n"
+                            "}\n"
+                        ),
+                    },
+                ],
+            },
+            source="ozulo_map",
+        )
+
+        self.assertEqual(len(observations), 3)
+        self.assertEqual(
+            [
+                observation.observed_at
+                for observation in observations
+            ],
+            [
+                "2026-08-03T21:38:04Z",
+                "2026-08-04T03:38:05Z",
+                "2026-08-04T03:38:05Z",
+            ],
+        )
+        self.assertEqual(
+            [
+                (
+                    observation.from_source_id,
+                    observation.to_source_id,
+                    observation.snr_db,
+                )
+                for observation in observations
+            ],
+            [
+                ("!b03c4574", "!ad301dc1", 1.0),
+                ("!b03c4574", "!35982f26", 6.75),
+                ("!b03c4574", "!ad301dc1", 4.0),
+            ],
+        )
+
+    def test_duplicate_neighbor_in_packet_is_ignored(
+        self,
+    ) -> None:
+        packet = {
+            "import_time_us": 1_785_814_685_059_745,
+            "from_node_id": 2_956_739_956,
+            "portnum": 71,
+            "payload": (
+                "node_id: 2956739956\n"
+                "neighbors { node_id: 2905611713 snr: 4.0 }\n"
+                "neighbors { node_id: 2905611713 snr: 4.0 }\n"
+            ),
+        }
+
+        observations = parse_ozulo_neighbor_packets(
+            {"packets": [packet]},
+            source="ozulo_map",
+        )
+
+        self.assertEqual(len(observations), 1)
+
+    def test_neighbor_packet_emitter_mismatch_is_rejected(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(
+            OzuloMapError,
+            "non coincide",
+        ):
+            parse_ozulo_neighbor_packets(
+                {
+                    "packets": [{
+                        "import_time_us": (
+                            1_785_814_685_059_745
+                        ),
+                        "from_node_id": 2_956_739_956,
+                        "portnum": 71,
+                        "payload": (
+                            "node_id: 2905611713\n"
+                        ),
+                    }]
+                },
+                source="ozulo_map",
+            )
+
+    def test_neighbor_packet_without_snr_is_rejected(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(
+            OzuloMapError,
+            "falta snr",
+        ):
+            parse_ozulo_neighbor_packets(
+                {
+                    "packets": [{
+                        "import_time_us": (
+                            1_785_814_685_059_745
+                        ),
+                        "from_node_id": 2_956_739_956,
+                        "portnum": 71,
+                        "payload": (
+                            "node_id: 2956739956\n"
+                            "neighbors {\n"
+                            "  node_id: 2905611713\n"
+                            "}\n"
+                        ),
+                    }]
+                },
                 source="ozulo_map",
             )
 

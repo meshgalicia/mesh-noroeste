@@ -5,6 +5,7 @@
   "documents": {
     "nodes.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/nodes.json",
     "edges.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/edges.json",
+    "neighbor-info.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/neighbor-info.json",
     "stats.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/stats.json",
     "meta.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/meta.json",
     "configuration-warnings.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/configuration-warnings.json"

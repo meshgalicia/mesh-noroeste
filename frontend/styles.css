@@ -24,6 +24,7 @@
   --network-meshcore: #675184;
   --traceroute: #5f3dc4;
   --neighbor: #343a40;
+  --neighbor-info: #c2255c;
   --meshtastic-client: #087f5b;
   --meshtastic-client-base: #1261a0;
   --meshtastic-client-mute: #6b4ba1;
@@ -597,6 +598,11 @@ h2 {
 .legend-line.neighbor-line {
   border-top-style: solid;
   border-top-color: var(--neighbor);
+}
+
+.legend-line.neighbor-info-line {
+  border-top-style: dotted;
+  border-top-color: var(--neighbor-info);
 }
 
 .source-status {

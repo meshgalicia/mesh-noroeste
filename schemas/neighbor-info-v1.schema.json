@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mesh Noroeste neighbor-info.json v1",
+  "description": "Histórico público de anuncios NeighborInfo Meshtastic, separado das veciñanzas consolidadas.",
+  "type": "object",
+  "required": [
+    "schema",
+    "generated_at",
+    "observations"
+  ],
+  "properties": {
+    "schema": {
+      "const": "mesh-noroeste.data/v1"
+    },
+    "generated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "observations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/observation"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "node_id": {
+      "type": "string",
+      "pattern": "^meshtastic:![0-9a-f]{8}$"
+    },
+    "observation": {
+      "type": "object",
+      "required": [
+        "source",
+        "network",
+        "from_id",
+        "to_id",
+        "observed_at",
+        "snr_db"
+      ],
+      "properties": {
+        "source": {
+          "enum": [
+            "meshview_es",
+            "malha_pt",
+            "ozulo_map"
+          ]
+        },
+        "network": {
+          "const": "meshtastic"
+        },
+        "from_id": {
+          "$ref": "#/$defs/node_id"
+        },
+        "to_id": {
+          "$ref": "#/$defs/node_id"
+        },
+        "observed_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "snr_db": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

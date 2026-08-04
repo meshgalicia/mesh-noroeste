@@ -27,6 +27,7 @@
       "required": [
         "nodes.json",
         "edges.json",
+        "neighbor-info.json",
         "stats.json",
         "meta.json",
         "configuration-warnings.json"
@@ -39,6 +40,10 @@
         "edges.json": {
           "type": "string",
           "pattern": "^generations/[0-9A-Za-z][0-9A-Za-z.-]*/edges\\.json$"
+        },
+        "neighbor-info.json": {
+          "type": "string",
+          "pattern": "^generations/[0-9A-Za-z][0-9A-Za-z.-]*/neighbor-info\\.json$"
         },
         "stats.json": {
           "type": "string",

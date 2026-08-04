@@ -11,6 +11,7 @@ import unittest
 from mesh_noroeste import storage as storage_module
 from mesh_noroeste.domain import (
     make_edge_observation,
+    make_neighbor_observation,
     make_observation,
 )
 from mesh_noroeste.storage import (
@@ -424,6 +425,106 @@ class EdgeObservationStoreTests(unittest.TestCase):
             "EdgeObservation",
         ):
             self.store.save_edges(
+                [object()]  # type: ignore[list-item]
+            )
+
+
+class NeighborObservationStoreTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary_directory = (
+            tempfile.TemporaryDirectory()
+        )
+        self.addCleanup(
+            self.temporary_directory.cleanup
+        )
+
+        self.store = ObservationStore(
+            Path(self.temporary_directory.name)
+            / "neighbor-observations.db"
+        )
+
+    def observation(
+        self,
+        *,
+        observed_at: str = "2026-08-04T08:41:13Z",
+        snr_db: float = 4.0,
+    ):
+        return make_neighbor_observation(
+            source="ozulo_map",
+            from_source_id="b03c4574",
+            to_source_id="ad301dc1",
+            observed_at=observed_at,
+            snr_db=snr_db,
+        )
+
+    def test_neighbor_round_trip(self) -> None:
+        observation = self.observation()
+
+        inserted = self.store.save_neighbors(
+            [observation]
+        )
+
+        self.assertEqual(inserted, 1)
+        self.assertEqual(
+            self.store.load_all_neighbors(),
+            [observation],
+        )
+        self.assertEqual(
+            self.store.count_neighbors(),
+            1,
+        )
+
+    def test_duplicate_neighbor_is_ignored(self) -> None:
+        observation = self.observation()
+
+        self.assertEqual(
+            self.store.save_neighbors([observation]),
+            1,
+        )
+        self.assertEqual(
+            self.store.save_neighbors([observation]),
+            0,
+        )
+        self.assertEqual(
+            self.store.count_neighbors(),
+            1,
+        )
+
+    def test_neighbor_history_is_preserved(self) -> None:
+        earlier = self.observation(
+            observed_at="2026-08-04T07:00:00Z",
+            snr_db=1.0,
+        )
+        later = self.observation(
+            observed_at="2026-08-04T08:00:00Z",
+            snr_db=6.5,
+        )
+
+        self.assertEqual(
+            self.store.save_neighbors([later, earlier]),
+            2,
+        )
+        self.assertEqual(
+            self.store.load_all_neighbors(),
+            [earlier, later],
+        )
+
+    def test_empty_neighbor_store(self) -> None:
+        self.assertEqual(
+            self.store.load_all_neighbors(),
+            [],
+        )
+        self.assertEqual(
+            self.store.count_neighbors(),
+            0,
+        )
+
+    def test_non_neighbor_object_is_rejected(self) -> None:
+        with self.assertRaisesRegex(
+            TypeError,
+            "NeighborObservation",
+        ):
+            self.store.save_neighbors(
                 [object()]  # type: ignore[list-item]
             )
 

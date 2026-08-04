@@ -18,6 +18,7 @@ from jsonschema import (
 from mesh_noroeste.config import Settings
 from mesh_noroeste.domain import (
     make_edge_observation,
+    make_neighbor_observation,
     make_observation,
 )
 from mesh_noroeste.publication import (
@@ -451,6 +452,110 @@ class PublicationTests(unittest.TestCase):
             0,
         )
 
+    def test_neighbor_info_is_published_as_history(
+        self,
+    ) -> None:
+        earlier = make_neighbor_observation(
+            source="ozulo_map",
+            from_source_id="b03c4574",
+            to_source_id="ad301dc1",
+            observed_at="2026-08-03T21:38:04Z",
+            snr_db=1.0,
+        )
+        later = make_neighbor_observation(
+            source="ozulo_map",
+            from_source_id="b03c4574",
+            to_source_id="ad301dc1",
+            observed_at="2026-08-04T03:38:05Z",
+            snr_db=4.0,
+        )
+        excluded = make_neighbor_observation(
+            source="ozulo_map",
+            from_source_id="b03c4574",
+            to_source_id="35982f26",
+            observed_at="2026-08-04T03:38:05Z",
+            snr_db=6.75,
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            documents = build_public_documents(
+                self.observations(),
+                neighbor_observations=[
+                    later,
+                    earlier,
+                    earlier,
+                    excluded,
+                ],
+                generated_at=(
+                    "2026-08-04T09:35:13Z"
+                ),
+                settings=self.settings(
+                    Path(temporary)
+                ),
+                excluded_node_ids={
+                    "meshtastic:!35982f26",
+                },
+            )
+
+        self.assertEqual(
+            documents["neighbor-info.json"],
+            {
+                "schema": "mesh-noroeste.data/v1",
+                "generated_at": (
+                    "2026-08-04T09:35:13Z"
+                ),
+                "observations": [
+                    {
+                        "source": "ozulo_map",
+                        "network": "meshtastic",
+                        "from_id": (
+                            "meshtastic:!b03c4574"
+                        ),
+                        "to_id": (
+                            "meshtastic:!ad301dc1"
+                        ),
+                        "observed_at": (
+                            "2026-08-03T21:38:04Z"
+                        ),
+                        "snr_db": 1.0,
+                    },
+                    {
+                        "source": "ozulo_map",
+                        "network": "meshtastic",
+                        "from_id": (
+                            "meshtastic:!b03c4574"
+                        ),
+                        "to_id": (
+                            "meshtastic:!ad301dc1"
+                        ),
+                        "observed_at": (
+                            "2026-08-04T03:38:05Z"
+                        ),
+                        "snr_db": 4.0,
+                    },
+                ],
+            },
+        )
+
+    def test_neighbor_info_rejects_wrong_objects(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            with self.assertRaisesRegex(
+                TypeError,
+                "NeighborObservation",
+            ):
+                build_public_documents(
+                    self.observations(),
+                    neighbor_observations=[
+                        object()
+                    ],  # type: ignore[list-item]
+                    generated_at=NOW,
+                    settings=self.settings(
+                        Path(temporary)
+                    ),
+                )
+
     def test_region_bounds_filter_nodes(
         self,
     ) -> None:
@@ -832,6 +937,10 @@ class PublicationTests(unittest.TestCase):
             "edges.json": (
                 project_root
                 / "schemas/edges-v1.schema.json"
+            ),
+            "neighbor-info.json": (
+                project_root
+                / "schemas/neighbor-info-v1.schema.json"
             ),
             "stats.json": (
                 project_root

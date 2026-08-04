@@ -190,6 +190,7 @@ class FrontendStaticTests(unittest.TestCase):
         for filename in (
             "nodes.json",
             "edges.json",
+            "neighbor-info.json",
             "stats.json",
             "meta.json",
             "configuration-warnings.json",
@@ -212,6 +213,57 @@ class FrontendStaticTests(unittest.TestCase):
                     expected,
                     self.javascript,
                 )
+
+    def test_neighbor_info_can_be_shown_on_the_map(
+        self,
+    ) -> None:
+        for expected in (
+            'neighborInfo: "neighbor-info.json"',
+            "DATA_DOCUMENT_NAMES.neighborInfo",
+            "documents.neighborInfo.observations",
+            "state.neighborInfo = neighborInfo.observations",
+            'neighborInfo: document.querySelector(',
+            '"#neighbor-info-toggle"',
+            "function addNeighborInfo(observation)",
+            "state.neighborInfo.filter(",
+            "elements.neighborInfo.checked",
+            "elements.neighborInfo.addEventListener(",
+            'selected ? "#9c2f6f" : "#c2255c"',
+            'dashArray: "2 6"',
+            "visibleNeighborInfo.length",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, self.javascript)
+
+        for expected in (
+            'id="neighbor-info-toggle"',
+            "Mostrar anuncios NeighborInfo",
+            'class="legend-line neighbor-info-line"',
+            "Anuncio NeighborInfo",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, self.html)
+
+        self.assertIn(
+            ".legend-line.neighbor-info-line",
+            self.css,
+        )
+        self.assertIn(
+            "border-top-color: var(--neighbor-info)",
+            self.css,
+        )
+
+    def test_neighbor_info_is_disabled_by_default(
+        self,
+    ) -> None:
+        control = self.html[
+            self.html.index('id="neighbor-info-toggle"'):
+            self.html.index(
+                'class="control-subheading">Capa base'
+            )
+        ]
+
+        self.assertNotIn("checked", control)
 
     def test_configuration_warning_data_are_indexed(
         self,
@@ -297,7 +349,8 @@ class FrontendStaticTests(unittest.TestCase):
             "elements.neighbors.addEventListener(",
             'selected ? "#006d77" : "#343a40"',
             "weight: selected ? 2.6 : 2.2",
-            "regularEdges.length + selectedEdges.length",
+            "regularEdges.length",
+            "selectedEdges.length",
         )
 
         for text in required_javascript:

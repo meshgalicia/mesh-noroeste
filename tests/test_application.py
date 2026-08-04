@@ -24,6 +24,7 @@ from mesh_noroeste.application import (
     MESHVIEW_ES_URL,
     OZULO_MAP_EDGES_URL,
     OZULO_MAP_NODES_URL,
+    OZULO_NEIGHBOR_PACKETS_URL,
     collect_malha_pt,
     collect_meshcore_map,
     collect_meshview_es,
@@ -33,6 +34,7 @@ from mesh_noroeste.application import (
 from mesh_noroeste.config import Settings
 from mesh_noroeste.domain import (
     make_edge_observation,
+    make_neighbor_observation,
     make_observation,
 )
 from mesh_noroeste.exclusions import ExclusionsError
@@ -301,6 +303,28 @@ def ozulo_edges_document() -> dict[str, object]:
                 "edge_type": "traceroute",
                 "last_seen": 1_785_325_865,
                 "snr": 5.75,
+            }
+        ],
+    }
+
+
+def ozulo_neighbor_packets_document() -> dict[str, object]:
+    return {
+        "latest_import_time": 1_785_814_685,
+        "packets": [
+            {
+                "id": 3_396_163_074,
+                "import_time_us": 1_785_814_685_059_745,
+                "from_node_id": 2_956_739_956,
+                "to_node_id": 1,
+                "portnum": 71,
+                "payload": (
+                    "node_id: 2956739956\n"
+                    "neighbors {\n"
+                    "  node_id: 2905611713\n"
+                    "  snr: 4.0\n"
+                    "}\n"
+                ),
             }
         ],
     }
@@ -835,6 +859,9 @@ class ApplicationTests(unittest.TestCase):
             settings = self.settings(root)
             nodes = ozulo_nodes_document()
             edges = ozulo_edges_document()
+            neighbor_packets = (
+                ozulo_neighbor_packets_document()
+            )
 
             fetched_nodes = JsonFetchResult(
                 document=nodes,
@@ -856,6 +883,18 @@ class ApplicationTests(unittest.TestCase):
                     json.dumps(edges).encode("utf-8")
                 ),
             )
+            fetched_neighbor_packets = JsonFetchResult(
+                document=neighbor_packets,
+                requested_url=OZULO_NEIGHBOR_PACKETS_URL,
+                final_url=OZULO_NEIGHBOR_PACKETS_URL,
+                status=200,
+                content_type="application/json",
+                bytes_received=len(
+                    json.dumps(
+                        neighbor_packets
+                    ).encode("utf-8")
+                ),
+            )
 
             timestamps = iter(
                 (
@@ -869,6 +908,7 @@ class ApplicationTests(unittest.TestCase):
                 side_effect=(
                     fetched_nodes,
                     fetched_edges,
+                    fetched_neighbor_packets,
                 ),
             ) as mocked_fetch:
                 result = collect_ozulo_map(
@@ -887,10 +927,11 @@ class ApplicationTests(unittest.TestCase):
                 database_path,
             )
             self.assertEqual(result.source, "ozulo_map")
-            self.assertEqual(result.records_received, 2)
-            self.assertEqual(result.records_inserted, 2)
+            self.assertEqual(result.records_received, 3)
+            self.assertEqual(result.records_inserted, 3)
             self.assertEqual(store.count(), 1)
             self.assertEqual(store.count_edges(), 1)
+            self.assertEqual(store.count_neighbors(), 1)
             self.assertEqual(
                 store.source_statistics()["ozulo_map"],
                 {
@@ -899,7 +940,7 @@ class ApplicationTests(unittest.TestCase):
                     ),
                     "last_error_at": None,
                     "last_error": None,
-                    "records_received": 2,
+                    "records_received": 3,
                 },
             )
             self.assertEqual(
@@ -912,6 +953,11 @@ class ApplicationTests(unittest.TestCase):
                     ),
                     call(
                         OZULO_MAP_EDGES_URL,
+                        timeout=20.0,
+                        max_bytes=20 * 1024 * 1024,
+                    ),
+                    call(
+                        OZULO_NEIGHBOR_PACKETS_URL,
                         timeout=20.0,
                         max_bytes=20 * 1024 * 1024,
                     ),
@@ -1373,6 +1419,11 @@ class ApplicationTests(unittest.TestCase):
                     "parse_ozulo_map_edges",
                     return_value=[edge],
                 ),
+                patch(
+                    "mesh_noroeste.application."
+                    "parse_ozulo_neighbor_packets",
+                    return_value=[],
+                ),
             ):
                 result = collect_ozulo_map(
                     settings=settings,
@@ -1557,9 +1608,21 @@ class ApplicationTests(unittest.TestCase):
                 long_name="Bruma Connection",
             )
 
+            neighbor = make_neighbor_observation(
+                source="ozulo_map",
+                from_source_id="a35b4144",
+                to_source_id="b1234567",
+                observed_at="2026-07-25T11:30:00Z",
+                snr_db=4.5,
+            )
+
             self.assertEqual(
                 store.save([older, newer]),
                 2,
+            )
+            self.assertEqual(
+                store.save_neighbors([neighbor]),
+                1,
             )
 
             result = publish_from_store(
@@ -1606,9 +1669,34 @@ class ApplicationTests(unittest.TestCase):
                 "nodes.json",
             )
 
+            neighbor_document = read_public_document(
+                settings.data_dir,
+                "neighbor-info.json",
+            )
+
             stats_document = read_public_document(
                 settings.data_dir,
                 "stats.json",
+            )
+
+            self.assertEqual(
+                neighbor_document["observations"],
+                [
+                    {
+                        "source": "ozulo_map",
+                        "network": "meshtastic",
+                        "from_id": (
+                            "meshtastic:!a35b4144"
+                        ),
+                        "to_id": (
+                            "meshtastic:!b1234567"
+                        ),
+                        "observed_at": (
+                            "2026-07-25T11:30:00Z"
+                        ),
+                        "snr_db": 4.5,
+                    }
+                ],
             )
 
             self.assertEqual(
