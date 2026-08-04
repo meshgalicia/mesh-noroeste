@@ -8,8 +8,6 @@ código copiado de Meshtastic-es-map ni de otros mapas sin licencia compatible.
 
 ## Licencias
 
-Copyright © 2026 Elena Musk.
-
 El software propio de este repositorio se distribuye bajo la licencia
 [GNU Affero General Public License v3.0 o posterior](LICENSE)
 (`AGPL-3.0-or-later`).
