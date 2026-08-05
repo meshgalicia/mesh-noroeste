@@ -81,7 +81,8 @@
             "meshview_es",
             "malha_pt",
             "ozulo_map",
-            "meshcore_map"
+            "meshcore_map",
+            "meshcore_hub"
           ]
         },
         "from_id": {
@@ -162,7 +163,10 @@
                 "pattern": "^meshcore:"
               },
               "source": {
-                "const": "meshcore_map"
+                "enum": [
+                  "meshcore_map",
+                  "meshcore_hub"
+                ]
               },
               "from_id": {
                 "pattern": "^meshcore:\\S+$"

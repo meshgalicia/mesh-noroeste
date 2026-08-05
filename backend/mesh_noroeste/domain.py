@@ -21,7 +21,13 @@ SOURCE_ORDER = {
     "malha_pt": 1,
     "ozulo_map": 2,
     "meshcore_map": 3,
+    "meshcore_hub": 4,
 }
+
+MESHCORE_SOURCES = frozenset({
+    "meshcore_map",
+    "meshcore_hub",
+})
 
 METRIC_KEYS = (
     "battery_percent",
@@ -372,9 +378,9 @@ def make_neighbor_observation(
             f"Fuente no admitida: {source!r}"
         )
 
-    if normalized_source == "meshcore_map":
+    if normalized_source in MESHCORE_SOURCES:
         raise ValueError(
-            "meshcore_map no pode producir NeighborInfo"
+            "As fontes MeshCore non poden producir NeighborInfo"
         )
 
     normalized_from = normalize_meshtastic_id(
@@ -453,15 +459,15 @@ def make_edge_observation(
 
     if (
         normalized_network == "meshtastic"
-        and normalized_source == "meshcore_map"
+        and normalized_source in MESHCORE_SOURCES
     ):
         raise ValueError(
-            "meshcore_map no es una fuente Meshtastic"
+            f"{normalized_source} no es una fuente Meshtastic"
         )
 
     if (
         normalized_network == "meshcore"
-        and normalized_source != "meshcore_map"
+        and normalized_source not in MESHCORE_SOURCES
     ):
         raise ValueError(
             f"{normalized_source} no es una fuente MeshCore"
@@ -595,15 +601,15 @@ def make_observation(
 
     if (
         normalized_network == "meshtastic"
-        and normalized_source == "meshcore_map"
+        and normalized_source in MESHCORE_SOURCES
     ):
         raise ValueError(
-            "meshcore_map no es una fuente Meshtastic"
+            f"{normalized_source} no es una fuente Meshtastic"
         )
 
     if (
         normalized_network == "meshcore"
-        and normalized_source != "meshcore_map"
+        and normalized_source not in MESHCORE_SOURCES
     ):
         raise ValueError(
             f"{normalized_source} no es una fuente MeshCore"

@@ -29,7 +29,8 @@ detalle en [LICENSES/README.md](LICENSES/README.md).
 ## Objetivos iniciales
 
 - Integrar Meshtastic y MeshCore.
-- Obtener datos de Meshview España, Malha Portugal, Comunidade O Zulo y MeshCore Map.
+- Obtener datos de Meshview España, Malha Portugal, Comunidade O Zulo,
+  MeshCore Map y MeshCore Hub de Mesh Galicia.
 - Normalizar los datos en un formato común.
 - Mantener persistencia histórica regional.
 - Generar datos estáticos para un frontend Leaflet.
@@ -43,7 +44,7 @@ El backend clean-room ya dispone de:
 - persistencia de nodos, conexiones y ejecuciones en SQLite;
 - clientes HTTPS con límites de tiempo y tamaño;
 - adaptadores y colectores para Meshview España, Malha Portugal,
-  Comunidade O Zulo y MeshCore Map;
+  Comunidade O Zulo, MeshCore Map y MeshCore Hub de Mesh Galicia;
 - normalización y persistencia de los traceroutes publicados por Malha;
 - generación de `manifest.json` y de `nodes.json`, `edges.json`,
   `stats.json`, `meta.json` y `configuration-warnings.json` dentro de
@@ -81,6 +82,9 @@ La instalación operativa carga
 `/etc/mesh-noroeste/mesh-noroeste.env`. Este archivo define
 `MESH_EXCLUSIONS_PATH=/etc/mesh-noroeste/exclusions.json`, una lista privada
 fuera de Git que se aplica antes de almacenar y publicar datos.
+Para utilizar MeshCore Hub, el mismo archivo debe definir
+`MESHCORE_HUB_API_READ_KEY`; la clave se mantiene fuera de Git y no se
+incluye en la salida de los comandos.
 
 La lista inicial está vacía. Si el archivo configurado desaparece o contiene
 un JSON inválido, los colectores se detienen antes de descargar o modificar
@@ -151,6 +155,7 @@ Para JavaScript utiliza Node.js o, si no está instalado, Docker.
 .venv/bin/mesh-noroeste collect-malha
 .venv/bin/mesh-noroeste collect-ozulo
 .venv/bin/mesh-noroeste collect-meshcore
+.venv/bin/mesh-noroeste collect-meshcore-hub
 .venv/bin/mesh-noroeste check
 .venv/bin/mesh-noroeste publish
 .venv/bin/mesh-noroeste prune
@@ -183,6 +188,9 @@ También pueden indicarse rutas explícitas:
   --cache-file /ruta/privada/malha-pt.json
 
 .venv/bin/mesh-noroeste collect-meshcore \
+  --database /ruta/mesh-noroeste.db
+
+.venv/bin/mesh-noroeste collect-meshcore-hub \
   --database /ruta/mesh-noroeste.db
 
 .venv/bin/mesh-noroeste publish \

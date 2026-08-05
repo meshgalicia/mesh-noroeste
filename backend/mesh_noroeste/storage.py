@@ -27,7 +27,7 @@ from mesh_noroeste.normalization import (
 )
 
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 @contextmanager
@@ -81,6 +81,14 @@ def _normalize_source(value: str) -> str:
 _LEGACY_SOURCE_CONSTRAINT = re.compile(
     r"'meshview_es'\s*,\s*"
     r"'malha_pt'\s*,\s*"
+    r"'meshcore_map'"
+)
+
+
+_MESHCORE_HUB_SOURCE_CONSTRAINT = re.compile(
+    r"'meshview_es'\s*,\s*"
+    r"'malha_pt'\s*,\s*"
+    r"'ozulo_map'\s*,\s*"
     r"'meshcore_map'"
 )
 
@@ -156,6 +164,14 @@ def _create_indexes(
         CREATE INDEX IF NOT EXISTS
             idx_neighbor_observations_endpoints
         ON neighbor_observations (
+            from_source_id,
+            to_source_id
+        );
+
+        CREATE INDEX IF NOT EXISTS
+            idx_edge_observation_cursors_endpoints
+        ON edge_observation_cursors (
+            network,
             from_source_id,
             to_source_id
         );
@@ -289,6 +305,129 @@ def _migrate_source_constraints(
     if migrated:
         _create_indexes(connection)
 
+
+
+def _migrate_meshcore_hub_source_constraints(
+    connection: sqlite3.Connection,
+) -> None:
+    """Amplía SQLite para admitir a fonte MeshCore Hub."""
+
+    migrated = False
+
+    for table in (
+        "node_observations",
+        "edge_observations",
+        "node_observation_cursors",
+        "edge_observation_cursors",
+        "source_runs",
+    ):
+        row = connection.execute(
+            """
+            SELECT sql
+            FROM sqlite_master
+            WHERE type = 'table'
+              AND name = ?
+            """,
+            (table,),
+        ).fetchone()
+
+        if row is None or row["sql"] is None:
+            raise RuntimeError(
+                f"Falta a táboa SQLite {table}"
+            )
+
+        create_sql = row["sql"]
+
+        if "'meshcore_hub'" in create_sql:
+            continue
+
+        updated_sql, replacements = (
+            _MESHCORE_HUB_SOURCE_CONSTRAINT.subn(
+                (
+                    "'meshview_es', "
+                    "'malha_pt', "
+                    "'ozulo_map', "
+                    "'meshcore_map', "
+                    "'meshcore_hub'"
+                ),
+                create_sql,
+                count=1,
+            )
+        )
+
+        if replacements != 1:
+            raise RuntimeError(
+                "Non se puido engadir MeshCore Hub "
+                f"á restrición de fonte de {table}"
+            )
+
+        temporary = f"{table}_source_v7"
+        quoted_table = _quote_identifier(table)
+        quoted_temporary = _quote_identifier(
+            temporary
+        )
+
+        connection.execute(
+            f"DROP TABLE IF EXISTS {quoted_temporary}"
+        )
+
+        temporary_sql, renamed = (
+            _CREATE_TABLE_HEAD.subn(
+                f"CREATE TABLE {quoted_temporary}",
+                updated_sql,
+                count=1,
+            )
+        )
+
+        if renamed != 1:
+            raise RuntimeError(
+                "Non se puido preparar a migración "
+                f"de {table}"
+            )
+
+        connection.execute(temporary_sql)
+
+        columns = [
+            item["name"]
+            for item in connection.execute(
+                f"PRAGMA table_info({quoted_table})"
+            )
+        ]
+
+        if not columns:
+            raise RuntimeError(
+                f"A táboa {table} non ten columnas"
+            )
+
+        column_list = ", ".join(
+            _quote_identifier(column)
+            for column in columns
+        )
+
+        connection.execute(
+            f"""
+            INSERT INTO {quoted_temporary} (
+                {column_list}
+            )
+            SELECT
+                {column_list}
+            FROM {quoted_table}
+            """
+        )
+        connection.execute(
+            f"DROP TABLE {quoted_table}"
+        )
+        connection.execute(
+            f"""
+            ALTER TABLE {quoted_temporary}
+            RENAME TO {quoted_table}
+            """
+        )
+
+        migrated = True
+
+    if migrated:
+        _create_indexes(connection)
 
 def _populate_observation_cursors(
     connection: sqlite3.Connection,
@@ -429,6 +568,7 @@ class ObservationStore:
                 3,
                 4,
                 5,
+                6,
                 SCHEMA_VERSION,
             }:
                 raise RuntimeError(
@@ -458,7 +598,8 @@ class ObservationStore:
                                 'meshview_es',
                                 'malha_pt',
                                 'ozulo_map',
-                                'meshcore_map'
+                                'meshcore_map',
+                                'meshcore_hub'
                             )
                         ),
 
@@ -547,7 +688,8 @@ class ObservationStore:
                                 'meshview_es',
                                 'malha_pt',
                                 'ozulo_map',
-                                'meshcore_map'
+                                'meshcore_map',
+                                'meshcore_hub'
                             )
                         ),
 
@@ -681,7 +823,8 @@ class ObservationStore:
                                     'meshview_es',
                                     'malha_pt',
                                     'ozulo_map',
-                                    'meshcore_map'
+                                    'meshcore_map',
+                                    'meshcore_hub'
                                 )
                             ),
 
@@ -703,7 +846,8 @@ class ObservationStore:
                                     'meshview_es',
                                     'malha_pt',
                                     'ozulo_map',
-                                    'meshcore_map'
+                                    'meshcore_map',
+                                    'meshcore_hub'
                                 )
                             ),
 
@@ -749,7 +893,8 @@ class ObservationStore:
                                 'meshview_es',
                                 'malha_pt',
                                 'ozulo_map',
-                                'meshcore_map'
+                                'meshcore_map',
+                                'meshcore_hub'
                             )
                         ),
 
@@ -816,6 +961,9 @@ class ObservationStore:
                 )
 
             _migrate_source_constraints(
+                connection
+            )
+            _migrate_meshcore_hub_source_constraints(
                 connection
             )
 

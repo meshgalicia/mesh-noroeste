@@ -14,6 +14,8 @@ from unittest.mock import ANY, patch
 from mesh_noroeste.application import (
     CollectionResult,
     MALHA_PT_URL,
+    MESHCORE_HUB_NODES_URL,
+    MESHCORE_HUB_PAGE_SIZE,
     MESHCORE_MAP_URL,
     MESHVIEW_ES_URL,
     OZULO_MAP_EDGES_URL,
@@ -676,6 +678,193 @@ class CommandLineTests(unittest.TestCase):
                 arguments["edges_url"],
                 OZULO_MAP_EDGES_URL,
             )
+
+    def test_collect_meshcore_hub_reports_success(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            database_path = root / "custom.db"
+            standard_output = StringIO()
+            source_url = (
+                "https://example.test/api/v1/nodes"
+            )
+
+            collection_result = CollectionResult(
+                database_path=database_path.resolve(),
+                source="meshcore_hub",
+                requested_url=(
+                    source_url + "?limit=50&offset=0"
+                ),
+                final_url=(
+                    source_url + "?limit=50&offset=50"
+                ),
+                bytes_received=6400,
+                records_received=75,
+                records_inserted=70,
+            )
+
+            environment = self.environment(root)
+            environment[
+                "MESHCORE_HUB_API_READ_KEY"
+            ] = "read-secret"
+
+            with patch.dict(
+                os.environ,
+                environment,
+                clear=True,
+            ):
+                with patch(
+                    "mesh_noroeste.cli."
+                    "collect_meshcore_hub",
+                    return_value=collection_result,
+                ) as mocked_collect:
+                    with redirect_stdout(
+                        standard_output
+                    ):
+                        result = main(
+                            [
+                                "collect-meshcore-hub",
+                                "--database",
+                                str(database_path),
+                                "--url",
+                                source_url,
+                                "--page-size",
+                                "50",
+                                "--timeout",
+                                "7.5",
+                                "--max-bytes",
+                                "18000000",
+                            ]
+                        )
+
+            response = json.loads(
+                standard_output.getvalue()
+            )
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                response,
+                {
+                    "status": "ok",
+                    "source": "meshcore_hub",
+                    "database": str(
+                        database_path.resolve()
+                    ),
+                    "requested_url": (
+                        source_url
+                        + "?limit=50&offset=0"
+                    ),
+                    "final_url": (
+                        source_url
+                        + "?limit=50&offset=50"
+                    ),
+                    "bytes_received": 6400,
+                    "records_received": 75,
+                    "records_inserted": 70,
+                },
+            )
+
+            mocked_collect.assert_called_once_with(
+                settings=ANY,
+                api_read_key="read-secret",
+                database_path=database_path,
+                url=source_url,
+                page_size=50,
+                timeout=7.5,
+                max_bytes=18000000,
+            )
+
+    def test_collect_meshcore_hub_uses_defaults(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+
+            collection_result = CollectionResult(
+                database_path=(
+                    root / "state" / "mesh-noroeste.db"
+                ).resolve(),
+                source="meshcore_hub",
+                requested_url=MESHCORE_HUB_NODES_URL,
+                final_url=MESHCORE_HUB_NODES_URL,
+                bytes_received=1,
+                records_received=0,
+                records_inserted=0,
+            )
+
+            environment = self.environment(root)
+            environment[
+                "MESHCORE_HUB_API_READ_KEY"
+            ] = "read-secret"
+
+            with patch.dict(
+                os.environ,
+                environment,
+                clear=True,
+            ):
+                with patch(
+                    "mesh_noroeste.cli."
+                    "collect_meshcore_hub",
+                    return_value=collection_result,
+                ) as mocked_collect:
+                    with redirect_stdout(StringIO()):
+                        result = main(
+                            ["collect-meshcore-hub"]
+                        )
+
+            self.assertEqual(result, 0)
+
+            arguments = mocked_collect.call_args.kwargs
+
+            self.assertEqual(
+                arguments["api_read_key"],
+                "read-secret",
+            )
+            self.assertEqual(
+                arguments["url"],
+                MESHCORE_HUB_NODES_URL,
+            )
+            self.assertEqual(
+                arguments["page_size"],
+                MESHCORE_HUB_PAGE_SIZE,
+            )
+            self.assertIsNone(
+                arguments["database_path"]
+            )
+
+    def test_collect_meshcore_hub_requires_key(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            standard_error = StringIO()
+
+            with patch.dict(
+                os.environ,
+                self.environment(root),
+                clear=True,
+            ):
+                with patch(
+                    "mesh_noroeste.cli."
+                    "collect_meshcore_hub"
+                ) as mocked_collect:
+                    with redirect_stderr(
+                        standard_error
+                    ):
+                        result = main(
+                            ["collect-meshcore-hub"]
+                        )
+
+            self.assertEqual(result, 2)
+            self.assertIn(
+                (
+                    "ERROR: MESHCORE_HUB_API_READ_KEY "
+                    "non está configurada"
+                ),
+                standard_error.getvalue(),
+            )
+            mocked_collect.assert_not_called()
 
     def test_collect_meshcore_reports_success(
         self,

@@ -42,7 +42,8 @@
         "meshview_es",
         "malha_pt",
         "ozulo_map",
-        "meshcore_map"
+        "meshcore_map",
+        "meshcore_hub"
       ],
       "properties": {
         "meshview_es": {
@@ -55,6 +56,9 @@
           "$ref": "#/$defs/source_stats"
         },
         "meshcore_map": {
+          "$ref": "#/$defs/source_stats"
+        },
+        "meshcore_hub": {
           "$ref": "#/$defs/source_stats"
         }
       },

@@ -261,7 +261,8 @@ Se muestra la última actualización correcta conocida de:
 - Meshview España;
 - Malha Portugal;
 - Comunidade O Zulo;
-- MeshCore Map.
+- MeshCore Map;
+- MeshCore Hub de Mesh Galicia.
 
 ### Avisos de configuración
 

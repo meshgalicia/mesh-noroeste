@@ -63,6 +63,65 @@ class ObservationTests(unittest.TestCase):
                 observed_at=NOW,
             )
 
+    def test_meshcore_hub_observation_is_accepted(
+        self,
+    ) -> None:
+        observation = make_observation(
+            source="meshcore_hub",
+            network="meshcore",
+            source_id="02ab34cd",
+            observed_at=NOW,
+            node_type="repeater",
+        )
+
+        self.assertEqual(
+            observation.source,
+            "meshcore_hub",
+        )
+        self.assertEqual(
+            observation.id,
+            "meshcore:02ab34cd",
+        )
+
+    def test_meshcore_hub_cannot_produce_meshtastic(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            "no es una fuente Meshtastic",
+        ):
+            make_observation(
+                source="meshcore_hub",
+                network="meshtastic",
+                source_id="a35b4144",
+                observed_at=NOW,
+            )
+
+    def test_meshcore_hub_edge_is_accepted(
+        self,
+    ) -> None:
+        observation = make_edge_observation(
+            source="meshcore_hub",
+            network="meshcore",
+            from_source_id="02ab34cd",
+            to_source_id="03ef5678",
+            edge_type="observed",
+            directed=False,
+            observed_at=NOW,
+            metrics={
+                "snr_db": -4.25,
+            },
+        )
+
+        self.assertEqual(
+            observation.source,
+            "meshcore_hub",
+        )
+        self.assertEqual(
+            observation.metrics["snr_db"],
+            -4.25,
+        )
+
     def test_position_requires_timestamp(self) -> None:
         with self.assertRaisesRegex(
             ValueError,

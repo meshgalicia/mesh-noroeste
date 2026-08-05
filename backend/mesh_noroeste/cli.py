@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timedelta, timezone
 import json
+import os
 from pathlib import Path
 import sqlite3
 import sys
@@ -12,11 +13,14 @@ from typing import Sequence
 
 from mesh_noroeste.application import (
     MALHA_PT_URL,
+    MESHCORE_HUB_NODES_URL,
+    MESHCORE_HUB_PAGE_SIZE,
     MESHCORE_MAP_URL,
     MESHVIEW_ES_URL,
     OZULO_MAP_EDGES_URL,
     OZULO_MAP_NODES_URL,
     collect_malha_pt,
+    collect_meshcore_hub,
     collect_meshcore_map,
     collect_meshview_es,
     collect_ozulo_map,
@@ -342,6 +346,60 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    hub_parser = subparsers.add_parser(
+        "collect-meshcore-hub",
+        help=(
+            "Descarga e almacena os nodos publicados "
+            "polo MeshCore Hub propio."
+        ),
+    )
+
+    hub_parser.add_argument(
+        "--database",
+        type=Path,
+        default=None,
+        help=(
+            "Ruta da base SQLite. "
+            "Por defecto: MESH_STATE_DIR/mesh-noroeste.db"
+        ),
+    )
+
+    hub_parser.add_argument(
+        "--url",
+        default=MESHCORE_HUB_NODES_URL,
+        help="URL HTTPS da API de nodos do Hub.",
+    )
+
+    hub_parser.add_argument(
+        "--page-size",
+        type=int,
+        default=MESHCORE_HUB_PAGE_SIZE,
+        help=(
+            "Número de nodos solicitado por páxina. "
+            f"Por defecto: {MESHCORE_HUB_PAGE_SIZE}."
+        ),
+    )
+
+    hub_parser.add_argument(
+        "--timeout",
+        type=float,
+        default=DEFAULT_TIMEOUT_SECONDS,
+        help=(
+            "Tempo máximo de espera HTTP en segundos. "
+            f"Por defecto: {DEFAULT_TIMEOUT_SECONDS:g}"
+        ),
+    )
+
+    hub_parser.add_argument(
+        "--max-bytes",
+        type=int,
+        default=DEFAULT_MAX_BYTES,
+        help=(
+            "Tamaño máximo permitido por páxina. "
+            f"Por defecto: {DEFAULT_MAX_BYTES} bytes."
+        ),
+    )
+
     purge_node_parser = subparsers.add_parser(
         "purge-node",
         help=(
@@ -573,6 +631,46 @@ def _collect_meshcore(
         settings=settings,
         database_path=args.database,
         url=args.url,
+        timeout=args.timeout,
+        max_bytes=args.max_bytes,
+    )
+
+    response = {
+        "status": "ok",
+        "source": result.source,
+        "database": str(result.database_path),
+        "requested_url": result.requested_url,
+        "final_url": result.final_url,
+        "bytes_received": result.bytes_received,
+        "records_received": result.records_received,
+        "records_inserted": result.records_inserted,
+    }
+
+    _print_response(response, compact=args.compact)
+
+    return 0
+
+
+def _collect_meshcore_hub(
+    args: argparse.Namespace,
+    settings: Settings,
+) -> int:
+    api_read_key = os.environ.get(
+        "MESHCORE_HUB_API_READ_KEY",
+        "",
+    ).strip()
+
+    if not api_read_key:
+        raise ValueError(
+            "MESHCORE_HUB_API_READ_KEY non está configurada"
+        )
+
+    result = collect_meshcore_hub(
+        settings=settings,
+        api_read_key=api_read_key,
+        database_path=args.database,
+        url=args.url,
+        page_size=args.page_size,
         timeout=args.timeout,
         max_bytes=args.max_bytes,
     )
@@ -826,6 +924,9 @@ def main(
 
         if args.command == "collect-meshcore":
             return _collect_meshcore(args, settings)
+
+        if args.command == "collect-meshcore-hub":
+            return _collect_meshcore_hub(args, settings)
 
         if args.command == "publish":
             return _publish(args, settings)

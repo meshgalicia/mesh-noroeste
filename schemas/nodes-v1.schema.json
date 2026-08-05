@@ -56,7 +56,8 @@
         "meshview_es",
         "malha_pt",
         "ozulo_map",
-        "meshcore_map"
+        "meshcore_map",
+        "meshcore_hub"
       ]
     },
     "source_ids": {
@@ -82,6 +83,11 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 256
+        },
+        "meshcore_hub": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
         }
       },
       "additionalProperties": false
@@ -100,6 +106,9 @@
           "$ref": "#/$defs/timestamp"
         },
         "meshcore_map": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "meshcore_hub": {
           "$ref": "#/$defs/timestamp"
         }
       },

@@ -30,7 +30,8 @@ el proyecto:
 - Meshview España;
 - Malha Portugal;
 - O Zulo;
-- MeshCore Map.
+- MeshCore Map;
+- MeshCore Hub de Mesh Galicia.
 
 Cada dato publicado deberá conservar información suficiente para indicar su
 procedencia.
@@ -98,7 +99,7 @@ Los cursores técnicos de deduplicación no son observaciones publicables.
 
 ## Retención interna objetivo
 
-La política está implementada y desplegada sobre el esquema SQLite 5.
+La política está implementada y desplegada sobre el esquema SQLite 7.
 
 Las observaciones completas de nodos y conexiones se conservan durante un
 máximo de 30 días. Cuando una observación supera ese plazo, la poda elimina la
@@ -281,7 +282,7 @@ Ya existe:
 - publicación limitada por ventanas de 24 horas, 7 días y 30 días;
 - retención absoluta de 30 días para observaciones completas;
 - cursores mínimos de deduplicación para nodos y conexiones;
-- migración y despliegue del esquema SQLite 5;
+- migración y despliegue del esquema SQLite 7;
 - poda diaria bajo el mismo bloqueo operativo que los colectores;
 - comprobación de integridad SQLite;
 - backup diario consistente y compactado mediante `VACUUM INTO` de SQLite;

@@ -161,6 +161,54 @@ def _validated_accept(value: str) -> str:
     return normalized
 
 
+
+def _validated_headers(
+    headers: dict[str, str] | None,
+) -> dict[str, str]:
+    if headers is None:
+        return {}
+
+    if not isinstance(headers, dict):
+        raise TypeError(
+            "Las cabeceras deben ser un diccionario"
+        )
+
+    normalized: dict[str, str] = {}
+
+    for name, value in headers.items():
+        if not isinstance(name, str):
+            raise TypeError(
+                "El nombre de la cabecera debe ser texto"
+            )
+
+        if not isinstance(value, str):
+            raise TypeError(
+                "El valor de la cabecera debe ser texto"
+            )
+
+        name = name.strip()
+        value = value.strip()
+
+        if not name:
+            raise ValueError(
+                "El nombre de una cabecera no puede estar vacío"
+            )
+
+        if (
+            "\r" in name
+            or "\n" in name
+            or "\r" in value
+            or "\n" in value
+        ):
+            raise ValueError(
+                "Una cabecera HTTP no puede contener saltos de línea"
+            )
+
+        normalized[name] = value
+
+    return normalized
+
+
 def _content_length(response: Any) -> int | None:
     raw_value = response.headers.get("Content-Length")
 
@@ -229,6 +277,7 @@ def fetch_bytes(
     max_bytes: int = DEFAULT_MAX_BYTES,
     user_agent: str = DEFAULT_USER_AGENT,
     accept: str = "application/octet-stream",
+    headers: dict[str, str] | None = None,
 ) -> BinaryFetchResult:
     """Obtiene un documento binario mediante HTTPS."""
 
@@ -241,13 +290,17 @@ def fetch_bytes(
         user_agent
     )
     normalized_accept = _validated_accept(accept)
+    normalized_headers = _validated_headers(headers)
+
+    request_headers = {
+        "Accept": normalized_accept,
+        "User-Agent": normalized_user_agent,
+    }
+    request_headers.update(normalized_headers)
 
     request = Request(
         requested_url,
-        headers={
-            "Accept": normalized_accept,
-            "User-Agent": normalized_user_agent,
-        },
+        headers=request_headers,
         method="GET",
     )
 
@@ -321,6 +374,7 @@ def fetch_json(
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     max_bytes: int = DEFAULT_MAX_BYTES,
     user_agent: str = DEFAULT_USER_AGENT,
+    headers: dict[str, str] | None = None,
 ) -> JsonFetchResult:
     """Obtiene y decodifica un documento JSON mediante HTTPS."""
 
@@ -329,6 +383,7 @@ def fetch_json(
         timeout=timeout,
         max_bytes=max_bytes,
         user_agent=user_agent,
+        headers=headers,
         accept=(
             "application/json, "
             "application/geo+json, "

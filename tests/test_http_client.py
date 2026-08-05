@@ -106,6 +106,135 @@ class HttpClientTests(unittest.TestCase):
             "Mesh-Noroeste-Test/1.0",
         )
 
+    def test_authorization_header_is_forwarded(
+        self,
+    ) -> None:
+        response = FakeResponse(
+            b"{}",
+            content_length=2,
+        )
+
+        with patch(
+            "mesh_noroeste.http_client.urlopen",
+            return_value=response,
+        ) as mocked_open:
+            fetch_json(
+                "https://example.test/data.json",
+                headers={
+                    "Authorization": "Bearer abc123",
+                },
+            )
+
+        request = mocked_open.call_args.args[0]
+
+        self.assertEqual(
+            request.get_header("Authorization"),
+            "Bearer abc123",
+        )
+
+    def test_multiple_headers_are_forwarded(
+        self,
+    ) -> None:
+        response = FakeResponse(
+            b"{}",
+            content_length=2,
+        )
+
+        with patch(
+            "mesh_noroeste.http_client.urlopen",
+            return_value=response,
+        ) as mocked_open:
+            fetch_json(
+                "https://example.test/data.json",
+                headers={
+                    "Authorization": "Bearer token",
+                    "Accept": "application/vnd.meshcore+json",
+                    "X-Test": "Mesh-Noroeste",
+                },
+            )
+
+        request = mocked_open.call_args.args[0]
+
+        self.assertEqual(
+            request.get_header("Authorization"),
+            "Bearer token",
+        )
+        self.assertEqual(
+            request.get_header("Accept"),
+            "application/vnd.meshcore+json",
+        )
+        self.assertEqual(
+            request.get_header("X-test"),
+            "Mesh-Noroeste",
+        )
+
+    def test_headers_are_forwarded_by_fetch_bytes(
+        self,
+    ) -> None:
+        response = FakeResponse(
+            b"payload",
+            content_length=7,
+        )
+
+        with patch(
+            "mesh_noroeste.http_client.urlopen",
+            return_value=response,
+        ) as mocked_open:
+            fetch_bytes(
+                "https://example.test/data.bin",
+                headers={
+                    "Authorization": "Bearer binary-token",
+                },
+            )
+
+        request = mocked_open.call_args.args[0]
+
+        self.assertEqual(
+            request.get_header("Authorization"),
+            "Bearer binary-token",
+        )
+
+    def test_header_name_with_newline_is_rejected(
+        self,
+    ) -> None:
+        with patch(
+            "mesh_noroeste.http_client.urlopen",
+        ) as mocked_open:
+            with self.assertRaisesRegex(
+                ValueError,
+                "cabecera HTTP",
+            ):
+                fetch_json(
+                    "https://example.test/data.json",
+                    headers={
+                        "Bad\nHeader": "value",
+                    },
+                )
+
+        mocked_open.assert_not_called()
+
+    def test_header_value_with_newline_is_rejected(
+        self,
+    ) -> None:
+        with patch(
+            "mesh_noroeste.http_client.urlopen",
+        ) as mocked_open:
+            with self.assertRaisesRegex(
+                ValueError,
+                "cabecera HTTP",
+            ):
+                fetch_json(
+                    "https://example.test/data.json",
+                    headers={
+                        "Authorization": (
+                            "Bearer abc\r\n"
+                            "X-Test: injected"
+                        ),
+                    },
+                )
+
+        mocked_open.assert_not_called()
+
     def test_non_https_url_is_rejected(self) -> None:
         with self.assertRaisesRegex(
             ValueError,

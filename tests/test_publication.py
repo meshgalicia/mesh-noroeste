@@ -190,6 +190,12 @@ class PublicationTests(unittest.TestCase):
             ],
             1,
         )
+        self.assertEqual(
+            stats["sources"]["meshcore_hub"][
+                "records_received"
+            ],
+            0,
+        )
 
 
     def test_exclusions_remove_nodes_edges_stats_and_warnings(
@@ -761,6 +767,14 @@ class PublicationTests(unittest.TestCase):
                 "last_error": None,
                 "records_received": 52326,
             },
+            "meshcore_hub": {
+                "last_success": (
+                    "2026-07-25T11:59:30Z"
+                ),
+                "last_error_at": None,
+                "last_error": None,
+                "records_received": 75,
+            },
         }
 
         with tempfile.TemporaryDirectory() as temporary:
@@ -812,6 +826,14 @@ class PublicationTests(unittest.TestCase):
                     "last_error": None,
                     "records_received": 52326,
                 },
+            "meshcore_hub": {
+                "last_success": (
+                    "2026-07-25T11:59:30Z"
+                ),
+                "last_error_at": None,
+                "last_error": None,
+                "records_received": 75,
+            },
             },
         )
 

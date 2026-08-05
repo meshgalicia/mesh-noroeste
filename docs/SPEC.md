@@ -14,6 +14,7 @@ El mapa debe admitir tres modos:
 - Malha Portugal
 - Comunidade O Zulo
 - MeshCore Map
+- MeshCore Hub de Mesh Galicia
 
 Solo se acreditarán fuentes realmente utilizadas.
 
@@ -26,6 +27,8 @@ Estado actual:
 
 - `meshcore_map`: colector implementado y probado contra el documento
   público compacto de MeshCore Map;
+- `meshcore_hub`: colector autenticado y paginado para los nodos de
+  MeshCore Hub de Mesh Galicia;
 - `meshview_es`: colector implementado y probado contra la API pública
   de nodos de Meshview España;
 - `malha_pt`: adaptador, cliente HTTP y colector implementados para los
@@ -48,8 +51,10 @@ Los colectores implementados:
 5. registran el inicio, el éxito o el error de la ejecución;
 6. conservan los últimos datos válidos si una ejecución posterior falla.
 
-Meshview España, Malha Portugal y Comunidade O Zulo se consumen como
-JSON. MeshCore Map se solicita en su formato MessagePack compacto.
+Meshview España, Malha Portugal, Comunidade O Zulo y MeshCore Hub se
+consumen como JSON. MeshCore Map se solicita en su formato MessagePack
+compacto. MeshCore Hub requiere una clave de lectura y pagina la respuesta
+mediante `limit` y `offset`.
 
 Malha aporta nodos y traceroutes dirigidos. Ambos se normalizan y persisten
 en SQLite. Los `packet_links` no forman parte de la integración inicial por
@@ -105,6 +110,7 @@ mesh-noroeste collect-meshview
 mesh-noroeste collect-malha
 mesh-noroeste collect-ozulo
 mesh-noroeste collect-meshcore
+mesh-noroeste collect-meshcore-hub
 mesh-noroeste check
 mesh-noroeste publish
 mesh-noroeste prune
@@ -127,8 +133,10 @@ publica como análisis no disponible y no bloquea los datos principales.
 Los colectores cargan
 `/etc/mesh-noroeste/mesh-noroeste.env` mediante `EnvironmentFile`. Esta
 configuración define `MESH_EXCLUSIONS_PATH` y apunta a una lista privada fuera
-de Git. Si el archivo falta o no supera la validación, la recolección se
-detiene antes de descargar o modificar SQLite.
+de Git. También contiene `MESHCORE_HUB_API_READ_KEY` cuando se activa el
+colector autenticado del Hub. Ninguna de estas configuraciones forma parte de
+Git. Si la lista de exclusiones falta o no supera la validación, la
+recolección se detiene antes de descargar o modificar SQLite.
 
 Cada actualización correcta:
 

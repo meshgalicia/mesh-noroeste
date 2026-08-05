@@ -51,6 +51,12 @@
       "last_error_at": null,
       "last_error": null,
       "records_received": 50
+    },
+    "meshcore_hub": {
+      "last_success": "2026-07-25T11:59:30Z",
+      "last_error_at": null,
+      "last_error": null,
+      "records_received": 25
     }
   }
 }

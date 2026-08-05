@@ -77,6 +77,13 @@ class DeploymentConfigurationTests(unittest.TestCase):
             / "mesh-noroeste-ozulo.timer"
         ).read_text(encoding="utf-8")
 
+        self.meshcore_hub_timer = (
+            ROOT
+            / "deploy"
+            / "systemd"
+            / "mesh-noroeste-meshcore-hub.timer"
+        ).read_text(encoding="utf-8")
+
         self.analysis_script_path = (
             ROOT
             / "scripts"
@@ -194,6 +201,33 @@ class DeploymentConfigurationTests(unittest.TestCase):
         self.assertIn(
             "Unit=mesh-noroeste-update@ozulo.service",
             self.ozulo_timer,
+        )
+
+    def test_meshcore_hub_updates_are_declared(
+        self,
+    ) -> None:
+        self.assertIn(
+            "meshview|malha|ozulo|meshcore|meshcore-hub",
+            self.update_script,
+        )
+        self.assertIn(
+            '"collect-$mode"',
+            self.update_script,
+        )
+        self.assertIn(
+            "OnUnitActiveSec=5min",
+            self.meshcore_hub_timer,
+        )
+        self.assertIn(
+            "Persistent=true",
+            self.meshcore_hub_timer,
+        )
+        self.assertIn(
+            (
+                "Unit=mesh-noroeste-update@"
+                "meshcore-hub.service"
+            ),
+            self.meshcore_hub_timer,
         )
 
     def test_configuration_warnings_are_deployed(

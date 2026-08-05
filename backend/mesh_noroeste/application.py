@@ -9,6 +9,12 @@ import json
 from pathlib import Path
 import time
 from typing import Any, Mapping
+from urllib.parse import (
+    parse_qsl,
+    urlencode,
+    urlsplit,
+    urlunsplit,
+)
 
 from mesh_noroeste import __version__
 from mesh_noroeste.config import Settings
@@ -37,6 +43,10 @@ from mesh_noroeste.malha_http import (
 from mesh_noroeste.malha_pt import (
     parse_malha_pt,
     parse_malha_pt_traceroutes,
+)
+from mesh_noroeste.meshcore_hub import (
+    MeshCoreHubError,
+    parse_meshcore_hub_nodes,
 )
 from mesh_noroeste.meshcore_map import (
     parse_meshcore_map,
@@ -91,6 +101,11 @@ MESHCORE_MAP_URL = (
     "nodes?binary=1&short=1"
 )
 MESHCORE_MAP_ACCEPT = "application/msgpack"
+
+MESHCORE_HUB_NODES_URL = (
+    "https://hub.mesh.gal/api/v1/nodes"
+)
+MESHCORE_HUB_PAGE_SIZE = 100
 
 MESHVIEW_RETRY_DELAYS = (1.0, 3.0)
 MESHVIEW_TRANSIENT_HTTP_CODES = (
@@ -152,6 +167,135 @@ def _fetch_meshview_json(
         "O bucle de reintentos de Meshview rematou "
         "sen resultado."
     )
+
+
+def _meshcore_hub_api_key(value: str) -> str:
+    if not isinstance(value, str):
+        raise TypeError(
+            "api_read_key debe ser texto"
+        )
+
+    normalized = value.strip()
+
+    if not normalized:
+        raise ValueError(
+            "api_read_key non pode estar baleira"
+        )
+
+    if "\r" in normalized or "\n" in normalized:
+        raise ValueError(
+            "api_read_key non pode conter "
+            "saltos de liña"
+        )
+
+    return normalized
+
+
+def _meshcore_hub_page_url(
+    url: str,
+    *,
+    limit: int,
+    offset: int,
+) -> str:
+    if isinstance(limit, bool) or not isinstance(limit, int):
+        raise TypeError(
+            "page_size debe ser un enteiro"
+        )
+
+    if limit < 1:
+        raise ValueError(
+            "page_size debe ser maior que cero"
+        )
+
+    if isinstance(offset, bool) or not isinstance(offset, int):
+        raise TypeError(
+            "offset debe ser un enteiro"
+        )
+
+    if offset < 0:
+        raise ValueError(
+            "offset non pode ser negativo"
+        )
+
+    parsed = urlsplit(url)
+
+    parameters = [
+        (name, value)
+        for name, value in parse_qsl(
+            parsed.query,
+            keep_blank_values=True,
+        )
+        if name not in {"limit", "offset"}
+    ]
+    parameters.extend(
+        (
+            ("limit", str(limit)),
+            ("offset", str(offset)),
+        )
+    )
+
+    return urlunsplit(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            urlencode(parameters),
+            parsed.fragment,
+        )
+    )
+
+
+def _meshcore_hub_page_total(
+    document: Any,
+    *,
+    expected_offset: int,
+    records_received: int,
+) -> int:
+    if not isinstance(document, Mapping):
+        raise MeshCoreHubError(
+            "A raíz de MeshCore Hub debe ser un obxecto"
+        )
+
+    values: dict[str, int] = {}
+
+    for field in ("limit", "offset", "total"):
+        value = document.get(field)
+
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise MeshCoreHubError(
+                f"O campo {field!r} debe ser un enteiro"
+            )
+
+        values[field] = value
+
+    if values["limit"] < 1:
+        raise MeshCoreHubError(
+            "O campo 'limit' debe ser maior que cero"
+        )
+
+    if values["offset"] < 0:
+        raise MeshCoreHubError(
+            "O campo 'offset' non pode ser negativo"
+        )
+
+    if values["total"] < 0:
+        raise MeshCoreHubError(
+            "O campo 'total' non pode ser negativo"
+        )
+
+    if values["offset"] != expected_offset:
+        raise MeshCoreHubError(
+            "A páxina de MeshCore Hub devolveu "
+            "un offset inesperado"
+        )
+
+    if expected_offset + records_received > values["total"]:
+        raise MeshCoreHubError(
+            "A páxina de MeshCore Hub supera "
+            "o total declarado"
+        )
+
+    return values["total"]
 
 
 def _current_utc_timestamp() -> str:
@@ -753,6 +897,174 @@ def collect_meshcore_map(
         requested_url=fetched.requested_url,
         final_url=fetched.final_url,
         bytes_received=fetched.bytes_received,
+        records_received=len(observations),
+        records_inserted=inserted,
+    )
+
+
+def collect_meshcore_hub(
+    *,
+    settings: Settings,
+    api_read_key: str,
+    database_path: Path | str | None = None,
+    url: str = MESHCORE_HUB_NODES_URL,
+    page_size: int = MESHCORE_HUB_PAGE_SIZE,
+    timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+    clock: Callable[[], Any] = _current_utc_timestamp,
+) -> CollectionResult:
+    """Descarga, adapta e almacena os nodos de MeshCore Hub."""
+
+    if not callable(clock):
+        raise TypeError("clock debe ser invocable")
+
+    normalized_api_key = _meshcore_hub_api_key(
+        api_read_key
+    )
+
+    first_page_url = _meshcore_hub_page_url(
+        url,
+        limit=page_size,
+        offset=0,
+    )
+
+    resolved_database_path = (
+        Path(database_path).expanduser().resolve()
+        if database_path is not None
+        else (
+            settings.state_dir
+            / "mesh-noroeste.db"
+        ).resolve()
+    )
+
+    excluded_node_ids = load_exclusions(
+        settings.exclusions_path
+    )
+
+    store = ObservationStore(
+        resolved_database_path
+    )
+
+    run_id = store.begin_source_run(
+        "meshcore_hub",
+        clock(),
+    )
+
+    observations: list[NodeObservation] = []
+    seen_ids: set[str] = set()
+    bytes_received = 0
+    offset = 0
+    requested_url = first_page_url
+    final_url = first_page_url
+
+    try:
+        while True:
+            page_url = _meshcore_hub_page_url(
+                url,
+                limit=page_size,
+                offset=offset,
+            )
+
+            fetched = fetch_json(
+                page_url,
+                timeout=timeout,
+                max_bytes=max_bytes,
+                headers={
+                    "Authorization": (
+                        f"Bearer {normalized_api_key}"
+                    ),
+                },
+            )
+
+            page_observations = (
+                parse_meshcore_hub_nodes(
+                    fetched.document,
+                    source="meshcore_hub",
+                )
+            )
+            total = _meshcore_hub_page_total(
+                fetched.document,
+                expected_offset=offset,
+                records_received=len(
+                    page_observations
+                ),
+            )
+
+            if offset == 0:
+                requested_url = fetched.requested_url
+
+            final_url = fetched.final_url
+            bytes_received += fetched.bytes_received
+
+            for observation in page_observations:
+                if observation.id in seen_ids:
+                    raise MeshCoreHubError(
+                        "MeshCore Hub devolveu un nodo "
+                        "duplicado entre páxinas: "
+                        f"{observation.source_id}"
+                    )
+
+                seen_ids.add(observation.id)
+                observations.append(observation)
+
+            next_offset = (
+                offset + len(page_observations)
+            )
+
+            if next_offset >= total:
+                break
+
+            if not page_observations:
+                raise MeshCoreHubError(
+                    "A paxinación de MeshCore Hub "
+                    "non avanzou"
+                )
+
+            offset = next_offset
+
+        allowed_observations = (
+            _allowed_node_observations(
+                observations,
+                excluded_node_ids,
+            )
+        )
+
+        inserted = store.save(
+            allowed_observations
+        )
+
+    except Exception as exc:
+        description = str(exc).strip()
+
+        error_message = (
+            f"{type(exc).__name__}: {description}"
+            if description
+            else type(exc).__name__
+        )
+
+        store.finish_source_run(
+            run_id,
+            finished_at=clock(),
+            success=False,
+            records_received=0,
+            error_message=error_message[:1000],
+        )
+
+        raise
+
+    store.finish_source_run(
+        run_id,
+        finished_at=clock(),
+        success=True,
+        records_received=len(observations),
+    )
+
+    return CollectionResult(
+        database_path=resolved_database_path,
+        source="meshcore_hub",
+        requested_url=requested_url,
+        final_url=final_url,
+        bytes_received=bytes_received,
         records_received=len(observations),
         records_inserted=inserted,
     )

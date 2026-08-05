@@ -17,6 +17,7 @@ import msgpack
 
 from mesh_noroeste.application import (
     MALHA_PT_URL,
+    MESHCORE_HUB_NODES_URL,
     MESHCORE_MAP_URL,
     MESHVIEW_ES_NEIGHBOR_EDGES_URL,
     MESHVIEW_ES_POSITION_PACKETS_URL,
@@ -26,6 +27,7 @@ from mesh_noroeste.application import (
     OZULO_MAP_NODES_URL,
     OZULO_NEIGHBOR_PACKETS_URL,
     collect_malha_pt,
+    collect_meshcore_hub,
     collect_meshcore_map,
     collect_meshview_es,
     collect_ozulo_map,
@@ -125,6 +127,43 @@ def meshcore_payload() -> bytes:
         use_bin_type=True,
         datetime=True,
     )
+
+
+def meshcore_hub_node(
+    public_key: str,
+    *,
+    name: str,
+    last_seen: str,
+) -> dict[str, object]:
+    return {
+        "public_key": public_key,
+        "name": name,
+        "adv_type": "repeater",
+        "flags": 146,
+        "first_seen": "2026-08-05T08:30:00Z",
+        "last_seen": last_seen,
+        "lat": 43.1,
+        "lon": -8.1,
+        "is_observer": False,
+        "created_at": "2026-08-05T08:30:00Z",
+        "updated_at": last_seen,
+        "tags": [],
+        "adopted_by": None,
+    }
+
+
+def meshcore_hub_document(
+    *nodes: object,
+    limit: int,
+    offset: int,
+    total: int,
+) -> dict[str, object]:
+    return {
+        "items": list(nodes),
+        "limit": limit,
+        "offset": offset,
+        "total": total,
+    }
 
 
 def meshview_document() -> dict[str, object]:
@@ -1028,6 +1067,234 @@ class ApplicationTests(unittest.TestCase):
                     "records_received": 0,
                 },
             )
+
+    def test_collect_meshcore_hub_paginates_and_authenticates(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            settings = self.settings(root)
+
+            first_url = (
+                MESHCORE_HUB_NODES_URL
+                + "?limit=1&offset=0"
+            )
+            second_url = (
+                MESHCORE_HUB_NODES_URL
+                + "?limit=1&offset=1"
+            )
+
+            first_document = meshcore_hub_document(
+                meshcore_hub_node(
+                    "01" * 32,
+                    name="Primeiro nodo",
+                    last_seen=(
+                        "2026-08-05T08:36:06Z"
+                    ),
+                ),
+                limit=1,
+                offset=0,
+                total=2,
+            )
+            second_document = meshcore_hub_document(
+                meshcore_hub_node(
+                    "02" * 32,
+                    name="Segundo nodo",
+                    last_seen=(
+                        "2026-08-05T08:37:06Z"
+                    ),
+                ),
+                limit=1,
+                offset=1,
+                total=2,
+            )
+
+            fetched_pages = [
+                JsonFetchResult(
+                    document=first_document,
+                    requested_url=first_url,
+                    final_url=first_url,
+                    status=200,
+                    content_type="application/json",
+                    bytes_received=300,
+                ),
+                JsonFetchResult(
+                    document=second_document,
+                    requested_url=second_url,
+                    final_url=second_url,
+                    status=200,
+                    content_type="application/json",
+                    bytes_received=320,
+                ),
+            ]
+
+            timestamps = iter(
+                (
+                    "2026-08-05T08:35:00Z",
+                    "2026-08-05T08:38:00Z",
+                )
+            )
+
+            with patch(
+                "mesh_noroeste.application.fetch_json",
+                side_effect=fetched_pages,
+            ) as mocked_fetch:
+                result = collect_meshcore_hub(
+                    settings=settings,
+                    api_read_key=" read-secret ",
+                    page_size=1,
+                    clock=lambda: next(timestamps),
+                )
+
+            database_path = (
+                settings.state_dir
+                / "mesh-noroeste.db"
+            ).resolve()
+            store = ObservationStore(database_path)
+
+            self.assertEqual(
+                result.database_path,
+                database_path,
+            )
+            self.assertEqual(
+                result.source,
+                "meshcore_hub",
+            )
+            self.assertEqual(
+                result.requested_url,
+                first_url,
+            )
+            self.assertEqual(
+                result.final_url,
+                second_url,
+            )
+            self.assertEqual(
+                result.bytes_received,
+                620,
+            )
+            self.assertEqual(
+                result.records_received,
+                2,
+            )
+            self.assertEqual(
+                result.records_inserted,
+                2,
+            )
+            self.assertEqual(store.count(), 2)
+
+            self.assertEqual(
+                store.source_statistics()[
+                    "meshcore_hub"
+                ],
+                {
+                    "last_success": (
+                        "2026-08-05T08:38:00Z"
+                    ),
+                    "last_error_at": None,
+                    "last_error": None,
+                    "records_received": 2,
+                },
+            )
+
+            self.assertEqual(
+                mocked_fetch.call_args_list,
+                [
+                    call(
+                        first_url,
+                        timeout=20.0,
+                        max_bytes=20 * 1024 * 1024,
+                        headers={
+                            "Authorization": (
+                                "Bearer read-secret"
+                            ),
+                        },
+                    ),
+                    call(
+                        second_url,
+                        timeout=20.0,
+                        max_bytes=20 * 1024 * 1024,
+                        headers={
+                            "Authorization": (
+                                "Bearer read-secret"
+                            ),
+                        },
+                    ),
+                ],
+            )
+
+    def test_collect_meshcore_hub_records_failure(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            settings = self.settings(root)
+
+            timestamps = iter(
+                (
+                    "2026-08-05T08:35:00Z",
+                    "2026-08-05T08:36:00Z",
+                )
+            )
+
+            with patch(
+                "mesh_noroeste.application.fetch_json",
+                side_effect=FetchError(
+                    "HTTP 503 temporal"
+                ),
+            ):
+                with self.assertRaisesRegex(
+                    FetchError,
+                    "HTTP 503 temporal",
+                ):
+                    collect_meshcore_hub(
+                        settings=settings,
+                        api_read_key="read-secret",
+                        clock=lambda: next(timestamps),
+                    )
+
+            store = ObservationStore(
+                settings.state_dir
+                / "mesh-noroeste.db"
+            )
+
+            self.assertEqual(store.count(), 0)
+            self.assertEqual(
+                store.source_statistics()[
+                    "meshcore_hub"
+                ],
+                {
+                    "last_success": None,
+                    "last_error_at": (
+                        "2026-08-05T08:36:00Z"
+                    ),
+                    "last_error": (
+                        "FetchError: HTTP 503 temporal"
+                    ),
+                    "records_received": 0,
+                },
+            )
+
+    def test_collect_meshcore_hub_rejects_empty_key(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            settings = self.settings(
+                Path(temporary)
+            )
+
+            with patch(
+                "mesh_noroeste.application.fetch_json"
+            ) as mocked_fetch:
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "api_read_key non pode estar baleira",
+                ):
+                    collect_meshcore_hub(
+                        settings=settings,
+                        api_read_key="   ",
+                    )
+
+            mocked_fetch.assert_not_called()
 
     def test_collect_meshcore_map_saves_and_records_run(
         self,

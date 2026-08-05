@@ -43,6 +43,7 @@ const SOURCE_LABELS = Object.freeze({
   malha_pt: "Malha Portugal",
   ozulo_map: "Comunidade O Zulo",
   meshcore_map: "MeshCore Map",
+  meshcore_hub: "MeshCore Hub de Mesh Galicia",
 });
 
 const TYPE_LABELS = Object.freeze({
@@ -2850,6 +2851,7 @@ function renderSourceStatus() {
     "malha_pt",
     "ozulo_map",
     "meshcore_map",
+    "meshcore_hub",
   ]) {
     const sourceData = state.stats.sources[source];
     const dt = document.createElement("dt");

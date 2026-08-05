@@ -5,7 +5,8 @@
 El backend transforma las respuestas de cada fuente en un modelo común.
 
 El frontend solo consumirá este contrato y no conocerá la estructura interna
-de Meshview España, Malha Portugal, Comunidade O Zulo ni MeshCore Map.
+de Meshview España, Malha Portugal, Comunidade O Zulo, MeshCore Map ni
+MeshCore Hub de Mesh Galicia.
 
 Versión inicial:
 
@@ -40,6 +41,7 @@ El campo `source` admite:
 - `malha_pt`
 - `ozulo_map`
 - `meshcore_map`
+- `meshcore_hub`
 
 Solo se acreditarán fuentes realmente utilizadas.
 
@@ -249,6 +251,43 @@ a partir de `ud`.
 
 Los campos compactos `s` y `l` no se publican mientras su significado
 completo no esté suficientemente documentado.
+
+### Adaptación de MeshCore Hub de Mesh Galicia
+
+El colector utiliza el endpoint autenticado de nodos:
+
+    https://hub.mesh.gal/api/v1/nodes
+
+La clave de lectura se recibe exclusivamente mediante
+`MESHCORE_HUB_API_READ_KEY` y se envía en la cabecera `Authorization` como
+token Bearer. La credencial no se incorpora al repositorio ni se incluye en
+los resultados o mensajes de error del colector.
+
+La respuesta se descarga como JSON mediante páginas con `limit` y `offset`.
+Cada página debe declarar un total coherente y una misma clave pública no
+puede repetirse dentro de la recolección.
+
+Correspondencia inicial:
+
+| Origen | Campo normalizado |
+|---|---|
+| `public_key` | `source_id` e `id` |
+| `name` | `short_name` |
+| `adv_type` | `node_type` |
+| `first_seen` | `first_seen` |
+| `last_seen` | `observed_at` |
+| `last_seen` | `position_updated_at` |
+| `lat` | `latitude` |
+| `lon` | `longitude` |
+
+`public_key` debe contener exactamente 64 caracteres hexadecimales. Los tipos
+`chat`, `repeater`, `room` o `server` y `sensor` se traducen respectivamente
+a `client`, `repeater`, `room_server` y `sensor`; cualquier otro valor se
+conserva como `unknown`.
+
+Las coordenadas parciales son inválidas y el punto `0, 0` se descarta. Esta
+integración inicial recoge únicamente nodos: no importa anuncios ni genera
+conexiones a partir del Hub.
 
 ## Publicación por generaciones
 

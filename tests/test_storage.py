@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import closing
 from pathlib import Path
+import re
 import sqlite3
 import tempfile
 import unittest
@@ -1003,6 +1004,266 @@ class SchemaMigrationTests(unittest.TestCase):
             self.assertEqual(
                 store.save_edges([old_edge]),
                 0,
+            )
+            self.assertEqual(store.quick_check(), "ok")
+
+    def test_version_six_database_adds_meshcore_hub(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = (
+                Path(directory) / "migration-v6.db"
+            )
+            store = ObservationStore(database_path)
+
+            existing_node = make_observation(
+                source="meshview_es",
+                network="meshtastic",
+                source_id="a35b4144",
+                observed_at="2026-08-05T08:00:00Z",
+            )
+            existing_edge = make_edge_observation(
+                source="malha_pt",
+                network="meshtastic",
+                from_source_id="a35b4144",
+                to_source_id="b1234567",
+                edge_type="traceroute",
+                directed=True,
+                observed_at="2026-08-05T08:01:00Z",
+            )
+
+            self.assertEqual(
+                store.save([existing_node]),
+                1,
+            )
+            self.assertEqual(
+                store.save_edges([existing_edge]),
+                1,
+            )
+
+            existing_run = store.begin_source_run(
+                "meshview_es",
+                "2026-08-05T07:59:00Z",
+            )
+            store.finish_source_run(
+                existing_run,
+                finished_at="2026-08-05T08:02:00Z",
+                success=True,
+                records_received=1,
+            )
+
+            with closing(
+                sqlite3.connect(database_path)
+            ) as connection:
+                connection.row_factory = sqlite3.Row
+
+                with connection:
+                    for table in (
+                        "node_observations",
+                        "edge_observations",
+                        "node_observation_cursors",
+                        "edge_observation_cursors",
+                        "source_runs",
+                    ):
+                        row = connection.execute(
+                            """
+                            SELECT sql
+                            FROM sqlite_master
+                            WHERE type = 'table'
+                              AND name = ?
+                            """,
+                            (table,),
+                        ).fetchone()
+
+                        self.assertIsNotNone(row)
+                        assert row is not None
+
+                        legacy_sql, replacements = re.subn(
+                            r",\s*'meshcore_hub'",
+                            "",
+                            row["sql"],
+                            count=1,
+                        )
+
+                        self.assertEqual(replacements, 1)
+
+                        temporary = f"{table}_v6"
+                        quoted_table = (
+                            storage_module._quote_identifier(
+                                table
+                            )
+                        )
+                        quoted_temporary = (
+                            storage_module._quote_identifier(
+                                temporary
+                            )
+                        )
+
+                        temporary_sql, renamed = (
+                            storage_module
+                            ._CREATE_TABLE_HEAD
+                            .subn(
+                                (
+                                    "CREATE TABLE "
+                                    f"{quoted_temporary}"
+                                ),
+                                legacy_sql,
+                                count=1,
+                            )
+                        )
+
+                        self.assertEqual(renamed, 1)
+                        connection.execute(temporary_sql)
+
+                        columns = [
+                            item["name"]
+                            for item in connection.execute(
+                                (
+                                    "PRAGMA table_info("
+                                    f"{quoted_table}"
+                                    ")"
+                                )
+                            )
+                        ]
+                        column_list = ", ".join(
+                            storage_module
+                            ._quote_identifier(column)
+                            for column in columns
+                        )
+
+                        connection.execute(
+                            f"""
+                            INSERT INTO {quoted_temporary} (
+                                {column_list}
+                            )
+                            SELECT
+                                {column_list}
+                            FROM {quoted_table}
+                            """
+                        )
+                        connection.execute(
+                            f"DROP TABLE {quoted_table}"
+                        )
+                        connection.execute(
+                            f"""
+                            ALTER TABLE {quoted_temporary}
+                            RENAME TO {quoted_table}
+                            """
+                        )
+
+                    connection.execute(
+                        "PRAGMA user_version = 6"
+                    )
+
+            store.initialize()
+
+            self.assertEqual(
+                store.schema_version(),
+                SCHEMA_VERSION,
+            )
+            self.assertEqual(
+                store.load_all(),
+                [existing_node],
+            )
+            self.assertEqual(
+                store.load_all_edges(),
+                [existing_edge],
+            )
+
+            with closing(
+                sqlite3.connect(database_path)
+            ) as connection:
+                table_sql = {
+                    row[0]: row[1]
+                    for row in connection.execute(
+                        """
+                        SELECT name, sql
+                        FROM sqlite_master
+                        WHERE type = 'table'
+                          AND name IN (
+                              'node_observations',
+                              'edge_observations',
+                              'node_observation_cursors',
+                              'edge_observation_cursors',
+                              'source_runs'
+                          )
+                        """
+                    )
+                }
+                cursor_index = connection.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM sqlite_master
+                    WHERE type = 'index'
+                      AND name = ?
+                    """,
+                    (
+                        "idx_edge_observation_"
+                        "cursors_endpoints",
+                    ),
+                ).fetchone()[0]
+
+            self.assertEqual(len(table_sql), 5)
+            self.assertEqual(cursor_index, 1)
+
+            for sql in table_sql.values():
+                self.assertIn(
+                    "'meshcore_hub'",
+                    sql,
+                )
+
+            hub_node = make_observation(
+                source="meshcore_hub",
+                network="meshcore",
+                source_id="a" * 64,
+                observed_at="2026-08-05T09:00:00Z",
+                node_type="client",
+            )
+            hub_edge = make_edge_observation(
+                source="meshcore_hub",
+                network="meshcore",
+                from_source_id="a" * 64,
+                to_source_id="b" * 64,
+                edge_type="observed",
+                directed=True,
+                observed_at="2026-08-05T09:01:00Z",
+                metrics={
+                    "snr_db": 8.5,
+                },
+            )
+
+            self.assertEqual(
+                store.save([hub_node]),
+                1,
+            )
+            self.assertEqual(
+                store.save_edges([hub_edge]),
+                1,
+            )
+
+            hub_run = store.begin_source_run(
+                "meshcore_hub",
+                "2026-08-05T08:59:00Z",
+            )
+            store.finish_source_run(
+                hub_run,
+                finished_at="2026-08-05T09:02:00Z",
+                success=True,
+                records_received=2,
+            )
+
+            self.assertEqual(
+                store.source_statistics()[
+                    "meshcore_hub"
+                ],
+                {
+                    "last_success": (
+                        "2026-08-05T09:02:00Z"
+                    ),
+                    "last_error_at": None,
+                    "last_error": None,
+                    "records_received": 2,
+                },
             )
             self.assertEqual(store.quick_check(), "ok")
 
