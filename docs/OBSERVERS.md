@@ -16,7 +16,7 @@ O observer escoita o tráfico que recibe a radio e publica no Hub os paquetes e
 o estado do dispositivo. Non crea rutas, non actúa como repetidor e non xera
 traceroutes por si mesmo.
 
-Esta guía está comprobada con MeshCore Packet Capture 2.1.0.
+Esta guía foi contrastada co código e co instalador de MeshCore Packet Capture 2.1.0.
 
 ## Alcance
 
