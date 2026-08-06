@@ -78,6 +78,9 @@ El mapa anterior permanece separado en `https://mesh.tuiter.ovh/`.
 El comportamiento implementado y los pendientes funcionales están
 documentados en [docs/FUNCTIONAL.md](docs/FUNCTIONAL.md).
 
+Para instalar un observer MeshCore que publique no Hub de Mesh Galicia,
+consulta a [guía de observers](docs/OBSERVERS.md).
+
 La instalación operativa carga
 `/etc/mesh-noroeste/mesh-noroeste.env`. Este archivo define
 `MESH_EXCLUSIONS_PATH=/etc/mesh-noroeste/exclusions.json`, una lista privada
