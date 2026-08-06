@@ -137,7 +137,7 @@ class FrontendStaticTests(unittest.TestCase):
             self.parser.links,
         )
         self.assertIn(
-            "./app.js?v=20260805-meshcore-hub1",
+            "./app.js?v=20260806-meshcore-links1",
             self.parser.scripts,
         )
 
@@ -444,6 +444,19 @@ class FrontendStaticTests(unittest.TestCase):
             'sourceLinkIsRecent(node, "ozulo_map")',
             '"https://meshview.mesh.comunidadeozulo.org/node/"',
             '"Abrir en Meshview de O Zulo"',
+            "function meshcoreNodeLinks(node)",
+            'node.network !== "meshcore"',
+            r"/^meshcore:([0-9a-f]{64})$/",
+            'node.sources.includes("meshcore_map")',
+            'sourceLinkIsRecent(node, "meshcore_map")',
+            '"https://map.meshcore.io/?public_key="',
+            '"Abrir en MeshCore Map"',
+            'node.sources.includes("meshcore_hub")',
+            'sourceLinkIsRecent(node, "meshcore_hub")',
+            '"https://hub.mesh.gal/nodes/"',
+            '"Abrir no Hub de Mesh Galicia"',
+            "...meshtasticNodeLinks(node)",
+            "...meshcoreNodeLinks(node)",
             "function externalNodeLinksSection(node)",
             'heading.textContent = "Fichas externas"',
             '"Consulta este nodo nos mapas públicos das fontes "',
@@ -455,7 +468,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.javascript)
 
         self.assertIn(
-            "./app.js?v=20260805-meshcore-hub1",
+            "./app.js?v=20260806-meshcore-links1",
             self.parser.scripts,
         )
 
@@ -486,7 +499,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.javascript)
 
         self.assertIn(
-            "./app.js?v=20260805-meshcore-hub1",
+            "./app.js?v=20260806-meshcore-links1",
             self.parser.scripts,
         )
 
@@ -1360,7 +1373,7 @@ class FrontendStaticTests(unittest.TestCase):
             if (
                 "leaflet@1.9.4/dist/leaflet.js" in source
                 or "leaflet.markercluster.js" in source
-                or source == "./app.js?v=20260805-meshcore-hub1"
+                or source == "./app.js?v=20260806-meshcore-links1"
             ):
                 dependencies.append((source, tag))
 
@@ -1374,7 +1387,7 @@ class FrontendStaticTests(unittest.TestCase):
                 "dist/leaflet.js",
                 "./vendor/leaflet.markercluster/"
                 "leaflet.markercluster.js?v=1.5.3-local1",
-                "./app.js?v=20260805-meshcore-hub1",
+                "./app.js?v=20260806-meshcore-links1",
             ],
         )
 

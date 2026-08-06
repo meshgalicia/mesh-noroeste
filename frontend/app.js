@@ -2330,6 +2330,52 @@ function meshtasticNodeLinks(node) {
   return links;
 }
 
+function meshcoreNodeLinks(node) {
+  if (
+    node.network !== "meshcore"
+    || !Array.isArray(node.sources)
+  ) {
+    return [];
+  }
+
+  const keyMatch = /^meshcore:([0-9a-f]{64})$/.exec(node.id);
+
+  if (!keyMatch) {
+    return [];
+  }
+
+  const publicKey = keyMatch[1];
+  const links = [];
+
+  if (
+    node.sources.includes("meshcore_map")
+    && sourceLinkIsRecent(node, "meshcore_map")
+  ) {
+    links.push({
+      label: "Abrir en MeshCore Map",
+      url: (
+        "https://map.meshcore.io/?public_key="
+        + encodeURIComponent(publicKey)
+      ),
+    });
+  }
+
+  if (
+    node.sources.includes("meshcore_hub")
+    && sourceLinkIsRecent(node, "meshcore_hub")
+  ) {
+    links.push({
+      label: "Abrir no Hub de Mesh Galicia",
+      url: (
+        "https://hub.mesh.gal/nodes/"
+        + encodeURIComponent(publicKey)
+      ),
+    });
+  }
+
+  return links;
+}
+
 function meshcoreContactUrl(node) {
   if (node.network !== "meshcore") {
     return null;
@@ -2377,7 +2423,10 @@ async function copyText(text) {
 }
 
 function externalNodeLinksSection(node) {
-  const links = meshtasticNodeLinks(node);
+  const links = [
+    ...meshtasticNodeLinks(node),
+    ...meshcoreNodeLinks(node),
+  ];
 
   if (links.length === 0) {
     return null;
