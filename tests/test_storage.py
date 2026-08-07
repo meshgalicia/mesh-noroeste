@@ -15,6 +15,7 @@ from mesh_noroeste.domain import (
     make_neighbor_observation,
     make_observation,
     make_observer_reception,
+    merge_observations,
 )
 from mesh_noroeste.storage import (
     ObservationStore,
@@ -203,6 +204,118 @@ class ObservationStoreTests(unittest.TestCase):
                 earlier_meshtastic,
                 later_meshtastic,
             ],
+        )
+
+
+    def test_load_for_publication_preserves_consolidation(
+        self,
+    ) -> None:
+        old_details = make_observation(
+            source="meshview_es",
+            network="meshtastic",
+            source_id="a35b4144",
+            observed_at="2026-07-20T09:00:00Z",
+            first_seen="2026-07-10T08:00:00Z",
+            short_name="BRUMA",
+            role="CLIENT_MUTE",
+            metrics={
+                "battery_percent": 80,
+                "snr_db": 4.5,
+            },
+            radio={
+                "channel": "LongFast",
+                "firmware": "2.5.0",
+            },
+        )
+        irrelevant_history = make_observation(
+            source="meshview_es",
+            network="meshtastic",
+            source_id="a35b4144",
+            observed_at="2026-07-21T09:00:00Z",
+        )
+        latest_meshview = make_observation(
+            source="meshview_es",
+            network="meshtastic",
+            source_id="a35b4144",
+            observed_at="2026-07-25T10:00:00Z",
+            latitude=43.1,
+            longitude=-8.1,
+            position_updated_at="2026-07-25T09:30:00Z",
+        )
+        latest_node = make_observation(
+            source="malha_pt",
+            network="meshtastic",
+            source_id="a35b4144",
+            observed_at="2026-07-25T11:00:00Z",
+            long_name="Bruma actualizada",
+            metrics={
+                "voltage_v": 4.1,
+            },
+        )
+
+        observations = [
+            latest_node,
+            irrelevant_history,
+            old_details,
+            latest_meshview,
+        ]
+
+        self.assertEqual(
+            self.store.save(observations),
+            4,
+        )
+
+        complete = self.store.load_all()
+        reduced = self.store.load_for_publication()
+
+        self.assertEqual(len(complete), 4)
+        self.assertEqual(len(reduced), 3)
+        self.assertNotIn(irrelevant_history, reduced)
+
+        complete_node = merge_observations(
+            complete,
+            now="2026-07-25T12:00:00Z",
+            active_hours=24,
+            recent_days=7,
+            historical_days=30,
+        )
+        reduced_node = merge_observations(
+            reduced,
+            now="2026-07-25T12:00:00Z",
+            active_hours=24,
+            recent_days=7,
+            historical_days=30,
+        )
+
+        self.assertEqual(reduced_node, complete_node)
+
+    def test_load_for_publication_keeps_nodes_separate(
+        self,
+    ) -> None:
+        first = self.meshtastic_observation()
+        second = make_observation(
+            source="meshcore_map",
+            network="meshcore",
+            source_id="02ab34cd",
+            observed_at="2026-07-25T11:00:00Z",
+            node_type="repeater",
+        )
+
+        self.assertEqual(
+            self.store.save([first, second]),
+            2,
+        )
+        self.assertEqual(
+            self.store.load_for_publication(),
+            [second, first],
+        )
+
+    def test_load_for_publication_on_empty_database(
+        self,
+    ) -> None:
+        self.assertEqual(
+            self.store.load_for_publication(),
+            [],
         )
 
     def test_load_all_on_empty_database(

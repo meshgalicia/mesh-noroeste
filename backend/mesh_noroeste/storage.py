@@ -14,6 +14,8 @@ from typing import Any, Iterable
 
 from mesh_noroeste.normalization import canonical_node_id
 from mesh_noroeste.domain import (
+    METRIC_KEYS,
+    RADIO_KEYS,
     SOURCE_ORDER,
     EdgeObservation,
     NeighborObservation,
@@ -110,6 +112,117 @@ def _node_observation_from_row(
         position_updated_at=row["position_updated_at"],
         metrics=json.loads(row["metrics_json"]),
         radio=json.loads(row["radio_json"]),
+    )
+
+
+_PUBLICATION_SCALAR_FIELDS = (
+    "short_name",
+    "long_name",
+    "hardware",
+    "role",
+    "node_type",
+    "is_observer",
+)
+
+
+def _select_publication_observations(
+    observations: Iterable[NodeObservation],
+) -> tuple[NodeObservation, ...]:
+    """Retiene solo las filas necesarias para consolidar un nodo."""
+
+    received = tuple(observations)
+
+    if not received:
+        return ()
+
+    node_ids = {
+        observation.id
+        for observation in received
+    }
+
+    if len(node_ids) != 1:
+        raise ValueError(
+            "No se pueden seleccionar nodos diferentes"
+        )
+
+    ordered = tuple(
+        sorted(
+            received,
+            key=lambda observation: (
+                observation.observed_at,
+                SOURCE_ORDER[observation.source],
+            ),
+        )
+    )
+
+    selected_indexes: set[int] = {
+        len(ordered) - 1,
+    }
+
+    latest_by_source: dict[str, int] = {}
+
+    for index, observation in enumerate(ordered):
+        latest_by_source[observation.source] = index
+
+    selected_indexes.update(latest_by_source.values())
+
+    first_seen_index = min(
+        range(len(ordered)),
+        key=lambda index: (
+            ordered[index].first_seen
+            or ordered[index].observed_at
+        ),
+    )
+    selected_indexes.add(first_seen_index)
+
+    position_index: int | None = None
+    position_key: tuple[str, str] | None = None
+
+    for index, observation in enumerate(ordered):
+        if (
+            observation.latitude is None
+            or observation.longitude is None
+            or observation.position_updated_at is None
+        ):
+            continue
+
+        candidate_key = (
+            observation.position_updated_at,
+            observation.observed_at,
+        )
+
+        if (
+            position_key is None
+            or candidate_key > position_key
+        ):
+            position_index = index
+            position_key = candidate_key
+
+    if position_index is not None:
+        selected_indexes.add(position_index)
+
+    for field in _PUBLICATION_SCALAR_FIELDS:
+        for index in range(len(ordered) - 1, -1, -1):
+            if getattr(ordered[index], field) is not None:
+                selected_indexes.add(index)
+                break
+
+    for key in METRIC_KEYS:
+        for index in range(len(ordered) - 1, -1, -1):
+            if ordered[index].metrics[key] is not None:
+                selected_indexes.add(index)
+                break
+
+    for key in RADIO_KEYS:
+        for index in range(len(ordered) - 1, -1, -1):
+            if ordered[index].radio[key] is not None:
+                selected_indexes.add(index)
+                break
+
+    return tuple(
+        observation
+        for index, observation in enumerate(ordered)
+        if index in selected_indexes
     )
 
 
@@ -1325,6 +1438,78 @@ class ObservationStore:
                 _node_observation_from_row(row)
                 for row in rows
             ]
+
+    def load_for_publication(
+        self,
+    ) -> list[NodeObservation]:
+        """Carga solo las filas necesarias para publicar nodos."""
+
+        self.initialize()
+
+        selected: list[NodeObservation] = []
+        current_id: str | None = None
+        current_observations: list[NodeObservation] = []
+
+        with _open_connection(
+            self.database_path
+        ) as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    canonical_id,
+                    source,
+                    network,
+                    source_id,
+                    observed_at,
+                    first_seen,
+                    short_name,
+                    long_name,
+                    hardware,
+                    role,
+                    node_type,
+                    is_observer,
+                    latitude,
+                    longitude,
+                    altitude_m,
+                    position_precision_bits,
+                    position_updated_at,
+                    metrics_json,
+                    radio_json
+                FROM node_observations
+                ORDER BY
+                    canonical_id ASC,
+                    observed_at ASC,
+                    id ASC
+                """
+            )
+
+            for row in rows:
+                canonical_id = row["canonical_id"]
+
+                if (
+                    current_id is not None
+                    and canonical_id != current_id
+                ):
+                    selected.extend(
+                        _select_publication_observations(
+                            current_observations
+                        )
+                    )
+                    current_observations = []
+
+                current_id = canonical_id
+                current_observations.append(
+                    _node_observation_from_row(row)
+                )
+
+        if current_observations:
+            selected.extend(
+                _select_publication_observations(
+                    current_observations
+                )
+            )
+
+        return selected
 
     def save_edges(
         self,
