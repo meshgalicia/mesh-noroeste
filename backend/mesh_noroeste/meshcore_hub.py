@@ -9,7 +9,9 @@ from typing import Any
 
 from mesh_noroeste.domain import (
     NodeObservation,
+    ObserverReception,
     make_observation,
+    make_observer_reception,
 )
 
 
@@ -192,6 +194,127 @@ def _coordinates(
     return normalized_latitude, normalized_longitude
 
 
+def _advertisement_public_key(
+    value: Any,
+    index: int,
+    *,
+    field: str,
+) -> str:
+    if not isinstance(value, str):
+        raise MeshCoreHubError(
+            f"Anuncio {index}: {field} debe ser texto"
+        )
+
+    normalized = value.strip().lower()
+
+    if _PUBLIC_KEY.fullmatch(normalized) is None:
+        raise MeshCoreHubError(
+            f"Anuncio {index}: {field} debe conter "
+            "64 caracteres hexadecimais"
+        )
+
+    return normalized
+
+
+def _advertisement_timestamp(
+    value: Any,
+    index: int,
+    *,
+    field: str,
+) -> str:
+    if not isinstance(value, str):
+        raise MeshCoreHubError(
+            f"Anuncio {index}: {field} debe ser texto"
+        )
+
+    normalized = value.strip()
+
+    if not normalized:
+        raise MeshCoreHubError(
+            f"Anuncio {index}: {field} non pode estar baleiro"
+        )
+
+    return normalized
+
+
+def _advertisement_packet_hash(
+    value: Any,
+    index: int,
+) -> str | None:
+    if value is None:
+        return None
+
+    if not isinstance(value, str):
+        raise MeshCoreHubError(
+            f"Anuncio {index}: packet_hash debe ser "
+            "texto ou null"
+        )
+
+    normalized = value.strip().upper()
+
+    if not normalized:
+        return None
+
+    if len(normalized) > 128:
+        raise MeshCoreHubError(
+            f"Anuncio {index}: packet_hash supera "
+            "128 caracteres"
+        )
+
+    return normalized
+
+
+def _advertisement_number(
+    value: Any,
+    index: int,
+    *,
+    field: str,
+) -> float | None:
+    if value is None:
+        return None
+
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+    ):
+        raise MeshCoreHubError(
+            f"Anuncio {index}: {field} debe ser "
+            "numérico ou null"
+        )
+
+    normalized = float(value)
+
+    if not math.isfinite(normalized):
+        raise MeshCoreHubError(
+            f"Anuncio {index}: {field} debe ser finito"
+        )
+
+    return normalized
+
+
+def _advertisement_integer(
+    value: Any,
+    index: int,
+    *,
+    field: str,
+) -> int | None:
+    if value is None:
+        return None
+
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise MeshCoreHubError(
+            f"Anuncio {index}: {field} debe ser "
+            "un enteiro ou null"
+        )
+
+    if value < 0:
+        raise MeshCoreHubError(
+            f"Anuncio {index}: {field} non pode ser negativo"
+        )
+
+    return value
+
+
 def _tags(value: Any, index: int) -> None:
     if not isinstance(value, list):
         raise MeshCoreHubError(
@@ -316,3 +439,142 @@ def parse_meshcore_hub_nodes(
         observations.append(observation)
 
     return tuple(observations)
+
+def parse_meshcore_hub_advertisements(
+    document: Any,
+    *,
+    source: str,
+) -> tuple[ObserverReception, ...]:
+    """Normaliza unha páxina de anuncios e as súas recepcións."""
+
+    if not isinstance(source, str):
+        raise TypeError("source debe ser texto")
+
+    if not isinstance(document, Mapping):
+        raise MeshCoreHubError(
+            "A raíz de MeshCore Hub debe ser un obxecto"
+        )
+
+    records = document.get("items")
+
+    if not isinstance(records, list):
+        raise MeshCoreHubError(
+            "O campo 'items' de MeshCore Hub debe ser unha lista"
+        )
+
+    receptions: list[ObserverReception] = []
+    seen: set[tuple[str, str, str]] = set()
+
+    for index, record in enumerate(records):
+        if not isinstance(record, Mapping):
+            raise MeshCoreHubError(
+                f"Anuncio {index}: debe ser un obxecto"
+            )
+
+        node_source_id = _advertisement_public_key(
+            _required(record, "public_key", index),
+            index,
+            field="public_key",
+        )
+        packet_hash = _advertisement_packet_hash(
+            _required(record, "packet_hash", index),
+            index,
+        )
+
+        # O Hub admite anuncios sen hash. Non se conservan
+        # como recepcións porque non ofrecen unha identidade
+        # estable para deduplicar o paquete entre observers.
+        if packet_hash is None:
+            continue
+
+        observers = _required(
+            record,
+            "observers",
+            index,
+        )
+
+        if not isinstance(observers, list):
+            raise MeshCoreHubError(
+                f"Anuncio {index}: observers debe ser unha lista"
+            )
+
+        for observer_index, observer in enumerate(observers):
+            if not isinstance(observer, Mapping):
+                raise MeshCoreHubError(
+                    f"Anuncio {index}: observer "
+                    f"{observer_index} debe ser un obxecto"
+                )
+
+            observer_source_id = (
+                _advertisement_public_key(
+                    _required(
+                        observer,
+                        "public_key",
+                        observer_index,
+                    ),
+                    index,
+                    field=(
+                        f"observers[{observer_index}].public_key"
+                    ),
+                )
+            )
+            observed_at = _advertisement_timestamp(
+                _required(
+                    observer,
+                    "observed_at",
+                    observer_index,
+                ),
+                index,
+                field=(
+                    f"observers[{observer_index}].observed_at"
+                ),
+            )
+            snr_db = _advertisement_number(
+                observer.get("snr"),
+                index,
+                field=f"observers[{observer_index}].snr",
+            )
+            path_len = _advertisement_integer(
+                observer.get("path_len"),
+                index,
+                field=(
+                    f"observers[{observer_index}].path_len"
+                ),
+            )
+
+            identity = (
+                packet_hash,
+                node_source_id,
+                observer_source_id,
+            )
+
+            if identity in seen:
+                raise MeshCoreHubError(
+                    f"Anuncio {index}: recepción duplicada "
+                    f"do observer {observer_source_id}"
+                )
+
+            seen.add(identity)
+
+            try:
+                receptions.append(
+                    make_observer_reception(
+                        source=source,
+                        node_source_id=node_source_id,
+                        observer_source_id=(
+                            observer_source_id
+                        ),
+                        packet_hash=packet_hash,
+                        observed_at=observed_at,
+                        snr_db=snr_db,
+                        path_len=path_len,
+                    )
+                )
+            except MeshCoreHubError:
+                raise
+            except (TypeError, ValueError) as exc:
+                raise MeshCoreHubError(
+                    f"Anuncio {index}: {exc}"
+                ) from exc
+
+    return tuple(receptions)

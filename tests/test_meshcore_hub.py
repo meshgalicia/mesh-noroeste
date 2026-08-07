@@ -6,6 +6,7 @@ import unittest
 
 from mesh_noroeste.meshcore_hub import (
     MeshCoreHubError,
+    parse_meshcore_hub_advertisements,
     parse_meshcore_hub_nodes,
 )
 
@@ -40,6 +41,204 @@ def document(*nodes: object) -> dict[str, object]:
         "offset": 0,
         "total": len(nodes),
     }
+
+
+class MeshCoreHubAdvertisementTests(unittest.TestCase):
+    def advertisement(
+        self,
+        **overrides: object,
+    ) -> dict[str, object]:
+        result: dict[str, object] = {
+            "public_key": "01" * 32,
+            "received_at": "2026-08-07T07:10:57Z",
+            "packet_hash": "338FFB499235B61F",
+            "observers": [
+                {
+                    "node_id": "observer-uuid",
+                    "public_key": "ab" * 32,
+                    "name": "Mapache",
+                    "tag_name": None,
+                    "snr": -6.75,
+                    "path_len": 2,
+                    "observed_at": (
+                        "2026-08-07T07:10:57.369025Z"
+                    ),
+                }
+            ],
+        }
+        result.update(overrides)
+        return result
+
+    def advertisement_document(
+        self,
+        *records: object,
+    ) -> dict[str, object]:
+        return {
+            "items": list(records),
+            "limit": 100,
+            "offset": 0,
+            "total": len(records),
+        }
+
+    def test_receptions_are_normalized(self) -> None:
+        receptions = parse_meshcore_hub_advertisements(
+            self.advertisement_document(
+                self.advertisement(
+                    observers=[
+                        {
+                            "public_key": "ab" * 32,
+                            "snr": -6.75,
+                            "path_len": 2,
+                            "observed_at": (
+                                "2026-08-07T07:10:57.369025Z"
+                            ),
+                        },
+                        {
+                            "public_key": "cd" * 32,
+                            "snr": 3.5,
+                            "path_len": None,
+                            "observed_at": (
+                                "2026-08-07T07:10:58.411675Z"
+                            ),
+                        },
+                    ]
+                )
+            ),
+            source="meshcore_hub",
+        )
+
+        self.assertEqual(len(receptions), 2)
+        self.assertEqual(
+            receptions[0].node_source_id,
+            "01" * 32,
+        )
+        self.assertEqual(
+            receptions[0].observer_source_id,
+            "ab" * 32,
+        )
+        self.assertEqual(
+            receptions[0].packet_hash,
+            "338FFB499235B61F",
+        )
+        self.assertEqual(
+            receptions[0].observed_at,
+            "2026-08-07T07:10:57Z",
+        )
+        self.assertEqual(receptions[0].snr_db, -6.75)
+        self.assertEqual(receptions[0].path_len, 2)
+        self.assertEqual(
+            receptions[1].observer_source_id,
+            "cd" * 32,
+        )
+        self.assertEqual(receptions[1].snr_db, 3.5)
+        self.assertIsNone(receptions[1].path_len)
+
+    def test_advertisement_without_packet_hash_is_ignored(
+        self,
+    ) -> None:
+        receptions = parse_meshcore_hub_advertisements(
+            self.advertisement_document(
+                self.advertisement(packet_hash=None)
+            ),
+            source="meshcore_hub",
+        )
+
+        self.assertEqual(receptions, ())
+
+    def test_empty_observers_are_valid(self) -> None:
+        receptions = parse_meshcore_hub_advertisements(
+            self.advertisement_document(
+                self.advertisement(observers=[])
+            ),
+            source="meshcore_hub",
+        )
+
+        self.assertEqual(receptions, ())
+
+    def test_invalid_observers_are_rejected(self) -> None:
+        with self.assertRaisesRegex(
+            MeshCoreHubError,
+            "observers debe ser unha lista",
+        ):
+            parse_meshcore_hub_advertisements(
+                self.advertisement_document(
+                    self.advertisement(observers=None)
+                ),
+                source="meshcore_hub",
+            )
+
+    def test_invalid_observer_public_key_is_rejected(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(
+            MeshCoreHubError,
+            "64 caracteres hexadecimais",
+        ):
+            parse_meshcore_hub_advertisements(
+                self.advertisement_document(
+                    self.advertisement(
+                        observers=[
+                            {
+                                "public_key": "abcd",
+                                "snr": 1.0,
+                                "path_len": None,
+                                "observed_at": (
+                                    "2026-08-07T07:10:57Z"
+                                ),
+                            }
+                        ]
+                    )
+                ),
+                source="meshcore_hub",
+            )
+
+    def test_duplicate_observer_reception_is_rejected(
+        self,
+    ) -> None:
+        observer = {
+            "public_key": "ab" * 32,
+            "snr": -6.75,
+            "path_len": None,
+            "observed_at": "2026-08-07T07:10:57Z",
+        }
+
+        with self.assertRaisesRegex(
+            MeshCoreHubError,
+            "recepción duplicada",
+        ):
+            parse_meshcore_hub_advertisements(
+                self.advertisement_document(
+                    self.advertisement(
+                        observers=[observer, dict(observer)]
+                    )
+                ),
+                source="meshcore_hub",
+            )
+
+    def test_negative_path_length_is_rejected(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(
+            MeshCoreHubError,
+            "path_len non pode ser negativo",
+        ):
+            parse_meshcore_hub_advertisements(
+                self.advertisement_document(
+                    self.advertisement(
+                        observers=[
+                            {
+                                "public_key": "ab" * 32,
+                                "snr": None,
+                                "path_len": -1,
+                                "observed_at": (
+                                    "2026-08-07T07:10:57Z"
+                                ),
+                            }
+                        ]
+                    )
+                ),
+                source="meshcore_hub",
+            )
 
 
 class MeshCoreHubTests(unittest.TestCase):
