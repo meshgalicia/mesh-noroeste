@@ -9,6 +9,7 @@ from mesh_noroeste.domain import (
     make_edge_observation,
     make_neighbor_observation,
     make_observation,
+    make_observer_reception,
     merge_observations,
 )
 
@@ -631,6 +632,100 @@ class NeighborObservationTests(unittest.TestCase):
                 to_source_id="ad301dc1",
                 observed_at=NOW,
                 snr_db=None,
+            )
+
+
+class ObserverReceptionTests(unittest.TestCase):
+    def test_valid_reception_is_normalized(
+        self,
+    ) -> None:
+        reception = make_observer_reception(
+            source=" meshcore_hub ",
+            node_source_id="01" * 32,
+            observer_source_id="AB" * 32,
+            packet_hash=" 338ffb499235b61f ",
+            observed_at="2026-08-07T07:10:57.369025Z",
+            snr_db=-6.75,
+            path_len=2,
+        )
+
+        self.assertEqual(
+            reception.node_id,
+            "meshcore:" + ("01" * 32),
+        )
+        self.assertEqual(
+            reception.observer_id,
+            "meshcore:" + ("ab" * 32),
+        )
+        self.assertEqual(
+            reception.packet_hash,
+            "338FFB499235B61F",
+        )
+        self.assertEqual(
+            reception.observed_at,
+            "2026-08-07T07:10:57Z",
+        )
+        self.assertEqual(reception.snr_db, -6.75)
+        self.assertEqual(reception.path_len, 2)
+
+    def test_missing_optional_metrics_are_valid(
+        self,
+    ) -> None:
+        reception = make_observer_reception(
+            source="meshcore_hub",
+            node_source_id="01" * 32,
+            observer_source_id="02" * 32,
+            packet_hash="A1B2C3D4",
+            observed_at=NOW,
+        )
+
+        self.assertIsNone(reception.snr_db)
+        self.assertIsNone(reception.path_len)
+
+    def test_non_hub_source_is_rejected(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            "só poden proceder de meshcore_hub",
+        ):
+            make_observer_reception(
+                source="meshcore_map",
+                node_source_id="01" * 32,
+                observer_source_id="02" * 32,
+                packet_hash="A1B2C3D4",
+                observed_at=NOW,
+            )
+
+    def test_negative_path_length_is_rejected(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            "path_len no puede ser menor que 0",
+        ):
+            make_observer_reception(
+                source="meshcore_hub",
+                node_source_id="01" * 32,
+                observer_source_id="02" * 32,
+                packet_hash="A1B2C3D4",
+                observed_at=NOW,
+                path_len=-1,
+            )
+
+    def test_empty_packet_hash_is_rejected(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            "packet_hash non pode estar baleiro",
+        ):
+            make_observer_reception(
+                source="meshcore_hub",
+                node_source_id="01" * 32,
+                observer_source_id="02" * 32,
+                packet_hash="   ",
+                observed_at=NOW,
             )
 
 

@@ -331,6 +331,36 @@ class NeighborObservation:
 
 
 @dataclass(frozen=True, slots=True)
+class ObserverReception:
+    """Recepción dun anuncio MeshCore atribuída a un observer."""
+
+    source: str
+    node_source_id: str
+    observer_source_id: str
+    packet_hash: str
+    observed_at: str
+    snr_db: float | None
+    path_len: int | None
+
+    @property
+    def node_id(self) -> str:
+        return f"meshcore:{self.node_source_id}"
+
+    @property
+    def observer_id(self) -> str:
+        return f"meshcore:{self.observer_source_id}"
+
+    @property
+    def id(self) -> str:
+        return (
+            "meshcore:observer_reception:"
+            f"{self.node_source_id}:"
+            f"{self.observer_source_id}:"
+            f"{self.packet_hash}"
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class EdgeObservation:
     """Observación normalizada de una conexión entre nodos."""
 
@@ -357,6 +387,74 @@ class EdgeObservation:
             f"{self.network}:{self.edge_type}:"
             f"{self.from_source_id}:{self.to_source_id}"
         )
+
+
+def make_observer_reception(
+    *,
+    source: str,
+    node_source_id: str,
+    observer_source_id: str,
+    packet_hash: str,
+    observed_at: datetime | str | int | float,
+    snr_db: Any = None,
+    path_len: Any = None,
+) -> ObserverReception:
+    """Crea unha recepción MeshCore atribuída a un observer do Hub."""
+
+    if not isinstance(source, str):
+        raise TypeError("source debe ser texto")
+
+    normalized_source = source.strip().lower()
+
+    if normalized_source != "meshcore_hub":
+        raise ValueError(
+            "As recepcións de observers só poden proceder "
+            "de meshcore_hub"
+        )
+
+    if not isinstance(node_source_id, str):
+        raise TypeError("node_source_id debe ser texto")
+
+    if not isinstance(observer_source_id, str):
+        raise TypeError("observer_source_id debe ser texto")
+
+    if not isinstance(packet_hash, str):
+        raise TypeError("packet_hash debe ser texto")
+
+    normalized_packet_hash = packet_hash.strip().upper()
+
+    if not normalized_packet_hash:
+        raise ValueError("packet_hash non pode estar baleiro")
+
+    if len(normalized_packet_hash) > 128:
+        raise ValueError(
+            "packet_hash supera 128 caracteres"
+        )
+
+    normalized_path_len = _optional_integer(
+        path_len,
+        "path_len",
+        minimum=0,
+    )
+
+    return ObserverReception(
+        source=normalized_source,
+        node_source_id=normalize_meshcore_id(
+            node_source_id
+        ),
+        observer_source_id=normalize_meshcore_id(
+            observer_source_id
+        ),
+        packet_hash=normalized_packet_hash,
+        observed_at=normalize_timestamp(
+            observed_at
+        ),
+        snr_db=_optional_number(
+            snr_db,
+            "snr_db",
+        ),
+        path_len=normalized_path_len,
+    )
 
 
 def make_neighbor_observation(
