@@ -133,11 +133,11 @@ class FrontendStaticTests(unittest.TestCase):
         self,
     ) -> None:
         self.assertIn(
-            "./styles.css?v=20260806-observer1",
+            "./styles.css?v=20260807-receptions1",
             self.parser.links,
         )
         self.assertIn(
-            "./app.js?v=20260806-observer1",
+            "./app.js?v=20260807-receptions1",
             self.parser.scripts,
         )
 
@@ -225,6 +225,26 @@ class FrontendStaticTests(unittest.TestCase):
                     expected,
                     self.javascript,
                 )
+
+    def test_observer_receptions_are_loaded_and_shown(
+        self,
+    ) -> None:
+        for expected in (
+            'observerReceptions: "observer-receptions.json"',
+            "documents.observerReceptions.receptions",
+            "state.observerReceptions = (",
+            "state.receptionsByNodeId = new Map()",
+            "function observerReceptionsSection(node)",
+            '"Recepcións dos observers"',
+            "observerReceptionsSection(node)",
+            '"Recepcións publicadas"',
+            '"Observers distintos"',
+            '"Mellor SNR"',
+            '"Ruta máis curta"',
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, self.javascript)
+
 
     def test_neighbor_info_can_be_shown_on_the_map(
         self,
@@ -468,7 +488,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.javascript)
 
         self.assertIn(
-            "./app.js?v=20260806-observer1",
+            "./app.js?v=20260807-receptions1",
             self.parser.scripts,
         )
 
@@ -499,7 +519,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.javascript)
 
         self.assertIn(
-            "./app.js?v=20260806-observer1",
+            "./app.js?v=20260807-receptions1",
             self.parser.scripts,
         )
 
@@ -1135,11 +1155,11 @@ class FrontendStaticTests(unittest.TestCase):
             self.html,
         )
         self.assertIn(
-            "./styles.css?v=20260806-observer1",
+            "./styles.css?v=20260807-receptions1",
             self.parser.links,
         )
         self.assertIn(
-            "./app.js?v=20260806-observer1",
+            "./app.js?v=20260807-receptions1",
             self.parser.scripts,
         )
 
@@ -1408,7 +1428,7 @@ class FrontendStaticTests(unittest.TestCase):
             if (
                 "leaflet@1.9.4/dist/leaflet.js" in source
                 or "leaflet.markercluster.js" in source
-                or source == "./app.js?v=20260806-observer1"
+                or source == "./app.js?v=20260807-receptions1"
             ):
                 dependencies.append((source, tag))
 
@@ -1422,7 +1442,7 @@ class FrontendStaticTests(unittest.TestCase):
                 "dist/leaflet.js",
                 "./vendor/leaflet.markercluster/"
                 "leaflet.markercluster.js?v=1.5.3-local1",
-                "./app.js?v=20260806-observer1",
+                "./app.js?v=20260807-receptions1",
             ],
         )
 
@@ -1696,7 +1716,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.css)
 
         self.assertIn(
-            "20260806-observer1",
+            "20260807-receptions1",
             self.html,
         )
 
@@ -1723,7 +1743,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.css)
 
         self.assertIn(
-            "./styles.css?v=20260806-observer1",
+            "./styles.css?v=20260807-receptions1",
             self.parser.links,
         )
 

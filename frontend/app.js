@@ -15,6 +15,7 @@ const DATA_DOCUMENT_NAMES = Object.freeze({
   nodes: "nodes.json",
   edges: "edges.json",
   neighborInfo: "neighbor-info.json",
+  observerReceptions: "observer-receptions.json",
   stats: "stats.json",
   meta: "meta.json",
   configurationWarnings: (
@@ -26,6 +27,7 @@ const DATA_DOCUMENT_SCHEMAS = Object.freeze({
   nodes: PUBLIC_DATA_SCHEMA,
   edges: PUBLIC_DATA_SCHEMA,
   neighborInfo: PUBLIC_DATA_SCHEMA,
+  observerReceptions: PUBLIC_DATA_SCHEMA,
   stats: PUBLIC_DATA_SCHEMA,
   meta: PUBLIC_DATA_SCHEMA,
   configurationWarnings: (
@@ -257,6 +259,9 @@ const state = {
   edgeLayer: null,
   nodes: [],
   edges: [],
+  neighborInfo: [],
+  observerReceptions: [],
+  receptionsByNodeId: new Map(),
   stats: null,
   meta: null,
   configurationWarnings: null,
@@ -2539,6 +2544,68 @@ function meshcoreAppSection(node) {
   return section;
 }
 
+function observerReceptionsSection(node) {
+  if (node.network !== "meshcore") {
+    return null;
+  }
+
+  const receptions = (
+    state.receptionsByNodeId.get(node.id) || []
+  );
+
+  if (receptions.length === 0) {
+    return null;
+  }
+
+  const observerIds = new Set(
+    receptions.map(
+      (reception) => reception.observer_id
+    )
+  );
+
+  const latestObservedAt = receptions.reduce(
+    (latest, reception) => (
+      latest === null
+      || reception.observed_at > latest
+        ? reception.observed_at
+        : latest
+    ),
+    null
+  );
+
+  const snrValues = receptions
+    .map((reception) => reception.snr_db)
+    .filter(Number.isFinite);
+
+  const pathLengths = receptions
+    .map((reception) => reception.path_len)
+    .filter(Number.isInteger);
+
+  const bestSnr = (
+    snrValues.length > 0
+      ? Math.max(...snrValues)
+      : null
+  );
+
+  const shortestPath = (
+    pathLengths.length > 0
+      ? Math.min(...pathLengths)
+      : null
+  );
+
+  return detailSection(
+    "Recepcións dos observers",
+    [
+      ["Recepcións publicadas", receptions.length],
+      ["Observers distintos", observerIds.size],
+      ["Última recepción", formatDate(latestObservedAt)],
+      ["Mellor SNR", formatMetric(bestSnr, " dB")],
+      ["Ruta máis curta", formatMetric(shortestPath)],
+    ]
+  );
+}
+
+
 function configurationWarningsSection(node) {
   if (node.network !== "meshtastic") {
     return null;
@@ -2884,6 +2951,7 @@ function showNodeDetail(node) {
       ]
     ),
     createConnectionsSection(node),
+    observerReceptionsSection(node),
     configurationWarningsSection(node),
     detailSection(
       "Fontes",
@@ -3040,6 +3108,17 @@ function validateDocuments(documents, manifest) {
     throw new Error(
       "neighbor-info.json non contén unha lista "
       + "de observacións."
+    );
+  }
+
+  if (
+    !Array.isArray(
+      documents.observerReceptions.receptions
+    )
+  ) {
+    throw new Error(
+      "observer-receptions.json non contén unha lista "
+      + "de recepcións."
     );
   }
 
@@ -3919,6 +3998,7 @@ async function initialize() {
       nodes,
       edges,
       neighborInfo,
+      observerReceptions,
       stats,
       meta,
       configurationWarnings,
@@ -3931,6 +4011,11 @@ async function initialize() {
       ),
       fetchJson(
         documentUrl(DATA_DOCUMENT_NAMES.neighborInfo)
+      ),
+      fetchJson(
+        documentUrl(
+          DATA_DOCUMENT_NAMES.observerReceptions
+        )
       ),
       fetchJson(
         documentUrl(DATA_DOCUMENT_NAMES.stats)
@@ -3949,6 +4034,7 @@ async function initialize() {
       nodes,
       edges,
       neighborInfo,
+      observerReceptions,
       stats,
       meta,
       configurationWarnings,
@@ -3968,6 +4054,29 @@ async function initialize() {
     state.nodes = nodes.nodes;
     state.edges = edges.edges;
     state.neighborInfo = neighborInfo.observations;
+    state.observerReceptions = (
+      observerReceptions.receptions
+    );
+    state.receptionsByNodeId = new Map();
+
+    for (
+      const reception
+      of state.observerReceptions
+    ) {
+      const receptions = (
+        state.receptionsByNodeId.get(
+          reception.node_id
+        ) || []
+      );
+
+      receptions.push(reception);
+
+      state.receptionsByNodeId.set(
+        reception.node_id,
+        receptions
+      );
+    }
+
     state.stats = stats;
     state.meta = meta;
     state.configurationWarnings = configurationWarnings;
