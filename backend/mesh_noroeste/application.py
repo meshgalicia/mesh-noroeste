@@ -1239,8 +1239,9 @@ def publish_from_store(
         resolved_database_path
     )
 
+    observation_count = store.count()
     observations = tuple(
-        store.load_all()
+        store.load_for_publication()
     )
     edge_observations = tuple(
         store.load_all_edges()
@@ -1300,7 +1301,7 @@ def publish_from_store(
     return PublicationResult(
         database_path=resolved_database_path,
         output_directory=resolved_output_directory,
-        observation_count=len(observations),
+        observation_count=observation_count,
         node_count=len(
             documents["nodes.json"]["nodes"]
         ),

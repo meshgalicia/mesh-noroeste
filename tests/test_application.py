@@ -2226,6 +2226,72 @@ class ApplicationTests(unittest.TestCase):
             )
 
 
+
+    def test_publish_uses_reduced_node_loader(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            settings = self.settings(root)
+            store = ObservationStore(
+                settings.state_dir
+                / "mesh-noroeste.db"
+            )
+
+            older = make_observation(
+                source="meshview_es",
+                network="meshtastic",
+                source_id="a35b4144",
+                observed_at="2026-07-25T10:00:00Z",
+                first_seen="2026-07-20T09:00:00Z",
+                short_name="BRUMA",
+                latitude=43.1,
+                longitude=-8.1,
+                position_updated_at=(
+                    "2026-07-25T10:00:00Z"
+                ),
+            )
+            newer = make_observation(
+                source="meshview_es",
+                network="meshtastic",
+                source_id="a35b4144",
+                observed_at="2026-07-25T11:00:00Z",
+                long_name="Bruma actualizada",
+            )
+
+            self.assertEqual(
+                store.save([older, newer]),
+                2,
+            )
+
+            with patch.object(
+                ObservationStore,
+                "load_all",
+                side_effect=AssertionError(
+                    "publish_from_store non debe usar load_all"
+                ),
+            ):
+                result = publish_from_store(
+                    settings=settings,
+                    generated_at=NOW,
+                )
+
+            document = read_public_document(
+                settings.data_dir,
+                "nodes.json",
+            )
+
+        self.assertEqual(result.observation_count, 2)
+        self.assertEqual(result.node_count, 1)
+        self.assertEqual(
+            document["nodes"][0]["short_name"],
+            "BRUMA",
+        )
+        self.assertEqual(
+            document["nodes"][0]["long_name"],
+            "Bruma actualizada",
+        )
+
     def test_publish_applies_configured_exclusions(
         self,
     ) -> None:
