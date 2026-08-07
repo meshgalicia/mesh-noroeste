@@ -271,7 +271,7 @@ def parse_meshcore_hub_nodes(
             "flags",
             index,
         )
-        _boolean(
+        is_observer = _boolean(
             _required(record, "is_observer", index),
             "is_observer",
             index,
@@ -297,6 +297,7 @@ def parse_meshcore_hub_nodes(
                     _required(record, "adv_type", index),
                     index,
                 ),
+                is_observer=is_observer,
                 latitude=latitude,
                 longitude=longitude,
                 position_updated_at=(

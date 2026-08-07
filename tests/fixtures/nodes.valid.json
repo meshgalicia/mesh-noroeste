@@ -52,7 +52,8 @@
         "historical": false,
         "has_position": true
       },
-      "position_precision_bits": 14
+      "position_precision_bits": 14,
+      "is_observer": null
     },
     {
       "id": "meshcore:02ab34cd",
@@ -101,7 +102,8 @@
         "historical": false,
         "has_position": false
       },
-      "position_precision_bits": null
+      "position_precision_bits": null,
+      "is_observer": false
     }
   ]
 }

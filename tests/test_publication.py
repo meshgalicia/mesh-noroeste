@@ -83,6 +83,7 @@ class PublicationTests(unittest.TestCase):
             source_id="02AB34CD",
             observed_at="2026-07-18T12:00:00Z",
             node_type="repeater",
+            is_observer=False,
             short_name="MC01",
             latitude=42.5,
             longitude=-8.5,
@@ -128,7 +129,16 @@ class PublicationTests(unittest.TestCase):
             ],
         )
 
+        meshcore = nodes[0]
         meshtastic = nodes[1]
+
+        self.assertIs(
+            meshcore["is_observer"],
+            False,
+        )
+        self.assertIsNone(
+            meshtastic["is_observer"]
+        )
 
         self.assertEqual(
             meshtastic["sources"],

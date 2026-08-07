@@ -277,6 +277,7 @@ Correspondencia inicial:
 | `first_seen` | `first_seen` |
 | `last_seen` | `observed_at` |
 | `last_seen` | `position_updated_at` |
+| `is_observer` | `is_observer` |
 | `lat` | `latitude` |
 | `lon` | `longitude` |
 
@@ -285,7 +286,10 @@ Correspondencia inicial:
 a `client`, `repeater`, `room_server` y `sensor`; cualquier otro valor se
 conserva como `unknown`.
 
-Las coordenadas parciales son inválidas y el punto `0, 0` se descarta. Esta
+Las coordenadas parciales son inválidas y el punto `0, 0` se descarta.
+`is_observer` identifica que el propio dispositivo registrado por el Hub está
+dedicado a observación. Se conserva de forma independiente de `node_type`: no
+excluye el nodo ni modifica por sí solo su representación visual. Esta
 integración inicial recoge únicamente nodos: no importa anuncios ni genera
 conexiones a partir del Hub.
 
@@ -356,6 +360,7 @@ Cada nodo tendrá esta forma general:
       "hardware": "HELTEC_V4",
       "role": "CLIENT_MUTE",
       "node_type": null,
+      "is_observer": null,
       "latitude": 43.123456,
       "longitude": -8.123456,
       "altitude_m": 120,
@@ -401,6 +406,7 @@ Cada nodo tendrá esta forma general:
 | `hardware` | string/null | Modelo del dispositivo |
 | `role` | string/null | Rol Meshtastic |
 | `node_type` | string/null | Tipo MeshCore |
+| `is_observer` | boolean/null | Dispositivo MeshCore dedicado a observación segundo a fonte |
 | `latitude` | number/null | Latitud |
 | `longitude` | number/null | Longitud |
 | `altitude_m` | number/null | Altitud en metros |
@@ -444,15 +450,21 @@ Para Meshtastic:
 
     {
       "role": "CLIENT",
-      "node_type": null
+      "node_type": null,
+      "is_observer": null
     }
 
 Para MeshCore:
 
     {
       "role": null,
-      "node_type": "repeater"
+      "node_type": "repeater",
+      "is_observer": false
     }
+
+`is_observer` no es un tipo de anuncio MeshCore ni sustituye a `node_type`.
+Solo MeshCore Hub proporciona actualmente este dato; en las observaciones de
+otras fuentes su valor es `null`.
 
 ## Consolidación de observaciones
 

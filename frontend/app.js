@@ -957,6 +957,7 @@ function searchText(node) {
     node.hardware,
     node.role,
     node.node_type,
+    node.is_observer === true ? "observer observador" : "",
     node.sources.join(" "),
     Object.values(node.source_ids).join(" "),
   ].join(" "));
@@ -1291,11 +1292,17 @@ function createNodeIcon(node) {
   const gatewayClass = isMqttGateway(node)
     ? " mqtt-gateway"
     : "";
+  const observerClass = (
+    node.network === "meshcore"
+    && node.is_observer === true
+  )
+    ? " meshcore-observer"
+    : "";
 
   return L.divIcon({
     className: "node-marker-icon",
     html:
-      `<span class="node-marker-badge${gatewayClass}"`
+      `<span class="node-marker-badge${gatewayClass}${observerClass}"`
       + ` style="${cssVariables}">`
       + `<span class="${classes.join(" ")}"></span>`
       + "</span>",
@@ -1309,7 +1316,12 @@ function bindNodeTooltip(marker, node) {
   marker.unbindTooltip();
 
   marker.bindTooltip(
-    nodeName(node),
+    (
+      node.network === "meshcore"
+      && node.is_observer === true
+    )
+      ? `${nodeName(node)} · Observer`
+      : nodeName(node),
     {
       className: "node-tooltip",
       direction: "top",
@@ -2774,6 +2786,15 @@ function showNodeDetail(node) {
         [
           node.network === "meshtastic" ? "Rol" : "Tipo",
           typeLabel(node),
+        ],
+        [
+          "Función no Hub",
+          (
+            node.network === "meshcore"
+            && node.is_observer === true
+          )
+            ? "Observer"
+            : null,
         ],
         ["Estado", statusLabel(node)],
       ]

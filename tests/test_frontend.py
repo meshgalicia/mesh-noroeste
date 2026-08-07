@@ -133,11 +133,11 @@ class FrontendStaticTests(unittest.TestCase):
         self,
     ) -> None:
         self.assertIn(
-            "./styles.css?v=20260730-overlap1",
+            "./styles.css?v=20260806-observer1",
             self.parser.links,
         )
         self.assertIn(
-            "./app.js?v=20260806-meshcore-links1",
+            "./app.js?v=20260806-observer1",
             self.parser.scripts,
         )
 
@@ -468,7 +468,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.javascript)
 
         self.assertIn(
-            "./app.js?v=20260806-meshcore-links1",
+            "./app.js?v=20260806-observer1",
             self.parser.scripts,
         )
 
@@ -499,7 +499,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.javascript)
 
         self.assertIn(
-            "./app.js?v=20260806-meshcore-links1",
+            "./app.js?v=20260806-observer1",
             self.parser.scripts,
         )
 
@@ -1108,13 +1108,48 @@ class FrontendStaticTests(unittest.TestCase):
             with self.subTest(css=text):
                 self.assertIn(text, self.css)
 
+    def test_meshcore_observers_are_identified(
+        self,
+    ) -> None:
+        for expected in (
+            'node.is_observer === true',
+            '" meshcore-observer"',
+            '`${nodeName(node)} · Observer`',
+            '"Función no Hub"',
+            '"observer observador"',
+        ):
+            with self.subTest(javascript=expected):
+                self.assertIn(expected, self.javascript)
+
+        for expected in (
+            ".node-marker-badge.meshcore-observer::after",
+            ".legend-symbol.meshcore-observer",
+            "border: 2px dashed #087f8c;",
+            "width: calc(var(--node-size) + 14px);",
+        ):
+            with self.subTest(css=expected):
+                self.assertIn(expected, self.css)
+
+        self.assertIn(
+            "Observer de MeshCore Hub",
+            self.html,
+        )
+        self.assertIn(
+            "./styles.css?v=20260806-observer1",
+            self.parser.links,
+        )
+        self.assertIn(
+            "./app.js?v=20260806-observer1",
+            self.parser.scripts,
+        )
+
     def test_mqtt_gateways_have_a_persistent_map_ring(
         self,
     ) -> None:
         for expected in (
             'const gatewayClass = isMqttGateway(node)',
             '" mqtt-gateway"',
-            'class="node-marker-badge${gatewayClass}"',
+            'class="node-marker-badge${gatewayClass}${observerClass}"',
         ):
             with self.subTest(javascript=expected):
                 self.assertIn(expected, self.javascript)
@@ -1373,7 +1408,7 @@ class FrontendStaticTests(unittest.TestCase):
             if (
                 "leaflet@1.9.4/dist/leaflet.js" in source
                 or "leaflet.markercluster.js" in source
-                or source == "./app.js?v=20260806-meshcore-links1"
+                or source == "./app.js?v=20260806-observer1"
             ):
                 dependencies.append((source, tag))
 
@@ -1387,7 +1422,7 @@ class FrontendStaticTests(unittest.TestCase):
                 "dist/leaflet.js",
                 "./vendor/leaflet.markercluster/"
                 "leaflet.markercluster.js?v=1.5.3-local1",
-                "./app.js?v=20260806-meshcore-links1",
+                "./app.js?v=20260806-observer1",
             ],
         )
 
@@ -1661,7 +1696,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.css)
 
         self.assertIn(
-            "20260730-overlap1",
+            "20260806-observer1",
             self.html,
         )
 
@@ -1688,7 +1723,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.css)
 
         self.assertIn(
-            "./styles.css?v=20260730-overlap1",
+            "./styles.css?v=20260806-observer1",
             self.parser.links,
         )
 

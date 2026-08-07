@@ -1057,6 +1057,29 @@ h2 {
   transform: translate(-50%, -50%);
 }
 
+.node-marker-badge.meshcore-observer::after {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--node-size) + 14px);
+  height: calc(var(--node-size) + 14px);
+  border: 2px dashed #087f8c;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.9);
+  content: "";
+  pointer-events: none;
+  opacity: var(--node-opacity);
+  transform: translate(-50%, -50%);
+}
+
+.legend-symbol.meshcore-observer {
+  border: 2px dashed #087f8c;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.9);
+}
+
 .node-marker-visual {
   position: relative;
   z-index: 1;

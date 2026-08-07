@@ -385,6 +385,12 @@
             }
           ]
         },
+        "is_observer": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "latitude": {
           "type": [
             "number",
@@ -449,6 +455,9 @@
                 "pattern": "^meshtastic:![0-9a-f]{8}$"
               },
               "node_type": {
+                "type": "null"
+              },
+              "is_observer": {
                 "type": "null"
               }
             }

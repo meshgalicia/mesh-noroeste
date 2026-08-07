@@ -27,7 +27,7 @@ from mesh_noroeste.normalization import (
 )
 
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 
 @contextmanager
@@ -569,6 +569,7 @@ class ObservationStore:
                 4,
                 5,
                 6,
+                7,
                 SCHEMA_VERSION,
             }:
                 raise RuntimeError(
@@ -612,6 +613,11 @@ class ObservationStore:
                     hardware TEXT,
                     role TEXT,
                     node_type TEXT,
+                    is_observer INTEGER
+                        CHECK (
+                            is_observer IS NULL
+                            OR is_observer IN (0, 1)
+                        ),
 
                     latitude REAL,
                     longitude REAL,
@@ -960,6 +966,18 @@ class ObservationStore:
                     """
                 )
 
+            if "is_observer" not in node_columns:
+                connection.execute(
+                    """
+                    ALTER TABLE node_observations
+                    ADD COLUMN is_observer INTEGER
+                        CHECK (
+                            is_observer IS NULL
+                            OR is_observer IN (0, 1)
+                        )
+                    """
+                )
+
             _migrate_source_constraints(
                 connection
             )
@@ -1002,6 +1020,11 @@ class ObservationStore:
                 observation.hardware,
                 observation.role,
                 observation.node_type,
+                (
+                    None
+                    if observation.is_observer is None
+                    else int(observation.is_observer)
+                ),
                 observation.latitude,
                 observation.longitude,
                 observation.altitude_m,
@@ -1054,6 +1077,7 @@ class ObservationStore:
                     hardware,
                     role,
                     node_type,
+                    is_observer,
                     latitude,
                     longitude,
                     altitude_m,
@@ -1064,7 +1088,7 @@ class ObservationStore:
                 )
                 SELECT
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?
                 WHERE NOT EXISTS (
                     SELECT 1
                     FROM node_observation_cursors
@@ -1141,6 +1165,7 @@ class ObservationStore:
                     hardware,
                     role,
                     node_type,
+                    is_observer,
                     latitude,
                     longitude,
                     altitude_m,
@@ -1167,6 +1192,11 @@ class ObservationStore:
                 hardware=row["hardware"],
                 role=row["role"],
                 node_type=row["node_type"],
+                is_observer=(
+                    None
+                    if row["is_observer"] is None
+                    else bool(row["is_observer"])
+                ),
                 latitude=row["latitude"],
                 longitude=row["longitude"],
                 altitude_m=row["altitude_m"],
@@ -1207,6 +1237,7 @@ class ObservationStore:
                     hardware,
                     role,
                     node_type,
+                    is_observer,
                     latitude,
                     longitude,
                     altitude_m,
@@ -1234,6 +1265,11 @@ class ObservationStore:
                     hardware=row["hardware"],
                     role=row["role"],
                     node_type=row["node_type"],
+                    is_observer=(
+                        None
+                        if row["is_observer"] is None
+                        else bool(row["is_observer"])
+                    ),
                     latitude=row["latitude"],
                     longitude=row["longitude"],
                     altitude_m=row["altitude_m"],

@@ -1218,6 +1218,7 @@ class SchemaMigrationTests(unittest.TestCase):
                 source_id="a" * 64,
                 observed_at="2026-08-05T09:00:00Z",
                 node_type="client",
+                is_observer=True,
             )
             hub_edge = make_edge_observation(
                 source="meshcore_hub",
@@ -1235,6 +1236,10 @@ class SchemaMigrationTests(unittest.TestCase):
             self.assertEqual(
                 store.save([hub_node]),
                 1,
+            )
+            self.assertEqual(
+                store.load(hub_node.id),
+                [hub_node],
             )
             self.assertEqual(
                 store.save_edges([hub_edge]),

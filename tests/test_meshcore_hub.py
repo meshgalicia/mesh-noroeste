@@ -65,6 +65,7 @@ class MeshCoreHubTests(unittest.TestCase):
             observation.node_type,
             "repeater",
         )
+        self.assertIs(observation.is_observer, False)
         self.assertEqual(
             observation.first_seen,
             "2026-08-05T08:30:00Z",
@@ -105,6 +106,7 @@ class MeshCoreHubTests(unittest.TestCase):
 
         self.assertIsNone(observation.short_name)
         self.assertEqual(observation.node_type, "unknown")
+        self.assertIs(observation.is_observer, True)
         self.assertIsNone(observation.latitude)
         self.assertIsNone(observation.position_updated_at)
 

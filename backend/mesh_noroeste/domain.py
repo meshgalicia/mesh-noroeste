@@ -286,6 +286,7 @@ class NodeObservation:
     hardware: str | None
     role: str | None
     node_type: str | None
+    is_observer: bool | None
     latitude: float | None
     longitude: float | None
     altitude_m: float | None
@@ -572,6 +573,7 @@ def make_observation(
     hardware: str | None = None,
     role: str | None = None,
     node_type: str | None = None,
+    is_observer: bool | None = None,
     latitude: Any = None,
     longitude: Any = None,
     altitude_m: Any = None,
@@ -716,11 +718,20 @@ def make_observation(
         "node_type",
         200,
     )
+    normalized_is_observer = _optional_boolean(
+        is_observer,
+        "is_observer",
+    )
 
     if normalized_network == "meshtastic":
         if normalized_node_type is not None:
             raise ValueError(
                 "Un nodo Meshtastic no puede tener node_type"
+            )
+
+        if normalized_is_observer is not None:
+            raise ValueError(
+                "Un nodo Meshtastic no puede tener is_observer"
             )
     else:
         if normalized_role is not None:
@@ -764,6 +775,7 @@ def make_observation(
         ),
         role=normalized_role,
         node_type=normalized_node_type,
+        is_observer=normalized_is_observer,
         latitude=normalized_latitude,
         longitude=normalized_longitude,
         altitude_m=normalized_altitude,
@@ -1022,6 +1034,10 @@ def merge_observations(
         "node_type": _latest_non_null(
             ordered,
             "node_type",
+        ),
+        "is_observer": _latest_non_null(
+            ordered,
+            "is_observer",
         ),
         "latitude": latitude,
         "longitude": longitude,

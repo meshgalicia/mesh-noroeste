@@ -72,6 +72,7 @@ class ObservationTests(unittest.TestCase):
             source_id="02ab34cd",
             observed_at=NOW,
             node_type="repeater",
+            is_observer=True,
         )
 
         self.assertEqual(
@@ -82,6 +83,22 @@ class ObservationTests(unittest.TestCase):
             observation.id,
             "meshcore:02ab34cd",
         )
+        self.assertIs(observation.is_observer, True)
+
+    def test_meshtastic_observer_flag_is_rejected(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            "no puede tener is_observer",
+        ):
+            make_observation(
+                source="meshview_es",
+                network="meshtastic",
+                source_id="a35b4144",
+                observed_at=NOW,
+                is_observer=False,
+            )
 
     def test_meshcore_hub_cannot_produce_meshtastic(
         self,
