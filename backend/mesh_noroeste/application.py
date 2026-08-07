@@ -1104,11 +1104,7 @@ def collect_meshcore_hub(
 
             for reception in page_receptions:
                 if reception.id in seen_reception_ids:
-                    raise MeshCoreHubError(
-                        "MeshCore Hub devolveu unha recepción "
-                        "duplicada entre páxinas: "
-                        f"{reception.id}"
-                    )
+                    continue
 
                 seen_reception_ids.add(reception.id)
                 receptions.append(reception)

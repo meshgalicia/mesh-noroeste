@@ -1293,6 +1293,115 @@ class ApplicationTests(unittest.TestCase):
                 ],
             )
 
+    def test_collect_meshcore_hub_deduplicates_receptions_between_pages(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            settings = self.settings(root)
+
+            nodes_url = (
+                MESHCORE_HUB_NODES_URL
+                + "?limit=1&offset=0"
+            )
+            first_advertisements_url = (
+                MESHCORE_HUB_ADVERTISEMENTS_URL
+                + "?limit=1&offset=0"
+            )
+            second_advertisements_url = (
+                MESHCORE_HUB_ADVERTISEMENTS_URL
+                + "?limit=1&offset=1"
+            )
+
+            node_document = meshcore_hub_document(
+                meshcore_hub_node(
+                    "01" * 32,
+                    name="Nodo emisor",
+                    last_seen="2026-08-07T10:00:00Z",
+                ),
+                limit=1,
+                offset=0,
+                total=1,
+            )
+            first_advertisement_document = (
+                meshcore_hub_advertisement_document(
+                    limit=1,
+                    offset=0,
+                    total=2,
+                )
+            )
+            second_advertisement_document = (
+                meshcore_hub_advertisement_document(
+                    limit=1,
+                    offset=1,
+                    total=2,
+                )
+            )
+
+            fetched_pages = [
+                JsonFetchResult(
+                    document=node_document,
+                    requested_url=nodes_url,
+                    final_url=nodes_url,
+                    status=200,
+                    content_type="application/json",
+                    bytes_received=300,
+                ),
+                JsonFetchResult(
+                    document=first_advertisement_document,
+                    requested_url=first_advertisements_url,
+                    final_url=first_advertisements_url,
+                    status=200,
+                    content_type="application/json",
+                    bytes_received=200,
+                ),
+                JsonFetchResult(
+                    document=second_advertisement_document,
+                    requested_url=second_advertisements_url,
+                    final_url=second_advertisements_url,
+                    status=200,
+                    content_type="application/json",
+                    bytes_received=200,
+                ),
+            ]
+
+            timestamps = iter(
+                (
+                    "2026-08-07T10:00:00Z",
+                    "2026-08-07T10:01:00Z",
+                )
+            )
+
+            with patch(
+                "mesh_noroeste.application.fetch_json",
+                side_effect=fetched_pages,
+            ):
+                result = collect_meshcore_hub(
+                    settings=settings,
+                    api_read_key="read-secret",
+                    page_size=1,
+                    clock=lambda: next(timestamps),
+                )
+
+            store = ObservationStore(
+                settings.state_dir
+                / "mesh-noroeste.db"
+            )
+
+            self.assertEqual(
+                result.receptions_received,
+                1,
+            )
+            self.assertEqual(
+                result.receptions_inserted,
+                1,
+            )
+            self.assertEqual(
+                store.count_observer_receptions(),
+                1,
+            )
+
+
     def test_collect_meshcore_hub_records_failure(
         self,
     ) -> None:
