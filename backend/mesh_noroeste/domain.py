@@ -356,7 +356,8 @@ class ObserverReception:
             "meshcore:observer_reception:"
             f"{self.node_source_id}:"
             f"{self.observer_source_id}:"
-            f"{self.packet_hash}"
+            f"{self.packet_hash}:"
+            f"{self.observed_at}"
         )
 
 

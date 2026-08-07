@@ -31,7 +31,7 @@ from mesh_noroeste.normalization import (
 )
 
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 
 @contextmanager
@@ -591,6 +591,133 @@ def _migrate_meshcore_hub_source_constraints(
     if migrated:
         _create_indexes(connection)
 
+
+
+def _migrate_observer_reception_identity(
+    connection: sqlite3.Connection,
+) -> None:
+    """Inclúe observed_at na identidade das recepcións."""
+
+    row = connection.execute(
+        """
+        SELECT sql
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'observer_receptions'
+        """
+    ).fetchone()
+
+    if row is None or row["sql"] is None:
+        raise RuntimeError(
+            "Falta a táboa SQLite observer_receptions"
+        )
+
+    for index in connection.execute(
+        "PRAGMA index_list(observer_receptions)"
+    ):
+        if not index["unique"]:
+            continue
+
+        quoted_index = _quote_identifier(index["name"])
+        columns = [
+            item["name"]
+            for item in connection.execute(
+                f"PRAGMA index_info({quoted_index})"
+            )
+        ]
+
+        if columns == [
+            "source",
+            "node_source_id",
+            "observer_source_id",
+            "packet_hash",
+            "observed_at",
+        ]:
+            return
+
+    table = _quote_identifier("observer_receptions")
+    temporary = _quote_identifier(
+        "observer_receptions_identity_v10"
+    )
+
+    connection.execute(
+        f"DROP TABLE IF EXISTS {temporary}"
+    )
+    connection.execute(
+        f"""
+        CREATE TABLE {temporary} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            source TEXT NOT NULL
+                CHECK (
+                    source = 'meshcore_hub'
+                ),
+
+            node_source_id TEXT NOT NULL,
+            observer_source_id TEXT NOT NULL,
+            packet_hash TEXT NOT NULL,
+            observed_at TEXT NOT NULL,
+            snr_db REAL,
+            path_len INTEGER
+                CHECK (
+                    path_len IS NULL
+                    OR path_len >= 0
+                ),
+
+            inserted_at TEXT NOT NULL DEFAULT (
+                strftime(
+                    '%Y-%m-%dT%H:%M:%SZ',
+                    'now'
+                )
+            ),
+
+            UNIQUE (
+                source,
+                node_source_id,
+                observer_source_id,
+                packet_hash,
+                observed_at
+            )
+        )
+        """
+    )
+    connection.execute(
+        f"""
+        INSERT INTO {temporary} (
+            id,
+            source,
+            node_source_id,
+            observer_source_id,
+            packet_hash,
+            observed_at,
+            snr_db,
+            path_len,
+            inserted_at
+        )
+        SELECT
+            id,
+            source,
+            node_source_id,
+            observer_source_id,
+            packet_hash,
+            observed_at,
+            snr_db,
+            path_len,
+            inserted_at
+        FROM {table}
+        """
+    )
+    connection.execute(f"DROP TABLE {table}")
+    connection.execute(
+        f"""
+        ALTER TABLE {temporary}
+        RENAME TO observer_receptions
+        """
+    )
+
+    _create_indexes(connection)
+
+
 def _populate_observation_cursors(
     connection: sqlite3.Connection,
 ) -> None:
@@ -733,6 +860,7 @@ class ObservationStore:
                 6,
                 7,
                 8,
+                9,
                 SCHEMA_VERSION,
             }:
                 raise RuntimeError(
@@ -1015,7 +1143,8 @@ class ObservationStore:
                             source,
                             node_source_id,
                             observer_source_id,
-                            packet_hash
+                            packet_hash,
+                            observed_at
                         )
                     );
 
@@ -1194,6 +1323,9 @@ class ObservationStore:
                 connection
             )
             _migrate_meshcore_hub_source_constraints(
+                connection
+            )
+            _migrate_observer_reception_identity(
                 connection
             )
 

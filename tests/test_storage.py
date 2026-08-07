@@ -710,6 +710,26 @@ class ObserverReceptionStoreTests(unittest.TestCase):
             0,
         )
 
+    def test_same_packet_and_observer_at_different_times_is_preserved(
+        self,
+    ) -> None:
+        first = self.reception()
+        second = self.reception(
+            observed_at="2026-08-08T07:10:57Z",
+            snr_db=-2.5,
+        )
+
+        self.assertEqual(
+            self.store.save_observer_receptions(
+                [second, first]
+            ),
+            2,
+        )
+        self.assertEqual(
+            self.store.load_all_observer_receptions(),
+            [first, second],
+        )
+
     def test_same_packet_from_two_observers_is_preserved(
         self,
     ) -> None:
@@ -1541,6 +1561,106 @@ class SchemaMigrationTests(unittest.TestCase):
                 store.initialize()
 
 
+
+    def test_version_nine_database_updates_reception_identity(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = (
+                Path(directory) / "migration-v9.db"
+            )
+            store = ObservationStore(database_path)
+
+            first = make_observer_reception(
+                source="meshcore_hub",
+                node_source_id="01" * 32,
+                observer_source_id="02" * 32,
+                packet_hash="338FFB499235B61F",
+                observed_at="2026-08-07T07:10:57Z",
+                snr_db=-6.75,
+            )
+
+            self.assertEqual(
+                store.save_observer_receptions([first]),
+                1,
+            )
+
+            with closing(
+                sqlite3.connect(database_path)
+            ) as connection:
+                with connection:
+                    connection.execute(
+                        """
+                        CREATE TABLE observer_receptions_v9 (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            source TEXT NOT NULL
+                                CHECK (
+                                    source = 'meshcore_hub'
+                                ),
+                            node_source_id TEXT NOT NULL,
+                            observer_source_id TEXT NOT NULL,
+                            packet_hash TEXT NOT NULL,
+                            observed_at TEXT NOT NULL,
+                            snr_db REAL,
+                            path_len INTEGER
+                                CHECK (
+                                    path_len IS NULL
+                                    OR path_len >= 0
+                                ),
+                            inserted_at TEXT NOT NULL,
+                            UNIQUE (
+                                source,
+                                node_source_id,
+                                observer_source_id,
+                                packet_hash
+                            )
+                        )
+                        """
+                    )
+                    connection.execute(
+                        """
+                        INSERT INTO observer_receptions_v9
+                        SELECT *
+                        FROM observer_receptions
+                        """
+                    )
+                    connection.execute(
+                        "DROP TABLE observer_receptions"
+                    )
+                    connection.execute(
+                        """
+                        ALTER TABLE observer_receptions_v9
+                        RENAME TO observer_receptions
+                        """
+                    )
+                    connection.execute(
+                        "PRAGMA user_version = 9"
+                    )
+
+            store.initialize()
+
+            second = make_observer_reception(
+                source="meshcore_hub",
+                node_source_id="01" * 32,
+                observer_source_id="02" * 32,
+                packet_hash="338FFB499235B61F",
+                observed_at="2026-08-08T07:10:57Z",
+                snr_db=-2.5,
+            )
+
+            self.assertEqual(
+                store.save_observer_receptions([second]),
+                1,
+            )
+            self.assertEqual(
+                store.load_all_observer_receptions(),
+                [first, second],
+            )
+            self.assertEqual(
+                store.schema_version(),
+                SCHEMA_VERSION,
+            )
+            self.assertEqual(store.quick_check(), "ok")
 
     def test_version_eight_database_adds_observer_receptions(
         self,

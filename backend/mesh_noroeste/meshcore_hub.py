@@ -463,7 +463,7 @@ def parse_meshcore_hub_advertisements(
         )
 
     receptions: list[ObserverReception] = []
-    seen: set[tuple[str, str, str]] = set()
+    seen: set[tuple[str, str, str, str]] = set()
 
     for index, record in enumerate(records):
         if not isinstance(record, Mapping):
@@ -546,6 +546,7 @@ def parse_meshcore_hub_advertisements(
                 packet_hash,
                 node_source_id,
                 observer_source_id,
+                observed_at,
             )
 
             if identity in seen:

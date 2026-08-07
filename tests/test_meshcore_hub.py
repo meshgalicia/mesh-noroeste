@@ -192,6 +192,41 @@ class MeshCoreHubAdvertisementTests(unittest.TestCase):
                 source="meshcore_hub",
             )
 
+    def test_reused_packet_hash_at_different_times_is_valid(
+        self,
+    ) -> None:
+        observer = {
+            "public_key": "ab" * 32,
+            "snr": -6.75,
+            "path_len": None,
+            "observed_at": "2026-08-07T07:10:57Z",
+        }
+        later_observer = dict(observer)
+        later_observer["observed_at"] = (
+            "2026-08-08T07:10:57Z"
+        )
+
+        receptions = parse_meshcore_hub_advertisements(
+            self.advertisement_document(
+                self.advertisement(
+                    observers=[observer]
+                ),
+                self.advertisement(
+                    observers=[later_observer]
+                ),
+            ),
+            source="meshcore_hub",
+        )
+
+        self.assertEqual(len(receptions), 2)
+        self.assertEqual(
+            [item.observed_at for item in receptions],
+            [
+                "2026-08-07T07:10:57Z",
+                "2026-08-08T07:10:57Z",
+            ],
+        )
+
     def test_duplicate_observer_reception_is_rejected(
         self,
     ) -> None:

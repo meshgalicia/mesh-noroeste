@@ -667,6 +667,17 @@ class ObserverReceptionTests(unittest.TestCase):
         )
         self.assertEqual(reception.snr_db, -6.75)
         self.assertEqual(reception.path_len, 2)
+        self.assertEqual(
+            reception.id,
+            (
+                "meshcore:observer_reception:"
+                + ("01" * 32)
+                + ":"
+                + ("ab" * 32)
+                + ":338FFB499235B61F:"
+                + "2026-08-07T07:10:57Z"
+            ),
+        )
 
     def test_missing_optional_metrics_are_valid(
         self,

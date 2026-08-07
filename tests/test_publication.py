@@ -970,7 +970,7 @@ class PublicationTests(unittest.TestCase):
             path_len=2,
         )
 
-        duplicate = make_observer_reception(
+        later_reception = make_observer_reception(
             source="meshcore_hub",
             node_source_id="01" * 32,
             observer_source_id="ab" * 32,
@@ -994,7 +994,7 @@ class PublicationTests(unittest.TestCase):
             documents = build_public_documents(
                 self.observations(),
                 observer_receptions=[
-                    duplicate,
+                    later_reception,
                     reception,
                     excluded,
                 ],
@@ -1028,6 +1028,22 @@ class PublicationTests(unittest.TestCase):
                         ),
                         "snr_db": -6.75,
                         "path_len": 2,
+                    },
+                    {
+                        "source": "meshcore_hub",
+                        "network": "meshcore",
+                        "node_id": (
+                            "meshcore:" + ("01" * 32)
+                        ),
+                        "observer_id": (
+                            "meshcore:" + ("ab" * 32)
+                        ),
+                        "packet_hash": "338FFB499235B61F",
+                        "observed_at": (
+                            "2026-08-07T10:01:00Z"
+                        ),
+                        "snr_db": 3.5,
+                        "path_len": 3,
                     }
                 ],
             },
