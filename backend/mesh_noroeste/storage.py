@@ -18,16 +18,18 @@ from mesh_noroeste.domain import (
     EdgeObservation,
     NeighborObservation,
     NodeObservation,
+    ObserverReception,
     make_edge_observation,
     make_neighbor_observation,
     make_observation,
+    make_observer_reception,
 )
 from mesh_noroeste.normalization import (
     normalize_timestamp,
 )
 
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 
 @contextmanager
@@ -166,6 +168,20 @@ def _create_indexes(
         ON neighbor_observations (
             from_source_id,
             to_source_id
+        );
+
+        CREATE INDEX IF NOT EXISTS
+            idx_observer_receptions_node_time
+        ON observer_receptions (
+            node_source_id,
+            observed_at
+        );
+
+        CREATE INDEX IF NOT EXISTS
+            idx_observer_receptions_observer_time
+        ON observer_receptions (
+            observer_source_id,
+            observed_at
         );
 
         CREATE INDEX IF NOT EXISTS
@@ -570,6 +586,7 @@ class ObservationStore:
                 5,
                 6,
                 7,
+                8,
                 SCHEMA_VERSION,
             }:
                 raise RuntimeError(
@@ -819,6 +836,55 @@ class ObservationStore:
                 ON neighbor_observations (
                     from_source_id,
                     to_source_id
+                );
+
+                CREATE TABLE IF NOT EXISTS
+                    observer_receptions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                        source TEXT NOT NULL
+                            CHECK (
+                                source = 'meshcore_hub'
+                            ),
+
+                        node_source_id TEXT NOT NULL,
+                        observer_source_id TEXT NOT NULL,
+                        packet_hash TEXT NOT NULL,
+                        observed_at TEXT NOT NULL,
+                        snr_db REAL,
+                        path_len INTEGER
+                            CHECK (
+                                path_len IS NULL
+                                OR path_len >= 0
+                            ),
+
+                        inserted_at TEXT NOT NULL DEFAULT (
+                            strftime(
+                                '%Y-%m-%dT%H:%M:%SZ',
+                                'now'
+                            )
+                        ),
+
+                        UNIQUE (
+                            source,
+                            node_source_id,
+                            observer_source_id,
+                            packet_hash
+                        )
+                    );
+
+                CREATE INDEX IF NOT EXISTS
+                    idx_observer_receptions_node_time
+                ON observer_receptions (
+                    node_source_id,
+                    observed_at
+                );
+
+                CREATE INDEX IF NOT EXISTS
+                    idx_observer_receptions_observer_time
+                ON observer_receptions (
+                    observer_source_id,
+                    observed_at
                 );
 
                 CREATE TABLE IF NOT EXISTS
@@ -1717,6 +1783,133 @@ class ObservationStore:
             ).fetchone()[0]
 
 
+    def save_observer_receptions(
+        self,
+        receptions: Iterable[ObserverReception],
+    ) -> int:
+        """Garda recepcións de observers e devolve cantas inseriu."""
+
+        received = tuple(receptions)
+
+        if not received:
+            return 0
+
+        for reception in received:
+            if not isinstance(
+                reception,
+                ObserverReception,
+            ):
+                raise TypeError(
+                    "Todas as recepcións deben ser "
+                    "ObserverReception"
+                )
+
+        self.initialize()
+
+        rows = [
+            (
+                reception.source,
+                reception.node_source_id,
+                reception.observer_source_id,
+                reception.packet_hash,
+                reception.observed_at,
+                reception.snr_db,
+                reception.path_len,
+            )
+            for reception in received
+        ]
+
+        with _open_connection(
+            self.database_path
+        ) as connection:
+            changes_before = connection.total_changes
+
+            connection.executemany(
+                """
+                INSERT OR IGNORE INTO observer_receptions (
+                    source,
+                    node_source_id,
+                    observer_source_id,
+                    packet_hash,
+                    observed_at,
+                    snr_db,
+                    path_len
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                rows,
+            )
+
+            return (
+                connection.total_changes
+                - changes_before
+            )
+
+
+    def load_all_observer_receptions(
+        self,
+    ) -> list[ObserverReception]:
+        """Carga todas as recepcións dos observers almacenadas."""
+
+        self.initialize()
+
+        with _open_connection(
+            self.database_path
+        ) as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    source,
+                    node_source_id,
+                    observer_source_id,
+                    packet_hash,
+                    observed_at,
+                    snr_db,
+                    path_len
+                FROM observer_receptions
+                ORDER BY
+                    node_source_id ASC,
+                    observer_source_id ASC,
+                    observed_at ASC,
+                    packet_hash ASC,
+                    id ASC
+                """
+            )
+
+            return [
+                make_observer_reception(
+                    source=row["source"],
+                    node_source_id=row[
+                        "node_source_id"
+                    ],
+                    observer_source_id=row[
+                        "observer_source_id"
+                    ],
+                    packet_hash=row["packet_hash"],
+                    observed_at=row["observed_at"],
+                    snr_db=row["snr_db"],
+                    path_len=row["path_len"],
+                )
+                for row in rows
+            ]
+
+
+    def count_observer_receptions(self) -> int:
+        """Devolve o número de recepcións de observers almacenadas."""
+
+        self.initialize()
+
+        with _open_connection(
+            self.database_path
+        ) as connection:
+            return connection.execute(
+                """
+                SELECT COUNT(*)
+                FROM observer_receptions
+                """
+            ).fetchone()[0]
+
+
     def load_all_edges(
         self,
     ) -> list[EdgeObservation]:
@@ -1823,6 +2016,19 @@ class ObservationStore:
                 """,
                 (normalized_canonical_id,),
             )
+
+            if normalized_network == "meshcore":
+                connection.execute(
+                    """
+                    DELETE FROM observer_receptions
+                    WHERE node_source_id = ?
+                       OR observer_source_id = ?
+                    """,
+                    (
+                        normalized_source_id,
+                        normalized_source_id,
+                    ),
+                )
 
             changes_before_edges = (
                 connection.total_changes
@@ -2168,6 +2374,14 @@ class ObservationStore:
                 (normalized_before,),
             ).rowcount
 
+            deleted_observer_receptions = connection.execute(
+                """
+                DELETE FROM observer_receptions
+                WHERE observed_at < ?
+                """,
+                (normalized_before,),
+            ).rowcount
+
             deleted_runs = connection.execute(
                 """
                 DELETE FROM source_runs
@@ -2200,6 +2414,9 @@ class ObservationStore:
         return {
             "node_observations": deleted_nodes,
             "edge_observations": deleted_edges,
+            "observer_receptions": (
+                deleted_observer_receptions
+            ),
             "source_runs": deleted_runs,
         }
 

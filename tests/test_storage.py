@@ -14,6 +14,7 @@ from mesh_noroeste.domain import (
     make_edge_observation,
     make_neighbor_observation,
     make_observation,
+    make_observer_reception,
 )
 from mesh_noroeste.storage import (
     ObservationStore,
@@ -526,6 +527,136 @@ class NeighborObservationStoreTests(unittest.TestCase):
             "NeighborObservation",
         ):
             self.store.save_neighbors(
+                [object()]  # type: ignore[list-item]
+            )
+
+
+class ObserverReceptionStoreTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary_directory = (
+            tempfile.TemporaryDirectory()
+        )
+        self.addCleanup(
+            self.temporary_directory.cleanup
+        )
+
+        self.store = ObservationStore(
+            Path(self.temporary_directory.name)
+            / "observer-receptions.db"
+        )
+
+    def reception(
+        self,
+        *,
+        packet_hash: str = "338FFB499235B61F",
+        observed_at: str = "2026-08-07T07:10:57Z",
+        snr_db: float | None = -6.75,
+        path_len: int | None = 2,
+    ):
+        return make_observer_reception(
+            source="meshcore_hub",
+            node_source_id="01" * 32,
+            observer_source_id="ab" * 32,
+            packet_hash=packet_hash,
+            observed_at=observed_at,
+            snr_db=snr_db,
+            path_len=path_len,
+        )
+
+    def test_observer_reception_round_trip(self) -> None:
+        reception = self.reception()
+
+        self.assertEqual(
+            self.store.save_observer_receptions(
+                [reception]
+            ),
+            1,
+        )
+        self.assertEqual(
+            self.store.load_all_observer_receptions(),
+            [reception],
+        )
+        self.assertEqual(
+            self.store.count_observer_receptions(),
+            1,
+        )
+
+    def test_duplicate_reception_is_ignored(self) -> None:
+        reception = self.reception()
+
+        self.assertEqual(
+            self.store.save_observer_receptions(
+                [reception]
+            ),
+            1,
+        )
+        self.assertEqual(
+            self.store.save_observer_receptions(
+                [reception]
+            ),
+            0,
+        )
+
+    def test_same_packet_from_two_observers_is_preserved(
+        self,
+    ) -> None:
+        first = self.reception()
+        second = make_observer_reception(
+            source="meshcore_hub",
+            node_source_id="01" * 32,
+            observer_source_id="cd" * 32,
+            packet_hash=first.packet_hash,
+            observed_at="2026-08-07T07:10:58Z",
+            snr_db=3.5,
+        )
+
+        self.assertEqual(
+            self.store.save_observer_receptions(
+                [second, first]
+            ),
+            2,
+        )
+        self.assertEqual(
+            self.store.load_all_observer_receptions(),
+            [first, second],
+        )
+
+    def test_same_observer_can_receive_different_packets(
+        self,
+    ) -> None:
+        first = self.reception()
+        second = self.reception(
+            packet_hash="6875CFA7269E0AE0",
+            observed_at="2026-08-07T07:11:57Z",
+        )
+
+        self.assertEqual(
+            self.store.save_observer_receptions(
+                [second, first]
+            ),
+            2,
+        )
+        self.assertEqual(
+            self.store.load_all_observer_receptions(),
+            [first, second],
+        )
+
+    def test_empty_observer_reception_store(self) -> None:
+        self.assertEqual(
+            self.store.load_all_observer_receptions(),
+            [],
+        )
+        self.assertEqual(
+            self.store.count_observer_receptions(),
+            0,
+        )
+
+    def test_non_reception_object_is_rejected(self) -> None:
+        with self.assertRaisesRegex(
+            TypeError,
+            "ObserverReception",
+        ):
+            self.store.save_observer_receptions(
                 [object()]  # type: ignore[list-item]
             )
 
@@ -1296,6 +1427,73 @@ class SchemaMigrationTests(unittest.TestCase):
             ):
                 store.initialize()
 
+
+
+    def test_version_eight_database_adds_observer_receptions(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = (
+                Path(directory) / "migration-v8.db"
+            )
+            store = ObservationStore(database_path)
+
+            existing = make_observation(
+                source="meshcore_hub",
+                network="meshcore",
+                source_id="01" * 32,
+                observed_at="2026-08-07T07:00:00Z",
+                is_observer=False,
+            )
+
+            self.assertEqual(store.save([existing]), 1)
+
+            with closing(
+                sqlite3.connect(database_path)
+            ) as connection:
+                with connection:
+                    connection.execute(
+                        "DROP TABLE observer_receptions"
+                    )
+                    connection.execute(
+                        "PRAGMA user_version = 8"
+                    )
+
+            store.initialize()
+
+            self.assertEqual(
+                store.schema_version(),
+                SCHEMA_VERSION,
+            )
+            self.assertEqual(
+                store.load_all(),
+                [existing],
+            )
+            self.assertEqual(
+                store.load_all_observer_receptions(),
+                [],
+            )
+
+            reception = make_observer_reception(
+                source="meshcore_hub",
+                node_source_id="01" * 32,
+                observer_source_id="02" * 32,
+                packet_hash="338FFB499235B61F",
+                observed_at="2026-08-07T07:10:57Z",
+                snr_db=-6.75,
+            )
+
+            self.assertEqual(
+                store.save_observer_receptions(
+                    [reception]
+                ),
+                1,
+            )
+            self.assertEqual(
+                store.load_all_observer_receptions(),
+                [reception],
+            )
+            self.assertEqual(store.quick_check(), "ok")
 
 
 class NodePurgeTests(unittest.TestCase):
