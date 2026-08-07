@@ -17,6 +17,7 @@ import msgpack
 
 from mesh_noroeste.application import (
     MALHA_PT_URL,
+    MESHCORE_HUB_ADVERTISEMENTS_URL,
     MESHCORE_HUB_NODES_URL,
     MESHCORE_MAP_URL,
     MESHVIEW_ES_NEIGHBOR_EDGES_URL,
@@ -160,6 +161,36 @@ def meshcore_hub_document(
 ) -> dict[str, object]:
     return {
         "items": list(nodes),
+        "limit": limit,
+        "offset": offset,
+        "total": total,
+    }
+
+
+def meshcore_hub_advertisement_document(
+    *,
+    limit: int,
+    offset: int,
+    total: int,
+) -> dict[str, object]:
+    return {
+        "items": [
+            {
+                "public_key": "01" * 32,
+                "received_at": "2026-08-05T08:40:00Z",
+                "packet_hash": "338FFB499235B61F",
+                "observers": [
+                    {
+                        "public_key": "03" * 32,
+                        "snr": -6.75,
+                        "path_len": 2,
+                        "observed_at": (
+                            "2026-08-05T08:40:00Z"
+                        ),
+                    }
+                ],
+            }
+        ],
         "limit": limit,
         "offset": offset,
         "total": total,
@@ -1083,6 +1114,10 @@ class ApplicationTests(unittest.TestCase):
                 MESHCORE_HUB_NODES_URL
                 + "?limit=1&offset=1"
             )
+            advertisements_url = (
+                MESHCORE_HUB_ADVERTISEMENTS_URL
+                + "?limit=1&offset=0"
+            )
 
             first_document = meshcore_hub_document(
                 meshcore_hub_node(
@@ -1126,6 +1161,20 @@ class ApplicationTests(unittest.TestCase):
                     content_type="application/json",
                     bytes_received=320,
                 ),
+                JsonFetchResult(
+                    document=(
+                        meshcore_hub_advertisement_document(
+                            limit=1,
+                            offset=0,
+                            total=1,
+                        )
+                    ),
+                    requested_url=advertisements_url,
+                    final_url=advertisements_url,
+                    status=200,
+                    content_type="application/json",
+                    bytes_received=200,
+                ),
             ]
 
             timestamps = iter(
@@ -1166,11 +1215,11 @@ class ApplicationTests(unittest.TestCase):
             )
             self.assertEqual(
                 result.final_url,
-                second_url,
+                advertisements_url,
             )
             self.assertEqual(
                 result.bytes_received,
-                620,
+                820,
             )
             self.assertEqual(
                 result.records_received,
@@ -1180,7 +1229,19 @@ class ApplicationTests(unittest.TestCase):
                 result.records_inserted,
                 2,
             )
+            self.assertEqual(
+                result.receptions_received,
+                1,
+            )
+            self.assertEqual(
+                result.receptions_inserted,
+                1,
+            )
             self.assertEqual(store.count(), 2)
+            self.assertEqual(
+                store.count_observer_receptions(),
+                1,
+            )
 
             self.assertEqual(
                 store.source_statistics()[
@@ -1211,6 +1272,16 @@ class ApplicationTests(unittest.TestCase):
                     ),
                     call(
                         second_url,
+                        timeout=20.0,
+                        max_bytes=20 * 1024 * 1024,
+                        headers={
+                            "Authorization": (
+                                "Bearer read-secret"
+                            ),
+                        },
+                    ),
+                    call(
+                        advertisements_url,
                         timeout=20.0,
                         max_bytes=20 * 1024 * 1024,
                         headers={

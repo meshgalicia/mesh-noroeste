@@ -25,6 +25,7 @@ from mesh_noroeste.domain import (
     EdgeObservation,
     NeighborObservation,
     NodeObservation,
+    ObserverReception,
 )
 from mesh_noroeste.exclusions import load_exclusions
 from mesh_noroeste.http_client import (
@@ -46,6 +47,7 @@ from mesh_noroeste.malha_pt import (
 )
 from mesh_noroeste.meshcore_hub import (
     MeshCoreHubError,
+    parse_meshcore_hub_advertisements,
     parse_meshcore_hub_nodes,
 )
 from mesh_noroeste.meshcore_map import (
@@ -104,6 +106,9 @@ MESHCORE_MAP_ACCEPT = "application/msgpack"
 
 MESHCORE_HUB_NODES_URL = (
     "https://hub.mesh.gal/api/v1/nodes"
+)
+MESHCORE_HUB_ADVERTISEMENTS_URL = (
+    "https://hub.mesh.gal/api/v1/advertisements"
 )
 MESHCORE_HUB_PAGE_SIZE = 100
 
@@ -352,6 +357,22 @@ def _allowed_neighbor_observations(
     )
 
 
+def _allowed_observer_receptions(
+    receptions: Iterable[ObserverReception],
+    excluded_node_ids: frozenset[str],
+) -> tuple[ObserverReception, ...]:
+    """Descarta recepcións con algún nodo excluído."""
+
+    return tuple(
+        reception
+        for reception in receptions
+        if (
+            reception.node_id not in excluded_node_ids
+            and reception.observer_id not in excluded_node_ids
+        )
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class CollectionResult:
     """Resultado de una recolección de fuente."""
@@ -363,6 +384,8 @@ class CollectionResult:
     bytes_received: int
     records_received: int
     records_inserted: int
+    receptions_received: int = 0
+    receptions_inserted: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -908,6 +931,9 @@ def collect_meshcore_hub(
     api_read_key: str,
     database_path: Path | str | None = None,
     url: str = MESHCORE_HUB_NODES_URL,
+    advertisements_url: str = (
+        MESHCORE_HUB_ADVERTISEMENTS_URL
+    ),
     page_size: int = MESHCORE_HUB_PAGE_SIZE,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     max_bytes: int = DEFAULT_MAX_BYTES,
@@ -951,7 +977,9 @@ def collect_meshcore_hub(
     )
 
     observations: list[NodeObservation] = []
+    receptions: list[ObserverReception] = []
     seen_ids: set[str] = set()
+    seen_reception_ids: set[str] = set()
     bytes_received = 0
     offset = 0
     requested_url = first_page_url
@@ -1022,15 +1050,104 @@ def collect_meshcore_hub(
 
             offset = next_offset
 
+        advertisement_offset = 0
+
+        while True:
+            advertisement_page_url = (
+                _meshcore_hub_page_url(
+                    advertisements_url,
+                    limit=page_size,
+                    offset=advertisement_offset,
+                )
+            )
+
+            fetched = fetch_json(
+                advertisement_page_url,
+                timeout=timeout,
+                max_bytes=max_bytes,
+                headers={
+                    "Authorization": (
+                        f"Bearer {normalized_api_key}"
+                    ),
+                },
+            )
+
+            document = fetched.document
+
+            if not isinstance(document, Mapping):
+                raise MeshCoreHubError(
+                    "A raíz de MeshCore Hub debe ser un obxecto"
+                )
+
+            records = document.get("items")
+
+            if not isinstance(records, list):
+                raise MeshCoreHubError(
+                    "O campo 'items' de MeshCore Hub "
+                    "debe ser unha lista"
+                )
+
+            page_receptions = (
+                parse_meshcore_hub_advertisements(
+                    document,
+                    source="meshcore_hub",
+                )
+            )
+            total = _meshcore_hub_page_total(
+                document,
+                expected_offset=advertisement_offset,
+                records_received=len(records),
+            )
+
+            final_url = fetched.final_url
+            bytes_received += fetched.bytes_received
+
+            for reception in page_receptions:
+                if reception.id in seen_reception_ids:
+                    raise MeshCoreHubError(
+                        "MeshCore Hub devolveu unha recepción "
+                        "duplicada entre páxinas: "
+                        f"{reception.id}"
+                    )
+
+                seen_reception_ids.add(reception.id)
+                receptions.append(reception)
+
+            next_offset = (
+                advertisement_offset + len(records)
+            )
+
+            if next_offset >= total:
+                break
+
+            if not records:
+                raise MeshCoreHubError(
+                    "A paxinación dos anuncios de "
+                    "MeshCore Hub non avanzou"
+                )
+
+            advertisement_offset = next_offset
+
         allowed_observations = (
             _allowed_node_observations(
                 observations,
                 excluded_node_ids,
             )
         )
+        allowed_receptions = (
+            _allowed_observer_receptions(
+                receptions,
+                excluded_node_ids,
+            )
+        )
 
         inserted = store.save(
             allowed_observations
+        )
+        receptions_inserted = (
+            store.save_observer_receptions(
+                allowed_receptions
+            )
         )
 
     except Exception as exc:
@@ -1067,6 +1184,8 @@ def collect_meshcore_hub(
         bytes_received=bytes_received,
         records_received=len(observations),
         records_inserted=inserted,
+        receptions_received=len(receptions),
+        receptions_inserted=receptions_inserted,
     )
 
 
