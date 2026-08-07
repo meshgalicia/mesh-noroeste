@@ -702,6 +702,8 @@ class CommandLineTests(unittest.TestCase):
                 bytes_received=6400,
                 records_received=75,
                 records_inserted=70,
+                receptions_received=120,
+                receptions_inserted=115,
             )
 
             environment = self.environment(root)
@@ -762,6 +764,8 @@ class CommandLineTests(unittest.TestCase):
                     "bytes_received": 6400,
                     "records_received": 75,
                     "records_inserted": 70,
+                    "receptions_received": 120,
+                    "receptions_inserted": 115,
                 },
             )
 

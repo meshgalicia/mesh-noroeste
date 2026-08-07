@@ -684,6 +684,8 @@ def _collect_meshcore_hub(
         "bytes_received": result.bytes_received,
         "records_received": result.records_received,
         "records_inserted": result.records_inserted,
+        "receptions_received": result.receptions_received,
+        "receptions_inserted": result.receptions_inserted,
     }
 
     _print_response(response, compact=args.compact)
