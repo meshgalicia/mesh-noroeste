@@ -80,6 +80,39 @@ def _normalize_source(value: str) -> str:
     return normalized
 
 
+def _node_observation_from_row(
+    row: sqlite3.Row,
+) -> NodeObservation:
+    """Convierte una fila SQLite en una observación de nodo."""
+
+    return make_observation(
+        source=row["source"],
+        network=row["network"],
+        source_id=row["source_id"],
+        observed_at=row["observed_at"],
+        first_seen=row["first_seen"],
+        short_name=row["short_name"],
+        long_name=row["long_name"],
+        hardware=row["hardware"],
+        role=row["role"],
+        node_type=row["node_type"],
+        is_observer=(
+            None
+            if row["is_observer"] is None
+            else bool(row["is_observer"])
+        ),
+        latitude=row["latitude"],
+        longitude=row["longitude"],
+        altitude_m=row["altitude_m"],
+        position_precision_bits=(
+            row["position_precision_bits"]
+        ),
+        position_updated_at=row["position_updated_at"],
+        metrics=json.loads(row["metrics_json"]),
+        radio=json.loads(row["radio_json"]),
+    )
+
+
 _LEGACY_SOURCE_CONSTRAINT = re.compile(
     r"'meshview_es'\s*,\s*"
     r"'malha_pt'\s*,\s*"
@@ -1247,38 +1280,7 @@ class ObservationStore:
             ).fetchall()
 
         return [
-            make_observation(
-                source=row["source"],
-                network=row["network"],
-                source_id=row["source_id"],
-                observed_at=row["observed_at"],
-                first_seen=row["first_seen"],
-                short_name=row["short_name"],
-                long_name=row["long_name"],
-                hardware=row["hardware"],
-                role=row["role"],
-                node_type=row["node_type"],
-                is_observer=(
-                    None
-                    if row["is_observer"] is None
-                    else bool(row["is_observer"])
-                ),
-                latitude=row["latitude"],
-                longitude=row["longitude"],
-                altitude_m=row["altitude_m"],
-                position_precision_bits=(
-                    row["position_precision_bits"]
-                ),
-                position_updated_at=(
-                    row["position_updated_at"]
-                ),
-                metrics=json.loads(
-                    row["metrics_json"]
-                ),
-                radio=json.loads(
-                    row["radio_json"]
-                ),
-            )
+            _node_observation_from_row(row)
             for row in rows
         ]
 
@@ -1320,38 +1322,7 @@ class ObservationStore:
             )
 
             return [
-                make_observation(
-                    source=row["source"],
-                    network=row["network"],
-                    source_id=row["source_id"],
-                    observed_at=row["observed_at"],
-                    first_seen=row["first_seen"],
-                    short_name=row["short_name"],
-                    long_name=row["long_name"],
-                    hardware=row["hardware"],
-                    role=row["role"],
-                    node_type=row["node_type"],
-                    is_observer=(
-                        None
-                        if row["is_observer"] is None
-                        else bool(row["is_observer"])
-                    ),
-                    latitude=row["latitude"],
-                    longitude=row["longitude"],
-                    altitude_m=row["altitude_m"],
-                    position_precision_bits=(
-                        row["position_precision_bits"]
-                    ),
-                    position_updated_at=(
-                        row["position_updated_at"]
-                    ),
-                    metrics=json.loads(
-                        row["metrics_json"]
-                    ),
-                    radio=json.loads(
-                        row["radio_json"]
-                    ),
-                )
+                _node_observation_from_row(row)
                 for row in rows
             ]
 
