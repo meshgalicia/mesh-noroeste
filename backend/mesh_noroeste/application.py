@@ -1248,6 +1248,9 @@ def publish_from_store(
     neighbor_observations = tuple(
         store.load_all_neighbors()
     )
+    observer_receptions = tuple(
+        store.load_all_observer_receptions()
+    )
     source_statistics = store.source_statistics()
     excluded_node_ids = load_exclusions(
         settings.exclusions_path
@@ -1262,6 +1265,7 @@ def publish_from_store(
             observations,
             edge_observations=edge_observations,
             neighbor_observations=neighbor_observations,
+            observer_receptions=observer_receptions,
             generated_at=generated_at,
             settings=settings,
             application_version=application_version,
@@ -1276,6 +1280,7 @@ def publish_from_store(
             observations,
             edge_observations=edge_observations,
             neighbor_observations=neighbor_observations,
+            observer_receptions=observer_receptions,
             generated_at=generated_at,
             settings=settings,
             application_version=application_version,

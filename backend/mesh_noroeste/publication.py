@@ -24,6 +24,7 @@ from mesh_noroeste.domain import (
     EdgeObservation,
     NeighborObservation,
     NodeObservation,
+    ObserverReception,
     SOURCE_ORDER,
     merge_observations,
 )
@@ -43,6 +44,7 @@ PUBLIC_DOCUMENT_NAMES = (
     "nodes.json",
     "edges.json",
     "neighbor-info.json",
+    "observer-receptions.json",
     "stats.json",
     "meta.json",
     "configuration-warnings.json",
@@ -455,6 +457,46 @@ def _public_neighbor_documents(
     ]
 
 
+def _public_observer_reception_documents(
+    receptions: tuple[ObserverReception, ...],
+    excluded_node_ids: set[str],
+) -> list[dict[str, Any]]:
+    """Ordena e filtra as recepcións públicas dos observers."""
+
+    unique: dict[str, ObserverReception] = {}
+
+    for reception in receptions:
+        if not isinstance(reception, ObserverReception):
+            raise TypeError(
+                "Todas as recepcións deben ser ObserverReception"
+            )
+
+        if (
+            reception.node_id in excluded_node_ids
+            or reception.observer_id in excluded_node_ids
+        ):
+            continue
+
+        unique[reception.id] = reception
+
+    return [
+        {
+            "source": reception.source,
+            "network": "meshcore",
+            "node_id": reception.node_id,
+            "observer_id": reception.observer_id,
+            "packet_hash": reception.packet_hash,
+            "observed_at": reception.observed_at,
+            "snr_db": reception.snr_db,
+            "path_len": reception.path_len,
+        }
+        for _, reception in sorted(
+            unique.items(),
+            key=lambda item: item[0],
+        )
+    ]
+
+
 def build_public_documents(
     observations: Iterable[NodeObservation],
     *,
@@ -463,6 +505,9 @@ def build_public_documents(
     ] = (),
     neighbor_observations: Iterable[
         NeighborObservation
+    ] = (),
+    observer_receptions: Iterable[
+        ObserverReception
     ] = (),
     generated_at: Any,
     settings: Settings,
@@ -485,6 +530,9 @@ def build_public_documents(
     received_edges = tuple(edge_observations)
     received_neighbors = tuple(
         neighbor_observations
+    )
+    received_receptions = tuple(
+        observer_receptions
     )
 
     if isinstance(
@@ -653,6 +701,19 @@ def build_public_documents(
         "observations": neighbor_info,
     }
 
+    observer_receptions = (
+        _public_observer_reception_documents(
+            received_receptions,
+            excluded_ids,
+        )
+    )
+
+    observer_receptions_document = {
+        "schema": SCHEMA_ID,
+        "generated_at": normalized_generated_at,
+        "receptions": observer_receptions,
+    }
+
     network_stats = {
         "meshtastic": _network_statistics(
             nodes,
@@ -736,6 +797,9 @@ def build_public_documents(
         "nodes.json": nodes_document,
         "edges.json": edges_document,
         "neighbor-info.json": neighbor_info_document,
+        "observer-receptions.json": (
+            observer_receptions_document
+        ),
         "stats.json": stats_document,
         "meta.json": meta_document,
         "configuration-warnings.json": warnings_document,

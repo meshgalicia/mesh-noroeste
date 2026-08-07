@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mesh Noroeste observer-receptions.json v1",
+  "description": "Recepcións públicas de anuncios MeshCore atribuídas aos observers do Hub.",
+  "type": "object",
+  "required": [
+    "schema",
+    "generated_at",
+    "receptions"
+  ],
+  "properties": {
+    "schema": {
+      "const": "mesh-noroeste.data/v1"
+    },
+    "generated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "receptions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reception"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "node_id": {
+      "type": "string",
+      "pattern": "^meshcore:[0-9a-f]{64}$"
+    },
+    "reception": {
+      "type": "object",
+      "required": [
+        "source",
+        "network",
+        "node_id",
+        "observer_id",
+        "packet_hash",
+        "observed_at",
+        "snr_db",
+        "path_len"
+      ],
+      "properties": {
+        "source": {
+          "const": "meshcore_hub"
+        },
+        "network": {
+          "const": "meshcore"
+        },
+        "node_id": {
+          "$ref": "#/$defs/node_id"
+        },
+        "observer_id": {
+          "$ref": "#/$defs/node_id"
+        },
+        "packet_hash": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "observed_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "snr_db": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "path_len": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

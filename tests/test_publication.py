@@ -20,6 +20,7 @@ from mesh_noroeste.domain import (
     make_edge_observation,
     make_neighbor_observation,
     make_observation,
+    make_observer_reception,
 )
 from mesh_noroeste.publication import (
     PUBLIC_DOCUMENT_NAMES,
@@ -956,6 +957,83 @@ class PublicationTests(unittest.TestCase):
         )
         self.assertEqual(warnings["nodes"], [])
 
+    def test_observer_receptions_are_published(
+        self,
+    ) -> None:
+        reception = make_observer_reception(
+            source="meshcore_hub",
+            node_source_id="01" * 32,
+            observer_source_id="ab" * 32,
+            packet_hash="338ffb499235b61f",
+            observed_at="2026-08-07T10:00:00Z",
+            snr_db=-6.75,
+            path_len=2,
+        )
+
+        duplicate = make_observer_reception(
+            source="meshcore_hub",
+            node_source_id="01" * 32,
+            observer_source_id="ab" * 32,
+            packet_hash="338FFB499235B61F",
+            observed_at="2026-08-07T10:01:00Z",
+            snr_db=3.5,
+            path_len=3,
+        )
+
+        excluded = make_observer_reception(
+            source="meshcore_hub",
+            node_source_id="02" * 32,
+            observer_source_id="cd" * 32,
+            packet_hash="A1B2C3D4",
+            observed_at="2026-08-07T10:02:00Z",
+            snr_db=None,
+            path_len=None,
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            documents = build_public_documents(
+                self.observations(),
+                observer_receptions=[
+                    duplicate,
+                    reception,
+                    excluded,
+                ],
+                generated_at=NOW,
+                settings=self.settings(
+                    Path(temporary)
+                ),
+                excluded_node_ids={
+                    "meshcore:" + ("cd" * 32),
+                },
+            )
+
+        self.assertEqual(
+            documents["observer-receptions.json"],
+            {
+                "schema": "mesh-noroeste.data/v1",
+                "generated_at": NOW,
+                "receptions": [
+                    {
+                        "source": "meshcore_hub",
+                        "network": "meshcore",
+                        "node_id": (
+                            "meshcore:" + ("01" * 32)
+                        ),
+                        "observer_id": (
+                            "meshcore:" + ("ab" * 32)
+                        ),
+                        "packet_hash": "338FFB499235B61F",
+                        "observed_at": (
+                            "2026-08-07T10:00:00Z"
+                        ),
+                        "snr_db": -6.75,
+                        "path_len": 2,
+                    }
+                ],
+            },
+        )
+
+
     def test_written_documents_match_schemas(
         self,
     ) -> None:
@@ -973,6 +1051,10 @@ class PublicationTests(unittest.TestCase):
             "neighbor-info.json": (
                 project_root
                 / "schemas/neighbor-info-v1.schema.json"
+            ),
+            "observer-receptions.json": (
+                project_root
+                / "schemas/observer-receptions-v1.schema.json"
             ),
             "stats.json": (
                 project_root

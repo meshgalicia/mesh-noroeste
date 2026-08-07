@@ -28,6 +28,7 @@
         "nodes.json",
         "edges.json",
         "neighbor-info.json",
+        "observer-receptions.json",
         "stats.json",
         "meta.json",
         "configuration-warnings.json"
@@ -56,6 +57,10 @@
         "configuration-warnings.json": {
           "type": "string",
           "pattern": "^generations/[0-9A-Za-z][0-9A-Za-z.-]*/configuration-warnings\\.json$"
+        },
+        "observer-receptions.json": {
+          "type": "string",
+          "pattern": "^generations/[0-9A-Za-z][0-9A-Za-z.-]*/observer-receptions\\.json$"
         }
       },
       "additionalProperties": false

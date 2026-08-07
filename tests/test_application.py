@@ -39,6 +39,7 @@ from mesh_noroeste.domain import (
     make_edge_observation,
     make_neighbor_observation,
     make_observation,
+    make_observer_reception,
 )
 from mesh_noroeste.exclusions import ExclusionsError
 from mesh_noroeste.http_client import (
@@ -2087,6 +2088,23 @@ class ApplicationTests(unittest.TestCase):
                 1,
             )
 
+            reception = make_observer_reception(
+                source="meshcore_hub",
+                node_source_id="01" * 32,
+                observer_source_id="ab" * 32,
+                packet_hash="338FFB499235B61F",
+                observed_at="2026-07-25T11:40:00Z",
+                snr_db=-5.25,
+                path_len=1,
+            )
+
+            self.assertEqual(
+                store.save_observer_receptions(
+                    [reception]
+                ),
+                1,
+            )
+
             result = publish_from_store(
                 settings=settings,
                 generated_at=NOW,
@@ -2136,6 +2154,11 @@ class ApplicationTests(unittest.TestCase):
                 "neighbor-info.json",
             )
 
+            receptions_document = read_public_document(
+                settings.data_dir,
+                "observer-receptions.json",
+            )
+
             stats_document = read_public_document(
                 settings.data_dir,
                 "stats.json",
@@ -2157,6 +2180,28 @@ class ApplicationTests(unittest.TestCase):
                             "2026-07-25T11:30:00Z"
                         ),
                         "snr_db": 4.5,
+                    }
+                ],
+            )
+
+            self.assertEqual(
+                receptions_document["receptions"],
+                [
+                    {
+                        "source": "meshcore_hub",
+                        "network": "meshcore",
+                        "node_id": (
+                            "meshcore:" + ("01" * 32)
+                        ),
+                        "observer_id": (
+                            "meshcore:" + ("ab" * 32)
+                        ),
+                        "packet_hash": "338FFB499235B61F",
+                        "observed_at": (
+                            "2026-07-25T11:40:00Z"
+                        ),
+                        "snr_db": -5.25,
+                        "path_len": 1,
                     }
                 ],
             )

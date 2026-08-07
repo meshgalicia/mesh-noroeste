@@ -1,0 +1,16 @@
+{
+  "schema": "mesh-noroeste.data/v1",
+  "generated_at": "2026-08-07T10:00:00Z",
+  "receptions": [
+    {
+      "source": "meshcore_hub",
+      "network": "meshcore",
+      "node_id": "meshcore:0101010101010101010101010101010101010101010101010101010101010101",
+      "observer_id": "meshcore:abababababababababababababababababababababababababababababababab",
+      "packet_hash": "338FFB499235B61F",
+      "observed_at": "2026-08-07T09:59:57Z",
+      "snr_db": -6.75,
+      "path_len": 2
+    }
+  ]
+}

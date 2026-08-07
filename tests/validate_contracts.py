@@ -42,6 +42,10 @@ PAIRS = (
         ROOT / "tests/fixtures/neighbor-info.valid.json",
     ),
     (
+        ROOT / "schemas/observer-receptions-v1.schema.json",
+        ROOT / "tests/fixtures/observer-receptions.valid.json",
+    ),
+    (
         ROOT / "schemas/stats-v1.schema.json",
         ROOT / "tests/fixtures/stats.valid.json",
     ),
@@ -131,6 +135,7 @@ def validate_manifest(
         "nodes.json",
         "edges.json",
         "neighbor-info.json",
+        "observer-receptions.json",
         "stats.json",
         "meta.json",
         "configuration-warnings.json",
@@ -334,6 +339,37 @@ def validate_neighbor_info(
     )
 
 
+def validate_observer_receptions(
+    document: dict[str, Any],
+) -> None:
+    identities: set[
+        tuple[str, str, str]
+    ] = set()
+
+    for reception in document["receptions"]:
+        identity = (
+            reception["node_id"],
+            reception["observer_id"],
+            reception["packet_hash"],
+        )
+
+        if identity in identities:
+            raise AssertionError(
+                "Recepción de observer duplicada: "
+                f"{identity}"
+            )
+
+        identities.add(identity)
+        parse_timestamp(reception["observed_at"])
+
+    parse_timestamp(document["generated_at"])
+
+    print(
+        "OK semántica: "
+        "observer-receptions.valid.json"
+    )
+
+
 def validate_stats(document: dict[str, Any]) -> None:
     totals = document["totals"]
     networks = document["networks"]
@@ -522,6 +558,10 @@ def main() -> int:
     neighbor_info = load_json(
         ROOT / "tests/fixtures/neighbor-info.valid.json"
     )
+    observer_receptions = load_json(
+        ROOT
+        / "tests/fixtures/observer-receptions.valid.json"
+    )
     stats = load_json(
         ROOT / "tests/fixtures/stats.valid.json"
     )
@@ -537,6 +577,9 @@ def main() -> int:
     validate_nodes(nodes)
     validate_edges(edges)
     validate_neighbor_info(neighbor_info)
+    validate_observer_receptions(
+        observer_receptions
+    )
     validate_stats(stats)
     validate_meta(meta)
     validate_configuration_warnings(warnings)
