@@ -152,6 +152,8 @@ Al seleccionar un nodo se muestran los campos disponibles:
 - saltos y gateway MQTT;
 - batería, voltaje, SNR, RSSI y utilización del canal;
 - conexiones publicadas, dirección, fecha y métricas;
+- para nodos MeshCore, número de recepciones atribuídas a observers,
+  observers distintos y mejor SNR disponible;
 - avisos automáticos de configuración cuando existe análisis;
 - fuentes e identificadores originales.
 
@@ -242,6 +244,25 @@ estilo general.
 El resaltado respeta los filtros activos y el control para mostrar u ocultar
 traceroutes. No fuerza la aparición de conexiones cuyos dos extremos no estén
 visibles.
+
+
+### Recepcións dos observers MeshCore
+
+El frontend carga `observer-receptions.json` como parte de la misma generación
+atómica que el resto de documentos.
+
+En el detalle de un nodo MeshCore resume únicamente las recepciones cuyo
+`node_id` coincide con el nodo seleccionado. Muestra:
+
+- número de recepciones publicadas;
+- número de observers distintos que lo recibieron;
+- mejor SNR disponible;
+- fecha de la recepción más reciente;
+- longitud mínima de ruta cuando existe.
+
+La sección no identifica todavía públicamente cada observer concreto. Tampoco
+convierte estas recepciones en conexiones del mapa ni interpreta el SNR como
+una métrica extremo a extremo.
 
 ### Estadísticas visibles
 

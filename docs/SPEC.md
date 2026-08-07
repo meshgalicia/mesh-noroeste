@@ -27,8 +27,8 @@ Estado actual:
 
 - `meshcore_map`: colector implementado y probado contra el documento
   público compacto de MeshCore Map;
-- `meshcore_hub`: colector autenticado y paginado para los nodos de
-  MeshCore Hub de Mesh Galicia;
+- `meshcore_hub`: colector autenticado y paginado para los nodos y
+  anuncios recibidos por observers de MeshCore Hub de Mesh Galicia;
 - `meshview_es`: colector implementado y probado contra la API pública
   de nodos de Meshview España;
 - `malha_pt`: adaptador, cliente HTTP y colector implementados para los
@@ -53,8 +53,10 @@ Los colectores implementados:
 
 Meshview España, Malha Portugal, Comunidade O Zulo y MeshCore Hub se
 consumen como JSON. MeshCore Map se solicita en su formato MessagePack
-compacto. MeshCore Hub requiere una clave de lectura y pagina la respuesta
-mediante `limit` y `offset`.
+compacto. MeshCore Hub requiere una clave de lectura y pagina mediante
+`limit` y `offset` tanto los nodos como los anuncios recibidos. Las
+recepciones atribuidas a observers se deduplican, normalizan y persisten como
+una entidad independiente.
 
 Malha aporta nodos y traceroutes dirigidos. Ambos se normalizan y persisten
 en SQLite. Los `packet_links` no forman parte de la integración inicial por
@@ -98,8 +100,9 @@ El backend deberá:
 4. conservar observaciones completas durante un máximo de 30 días y
    cursores mínimos de deduplicación después de ese plazo;
 5. aplicar ventanas de actividad y retención configurables;
-6. generar JSON estáticos para el frontend, incluido el documento
-   opcional de avisos de configuración;
+6. generar JSON estáticos para el frontend, incluidos NeighborInfo,
+   recepciones de observers y el documento opcional de avisos de
+   configuración;
 7. funcionar mediante contenedores;
 8. registrar errores sin almacenar secretos.
 
@@ -142,14 +145,14 @@ Cada actualización correcta:
 
 1. recoge y normaliza la fuente correspondiente;
 2. comprueba la integridad de SQLite;
-3. escribe los cinco documentos dentro de un nuevo directorio inmutable en
+3. escribe los siete documentos dentro de un nuevo directorio inmutable en
    `frontend/data/generations/`;
 4. sincroniza la generación completa con el sistema de archivos;
 5. activa el conjunto sustituyendo atómicamente
    `frontend/data/manifest.json`.
 
-El frontend descarga primero el manifiesto y obtiene de él las cinco rutas de
-una única generación. No combina documentos de generaciones diferentes. Si
+El frontend descarga primero el manifiesto y obtiene de él las siete rutas
+de una única generación. No combina documentos de generaciones diferentes. Si
 la escritura falla antes de sustituir el manifiesto, la generación anterior
 continúa activa. Se conservan las doce generaciones más recientes para que
 las lecturas ya iniciadas puedan terminar después de una nueva activación.

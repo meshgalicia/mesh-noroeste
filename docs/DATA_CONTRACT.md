@@ -263,9 +263,19 @@ La clave de lectura se recibe exclusivamente mediante
 token Bearer. La credencial no se incorpora al repositorio ni se incluye en
 los resultados o mensajes de error del colector.
 
-La respuesta se descarga como JSON mediante páginas con `limit` y `offset`.
-Cada página debe declarar un total coherente y una misma clave pública no
-puede repetirse dentro de la recolección.
+Los nodos y los anuncios se descargan como JSON mediante páginas con
+`limit` y `offset`. Cada página debe declarar un total coherente y una misma
+clave pública no puede repetirse dentro de la recolección de nodos.
+
+Los anuncios proceden de:
+
+    https://hub.mesh.gal/api/v1/advertisements
+
+Cada recepción atribuida a un observer se normaliza conservando el nodo
+emisor, el observer receptor, el hash del paquete, la fecha de recepción,
+el SNR y la longitud de ruta cuando esos campos están disponibles. Una misma
+recepción puede aparecer en páginas consecutivas si el Hub cambia durante la
+paginación; el colector la deduplica por su identificador normalizado.
 
 Correspondencia inicial:
 
@@ -289,9 +299,12 @@ conserva como `unknown`.
 Las coordenadas parciales son inválidas y el punto `0, 0` se descarta.
 `is_observer` identifica que el propio dispositivo registrado por el Hub está
 dedicado a observación. Se conserva de forma independiente de `node_type`: no
-excluye el nodo ni modifica por sí solo su representación visual. Esta
-integración inicial recoge únicamente nodos: no importa anuncios ni genera
-conexiones a partir del Hub.
+excluye el nodo ni modifica por sí solo su representación visual.
+
+Las recepciones de anuncios se persisten como observaciones específicas y no
+se convierten en `edges.json`: prueban que un observer recibió por radio un
+paquete atribuido a un nodo, pero no demuestran una conexión directa entre
+ambos extremos ni una ruta extremo a extremo.
 
 ## Publicación por generaciones
 
@@ -308,6 +321,8 @@ El manifiesto utiliza el contrato `mesh-noroeste.manifest/v1`:
       "documents": {
         "nodes.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/nodes.json",
         "edges.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/edges.json",
+        "neighbor-info.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/neighbor-info.json",
+        "observer-receptions.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/observer-receptions.json",
         "stats.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/stats.json",
         "meta.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/meta.json",
         "configuration-warnings.json": "generations/20260725T120000Z-0123456789abcdef0123456789abcdef/configuration-warnings.json"
@@ -315,11 +330,11 @@ El manifiesto utiliza el contrato `mesh-noroeste.manifest/v1`:
     }
 
 `generation` es un identificador opaco. Cada ruta debe apuntar exactamente al
-directorio indicado por ese identificador. Los cinco documentos y el
+directorio indicado por ese identificador. Los siete documentos y el
 manifiesto deben compartir el mismo `generated_at`.
 
 Cada directorio de generación es inmutable. El backend escribe y sincroniza
-sus cinco documentos antes de sustituir `manifest.json` mediante una única
+sus siete documentos antes de sustituir `manifest.json` mediante una única
 operación atómica. Si el proceso falla antes de ese reemplazo, el manifiesto
 anterior y todos sus documentos continúan activos.
 
@@ -571,6 +586,42 @@ conexión, se publica únicamente la de fecha `observed_at` más reciente.
 
 La ausencia de conexiones MeshCore no impide publicar sus nodos.
 
+
+## Documento de recepcións dos observers MeshCore
+
+Archivo previsto:
+
+    frontend/data/generations/<generation>/observer-receptions.json
+
+Estructura superior:
+
+    {
+      "schema": "mesh-noroeste.data/v1",
+      "generated_at": "2026-08-07T10:43:08Z",
+      "receptions": []
+    }
+
+Cada entrada conserva:
+
+| Campo | Tipo | Significado |
+|---|---|---|
+| `source` | string | Fuente de la observación; actualmente `meshcore_hub` |
+| `network` | string | Siempre `meshcore` |
+| `node_id` | string | Nodo al que se atribuye el anuncio |
+| `observer_id` | string | Observer que recibió el paquete |
+| `packet_hash` | string | Identificador publicado para el paquete |
+| `observed_at` | timestamp | Momento de la recepción |
+| `snr_db` | number/null | SNR medido por el observer al recibir ese paquete |
+| `path_len` | integer/null | Longitud de ruta publicada por el Hub |
+
+Las entradas se ordenan de forma determinista y se deduplican por nodo,
+observer y hash de paquete. Se excluyen las recepciones cuando el nodo emisor
+o el observer figuran en la lista privada de exclusiones.
+
+El SNR es una métrica de la recepción RF realizada por el observer. No expresa
+la calidad extremo a extremo desde el nodo emisor ni permite afirmar por sí
+solo cuál fue cada salto intermedio.
+
 ## Documento de estadísticas
 
 Archivo previsto:
@@ -784,6 +835,8 @@ La base de datos deberá separar:
 - observaciones por fuente;
 - posiciones;
 - conexiones;
+- anuncios NeighborInfo;
+- recepcións de paquetes atribuídas a observers MeshCore;
 - ejecuciones de colectores;
 - errores de obtención;
 - errores de normalización.

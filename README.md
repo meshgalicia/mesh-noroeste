@@ -41,14 +41,16 @@ detalle en [LICENSES/README.md](LICENSES/README.md).
 El backend clean-room ya dispone de:
 
 - contrato público `mesh-noroeste.data/v1`;
-- persistencia de nodos, conexiones y ejecuciones en SQLite;
+- persistencia de nodos, conexiones, recepcións atribuídas a observers
+  MeshCore y ejecuciones en SQLite;
 - clientes HTTPS con límites de tiempo y tamaño;
 - adaptadores y colectores para Meshview España, Malha Portugal,
   Comunidade O Zulo, MeshCore Map y MeshCore Hub de Mesh Galicia;
 - normalización y persistencia de los traceroutes publicados por Malha;
 - generación de `manifest.json` y de `nodes.json`, `edges.json`,
-  `stats.json`, `meta.json` y `configuration-warnings.json` dentro de
-  generaciones inmutables;
+  `neighbor-info.json`, `observer-receptions.json`, `stats.json`,
+  `meta.json` y `configuration-warnings.json` dentro de generaciones
+  inmutables;
 - filtrado común de Meshtastic y MeshCore mediante nueve áreas regionales;
 - comandos de recolección, publicación, poda y comprobación;
 - actualización automatizada mediante temporizadores de systemd;
@@ -71,7 +73,9 @@ El frontend Leaflet ya dispone de filtros, búsqueda accesible, panel de
 detalle, estadísticas, traceroutes dirigidos, geolocalización local,
 agrupaciones diferenciadas por red, navegación móvil, controles táctiles y
 soporte para alto contraste. El detalle de los nodos Meshtastic incluye
-avisos automáticos de configuración cuando existe análisis disponible.
+avisos automáticos de configuración cuando existe análisis disponible. En
+MeshCore muestra también cuántas recepciones del nodo fueron atribuidas a
+observers, cuántos observers distintos lo escucharon y el mejor SNR publicado.
 La primera versión estable está publicada en `https://mapa.mesh.gal/`.
 El mapa anterior permanece separado en `https://mesh.tuiter.ovh/`.
 
