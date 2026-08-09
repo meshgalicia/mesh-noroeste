@@ -12,6 +12,7 @@ import re
 import shutil
 import tempfile
 import uuid
+import warnings
 from typing import Any
 
 from mesh_noroeste import __version__
@@ -1065,10 +1066,21 @@ def _write_public_documents_locked(
 
         _fsync_directory(output_path)
 
-        _prune_public_generations(
-            generations_path,
-            final_generation,
-        )
+        try:
+            _prune_public_generations(
+                generations_path,
+                final_generation,
+            )
+        except Exception as exc:
+            warnings.warn(
+                (
+                    "La publicación quedó activa, pero no "
+                    "se pudieron limpiar las generaciones "
+                    f"antiguas: {exc}"
+                ),
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
     except Exception:
         if temporary_generation.exists():

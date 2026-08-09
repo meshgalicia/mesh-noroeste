@@ -1270,6 +1270,101 @@ class PublicationTests(unittest.TestCase):
                 {"old"},
             )
 
+    def test_prune_failure_warns_after_publication(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "public"
+
+            write_public_documents(
+                output,
+                {
+                    filename: {
+                        "generated_at": NOW,
+                        "generation": "old",
+                    }
+                    for filename in PUBLIC_DOCUMENT_NAMES
+                },
+            )
+
+            old_manifest = json.loads(
+                (
+                    output
+                    / PUBLIC_MANIFEST_NAME
+                ).read_text(encoding="utf-8")
+            )
+
+            new_generated_at = (
+                "2026-07-25T13:00:00Z"
+            )
+
+            with patch(
+                (
+                    "mesh_noroeste.publication."
+                    "_prune_public_generations"
+                ),
+                side_effect=OSError(
+                    "fallo simulado no prune"
+                ),
+            ):
+                with self.assertWarnsRegex(
+                    RuntimeWarning,
+                    (
+                        "La publicación quedó activa, "
+                        "pero no se pudieron limpiar"
+                    ),
+                ):
+                    written = write_public_documents(
+                        output,
+                        {
+                            filename: {
+                                "generated_at": (
+                                    new_generated_at
+                                ),
+                                "generation": "new",
+                            }
+                            for filename
+                            in PUBLIC_DOCUMENT_NAMES
+                        },
+                    )
+
+            current_manifest = json.loads(
+                (
+                    output
+                    / PUBLIC_MANIFEST_NAME
+                ).read_text(encoding="utf-8")
+            )
+
+            self.assertNotEqual(
+                current_manifest["generation"],
+                old_manifest["generation"],
+            )
+            self.assertEqual(
+                current_manifest["generated_at"],
+                new_generated_at,
+            )
+            self.assertTrue(
+                all(path.is_file() for path in written)
+            )
+
+            generations = {
+                candidate.name
+                for candidate in (
+                    output
+                    / PUBLIC_GENERATIONS_DIRECTORY
+                ).iterdir()
+                if candidate.is_dir()
+            }
+
+            self.assertIn(
+                old_manifest["generation"],
+                generations,
+            )
+            self.assertIn(
+                current_manifest["generation"],
+                generations,
+            )
+
     def test_old_generations_are_pruned_safely(
         self,
     ) -> None:
