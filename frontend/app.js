@@ -131,6 +131,12 @@ const AGE_OPACITY = Object.freeze({
   month: 0.46,
 });
 
+const MESHCORE_ACTIVITY_WINDOWS = Object.freeze({
+  hour: 1,
+  day: 24,
+  week: 24 * 7,
+});
+
 const DETAILS_STORAGE_PREFIX = "mesh-noroeste:details:";
 const SIDEBAR_STORAGE_KEY = (
   "mesh-noroeste:controls-collapsed"
@@ -262,6 +268,7 @@ const state = {
   neighborInfo: [],
   observerReceptions: [],
   receptionsByNodeId: new Map(),
+  meshcoreActivityByNodeId: new Map(),
   stats: null,
   meta: null,
   configurationWarnings: null,
@@ -368,6 +375,18 @@ const elements = {
   ),
   mqttGatewaySummary: document.querySelector(
     "#mqtt-gateway-summary"
+  ),
+  meshcoreActivityFilter: document.querySelector(
+    "#meshcore-activity-filter"
+  ),
+  meshcoreActivitySummary: document.querySelector(
+    "#meshcore-activity-summary"
+  ),
+  meshcoreActivityControls: document.querySelector(
+    "#meshcore-activity-controls"
+  ),
+  meshcoreActivityWindow: document.querySelector(
+    "#meshcore-activity-window"
   ),
   filterEmptyPanel: document.querySelector(
     "#filter-empty-panel"
@@ -926,6 +945,63 @@ function isMqttGateway(node) {
   );
 }
 
+function meshcoreActivityEnabled() {
+  return (
+    elements.meshcoreActivityFilter.getAttribute(
+      "aria-pressed"
+    ) === "true"
+  );
+}
+
+function selectedMeshcoreActivityHours() {
+  return (
+    MESHCORE_ACTIVITY_WINDOWS[
+      elements.meshcoreActivityWindow.value
+    ]
+    || MESHCORE_ACTIVITY_WINDOWS.day
+  );
+}
+
+function meshcoreActivityCutoff() {
+  const reference = state.generatedAt?.getTime();
+
+  if (!Number.isFinite(reference)) {
+    return null;
+  }
+
+  return (
+    reference
+    - selectedMeshcoreActivityHours() * 3_600_000
+  );
+}
+
+function meshcoreActivityForNode(node) {
+  if (node.network !== "meshcore") {
+    return null;
+  }
+
+  const activity = state.meshcoreActivityByNodeId.get(
+    node.id
+  );
+
+  if (!activity) {
+    return null;
+  }
+
+  const cutoff = meshcoreActivityCutoff();
+  const observed = Date.parse(activity.latestObservedAt || "");
+
+  if (
+    !Number.isFinite(cutoff)
+    || !Number.isFinite(observed)
+    || observed < cutoff
+  ) {
+    return null;
+  }
+
+  return activity;
+}
+
 function matchesBaseFilters(node) {
   const network = selectedNetwork();
   const ageBands = selectedAgeBands();
@@ -1303,11 +1379,22 @@ function createNodeIcon(node) {
   )
     ? " meshcore-observer"
     : "";
+  const activity = meshcoreActivityForNode(node);
+  const activityClass = (
+    meshcoreActivityEnabled()
+    && node.network === "meshcore"
+  )
+    ? (
+      activity
+        ? " meshcore-activity-visible"
+        : " meshcore-activity-muted"
+    )
+    : "";
 
   return L.divIcon({
     className: "node-marker-icon",
     html:
-      `<span class="node-marker-badge${gatewayClass}${observerClass}"`
+      `<span class="node-marker-badge${gatewayClass}${observerClass}${activityClass}"`
       + ` style="${cssVariables}">`
       + `<span class="${classes.join(" ")}"></span>`
       + "</span>",
@@ -2104,8 +2191,36 @@ function updateMqttGatewaySummary() {
   );
 }
 
+function updateMeshcoreActivitySummary() {
+  const available = state.nodes.filter(
+    (node) => (
+      matchesBaseFilters(node)
+      && node.network === "meshcore"
+      && meshcoreActivityForNode(node) !== null
+    )
+  ).length;
+
+  elements.meshcoreActivitySummary.textContent = (
+    available === 1
+      ? "1 nodo observado"
+      : `${formatNumber(available)} nodos observados`
+  );
+}
+
+function updateMeshcoreActivityControls() {
+  const enabled = meshcoreActivityEnabled();
+
+  elements.meshcoreActivityControls.hidden = !enabled;
+  elements.meshcoreActivityWindow.disabled = !enabled;
+  elements.meshcoreActivityFilter.setAttribute(
+    "aria-expanded",
+    String(enabled)
+  );
+}
+
 function applyFilters({ fit = false } = {}) {
   updateMqttGatewaySummary();
+  updateMeshcoreActivitySummary();
   state.visibleNodes = state.nodes.filter(matchesFilters);
   state.visibleIds = new Set(
     state.visibleNodes.map((node) => node.id)
@@ -3973,6 +4088,26 @@ function bindControls() {
     }
   );
 
+  elements.meshcoreActivityFilter.addEventListener(
+    "click",
+    () => {
+      const enabled = meshcoreActivityEnabled();
+
+      elements.meshcoreActivityFilter.setAttribute(
+        "aria-pressed",
+        String(!enabled)
+      );
+
+      updateMeshcoreActivityControls();
+      applyFilters();
+    }
+  );
+
+  elements.meshcoreActivityWindow.addEventListener(
+    "change",
+    () => applyFilters()
+  );
+
   for (const input of elements.basemapInputs) {
     input.addEventListener(
       "change",
@@ -4162,6 +4297,7 @@ async function initialize() {
       observerReceptions.receptions
     );
     state.receptionsByNodeId = new Map();
+    state.meshcoreActivityByNodeId = new Map();
 
     for (
       const reception
@@ -4179,6 +4315,30 @@ async function initialize() {
         reception.node_id,
         receptions
       );
+
+      const current = state.meshcoreActivityByNodeId.get(
+        reception.node_id
+      );
+      const observed = Date.parse(reception.observed_at || "");
+      const currentObserved = Date.parse(
+        current?.latestObservedAt || ""
+      );
+
+      if (
+        Number.isFinite(observed)
+        && (
+          !current
+          || !Number.isFinite(currentObserved)
+          || observed > currentObserved
+        )
+      ) {
+        state.meshcoreActivityByNodeId.set(
+          reception.node_id,
+          {
+            latestObservedAt: reception.observed_at,
+          }
+        );
+      }
     }
 
     state.stats = stats;
@@ -4194,6 +4354,7 @@ async function initialize() {
     );
 
     renderSourceStatus();
+    updateMeshcoreActivityControls();
     setRegionalView();
     applyFilters();
 

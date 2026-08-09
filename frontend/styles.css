@@ -1119,6 +1119,29 @@ h2 {
   transform: translate(-50%, -50%);
 }
 
+.node-marker-badge.meshcore-activity-muted {
+  filter: grayscale(0.72);
+  opacity: 0.24;
+}
+
+.node-marker-badge.meshcore-activity-visible
+.node-marker-visual {
+  opacity: 1;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 5px #0b7285,
+    0 2px 8px rgb(11 114 133 / 0.48);
+}
+
+.node-marker-badge.meshcore-activity-visible
+.node-marker-visual.type-room-server,
+.node-marker-badge.meshcore-activity-visible
+.node-marker-visual.type-client {
+  filter:
+    drop-shadow(0 0 2px #ffffff)
+    drop-shadow(0 0 5px #0b7285);
+}
+
 .node-marker-badge.meshcore-observer::after {
   position: absolute;
   z-index: 0;
@@ -1703,6 +1726,45 @@ h2 {
   box-shadow:
     0 0 0 2px #ffffff,
     0 0 0 4px #7048e8;
+}
+
+.legend-symbol.meshcore-activity {
+  border: 2px solid #0b7285;
+  border-radius: 50%;
+  background: #66d9e8;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 4px rgb(11 114 133 / 0.32);
+}
+
+.feature-filter-options {
+  display: grid;
+  gap: 0.35rem;
+  margin: -0.45rem 0 0.85rem;
+  padding: 0.65rem;
+  border: 1px solid #b8dfe3;
+  border-radius: 0.5rem;
+  background: #f1fbfc;
+}
+
+.feature-filter-options[hidden] {
+  display: none;
+}
+
+.feature-filter-options label {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.feature-filter-options select {
+  width: 100%;
+  min-height: 2.4rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.42rem;
+  background: #ffffff;
+  color: var(--text);
 }
 
 .legend-symbol.meshcore-unknown {
@@ -2357,6 +2419,8 @@ h2 {
 
 /* Compatibilidade co modo de alto contraste do sistema. */
 @media (forced-colors: active) {
+  .node-marker-badge.meshcore-activity-muted,
+  .node-marker-badge.meshcore-activity-visible,
   .node-marker-visual,
   .node-cluster,
   .legend-symbol,

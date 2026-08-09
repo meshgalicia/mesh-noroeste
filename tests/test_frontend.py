@@ -72,6 +72,10 @@ class FrontendStaticTests(unittest.TestCase):
             "type-filter-reset",
             "mqtt-gateway-filter",
             "mqtt-gateway-summary",
+            "meshcore-activity-filter",
+            "meshcore-activity-summary",
+            "meshcore-activity-controls",
+            "meshcore-activity-window",
             "source-details",
             "filter-empty-panel",
             "node-search",
@@ -133,11 +137,11 @@ class FrontendStaticTests(unittest.TestCase):
         self,
     ) -> None:
         self.assertIn(
-            "./styles.css?v=20260809-observers1",
+            "./styles.css?v=20260809-meshcore-activity1",
             self.parser.links,
         )
         self.assertIn(
-            "./app.js?v=20260809-observers1",
+            "./app.js?v=20260809-meshcore-activity1",
             self.parser.scripts,
         )
 
@@ -260,7 +264,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.css)
 
         self.assertIn(
-            "20260809-observers1",
+            "20260809-meshcore-activity1",
             self.html,
         )
 
@@ -507,7 +511,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.javascript)
 
         self.assertIn(
-            "./app.js?v=20260809-observers1",
+            "./app.js?v=20260809-meshcore-activity1",
             self.parser.scripts,
         )
 
@@ -538,7 +542,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.javascript)
 
         self.assertIn(
-            "./app.js?v=20260809-observers1",
+            "./app.js?v=20260809-meshcore-activity1",
             self.parser.scripts,
         )
 
@@ -1174,13 +1178,62 @@ class FrontendStaticTests(unittest.TestCase):
             self.html,
         )
         self.assertIn(
-            "./styles.css?v=20260809-observers1",
+            "./styles.css?v=20260809-meshcore-activity1",
             self.parser.links,
         )
         self.assertIn(
-            "./app.js?v=20260809-observers1",
+            "./app.js?v=20260809-meshcore-activity1",
             self.parser.scripts,
         )
+
+    def test_meshcore_activity_mode_uses_hub_receptions(
+        self,
+    ) -> None:
+        for expected in (
+            'id="meshcore-activity-filter"',
+            'aria-controls="meshcore-activity-controls"',
+            "Actividade MeshCore",
+            "Destaca os nodos vistos recentemente",
+            'id="meshcore-activity-window"',
+            'value="hour"',
+            'value="day" selected',
+            'value="week"',
+        ):
+            with self.subTest(html=expected):
+                self.assertIn(expected, self.html)
+
+        for expected in (
+            "const MESHCORE_ACTIVITY_WINDOWS",
+            "meshcoreActivityByNodeId: new Map()",
+            "function meshcoreActivityEnabled()",
+            "function selectedMeshcoreActivityHours()",
+            "function meshcoreActivityForNode(node)",
+            '" meshcore-activity-visible"',
+            '" meshcore-activity-muted"',
+            "function updateMeshcoreActivitySummary()",
+            "function updateMeshcoreActivityControls()",
+            "state.meshcoreActivityByNodeId.set(",
+            "elements.meshcoreActivityFilter.addEventListener(",
+            "elements.meshcoreActivityWindow.addEventListener(",
+        ):
+            with self.subTest(javascript=expected):
+                self.assertIn(expected, self.javascript)
+
+        for expected in (
+            ".node-marker-badge.meshcore-activity-muted",
+            ".node-marker-badge.meshcore-activity-visible",
+            ".legend-symbol.meshcore-activity",
+            ".feature-filter-options",
+            ".feature-filter-options[hidden]",
+        ):
+            with self.subTest(css=expected):
+                self.assertIn(expected, self.css)
+
+        self.assertIn(
+            "20260809-meshcore-activity1",
+            self.html,
+        )
+
 
     def test_mqtt_gateways_have_a_persistent_map_ring(
         self,
@@ -1188,7 +1241,7 @@ class FrontendStaticTests(unittest.TestCase):
         for expected in (
             'const gatewayClass = isMqttGateway(node)',
             '" mqtt-gateway"',
-            'class="node-marker-badge${gatewayClass}${observerClass}"',
+            'class="node-marker-badge${gatewayClass}${observerClass}${activityClass}"',
         ):
             with self.subTest(javascript=expected):
                 self.assertIn(expected, self.javascript)
@@ -1447,7 +1500,7 @@ class FrontendStaticTests(unittest.TestCase):
             if (
                 "leaflet@1.9.4/dist/leaflet.js" in source
                 or "leaflet.markercluster.js" in source
-                or source == "./app.js?v=20260809-observers1"
+                or source == "./app.js?v=20260809-meshcore-activity1"
             ):
                 dependencies.append((source, tag))
 
@@ -1461,7 +1514,7 @@ class FrontendStaticTests(unittest.TestCase):
                 "dist/leaflet.js",
                 "./vendor/leaflet.markercluster/"
                 "leaflet.markercluster.js?v=1.5.3-local1",
-                "./app.js?v=20260809-observers1",
+                "./app.js?v=20260809-meshcore-activity1",
             ],
         )
 
@@ -1735,7 +1788,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.css)
 
         self.assertIn(
-            "20260809-observers1",
+            "20260809-meshcore-activity1",
             self.html,
         )
 
@@ -1762,7 +1815,7 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.css)
 
         self.assertIn(
-            "./styles.css?v=20260809-observers1",
+            "./styles.css?v=20260809-meshcore-activity1",
             self.parser.links,
         )
 

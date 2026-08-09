@@ -29,7 +29,7 @@
     rel="stylesheet"
     href="./vendor/leaflet.markercluster/MarkerCluster.Default.css?v=1.5.3-local1"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260809-observers1">
+  <link rel="stylesheet" href="./styles.css?v=20260809-meshcore-activity1">
 
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -40,7 +40,7 @@
     src="./vendor/leaflet.markercluster/leaflet.markercluster.js?v=1.5.3-local1"
     defer
   ></script>
-  <script src="./app.js?v=20260809-observers1" defer></script>
+  <script src="./app.js?v=20260809-meshcore-activity1" defer></script>
 </head>
 
 <body>
@@ -535,6 +535,62 @@
               </small>
             </span>
           </button>
+
+          <p class="legend-heading">
+            Características MeshCore
+          </p>
+
+          <button
+            id="meshcore-activity-filter"
+            class="feature-filter meshcore-activity-filter"
+            type="button"
+            aria-pressed="false"
+            aria-expanded="false"
+            aria-controls="meshcore-activity-controls"
+            aria-describedby="meshcore-activity-help"
+          >
+            <span
+              class="legend-symbol meshcore-activity"
+              aria-hidden="true"
+            ></span>
+
+            <span class="feature-filter-copy">
+              <strong>Actividade MeshCore</strong>
+              <small
+                id="meshcore-activity-summary"
+                aria-live="polite"
+              >0 nodos observados</small>
+              <small id="meshcore-activity-help">
+                Destaca os nodos vistos recentemente polos
+                observers do Hub e atenúa os demais.
+              </small>
+            </span>
+          </button>
+
+          <div
+            id="meshcore-activity-controls"
+            class="feature-filter-options"
+            hidden
+          >
+            <label for="meshcore-activity-window">
+              Período de actividade
+            </label>
+
+            <select
+              id="meshcore-activity-window"
+              disabled
+            >
+              <option value="hour">
+                Última hora
+              </option>
+              <option value="day" selected>
+                Últimas 24 horas
+              </option>
+              <option value="week">
+                Últimos 7 días
+              </option>
+            </select>
+          </div>
 
           <div class="legend-toolbar">
             <p>
