@@ -1772,6 +1772,21 @@ class NodePurgeTests(unittest.TestCase):
             observed_at="2026-07-25T12:05:00Z",
         )
 
+    def neighbor(
+        self,
+        from_source_id: str,
+        to_source_id: str,
+        *,
+        observed_at: str = "2026-07-25T12:06:00Z",
+    ):
+        return make_neighbor_observation(
+            source="ozulo_map",
+            from_source_id=from_source_id,
+            to_source_id=to_source_id,
+            observed_at=observed_at,
+            snr_db=4.0,
+        )
+
     def test_purge_removes_all_sources_and_incident_edges(
         self,
     ) -> None:
@@ -1863,6 +1878,53 @@ class NodePurgeTests(unittest.TestCase):
         self.assertEqual(
             remaining_edges[0].to_id,
             "meshtastic:!c7654321",
+        )
+
+    def test_purge_removes_incident_neighbor_observations(
+        self,
+    ) -> None:
+        target = self.node("a35b4144")
+        node_b = self.node("b1234567")
+        node_c = self.node("c7654321")
+
+        incoming = self.neighbor(
+            "b1234567",
+            "a35b4144",
+        )
+        outgoing = self.neighbor(
+            "a35b4144",
+            "c7654321",
+        )
+        unrelated = self.neighbor(
+            "b1234567",
+            "c7654321",
+            observed_at="2026-07-25T12:07:00Z",
+        )
+
+        self.assertEqual(
+            self.store.save([
+                target,
+                node_b,
+                node_c,
+            ]),
+            3,
+        )
+        self.assertEqual(
+            self.store.save_neighbors([
+                incoming,
+                outgoing,
+                unrelated,
+            ]),
+            3,
+        )
+
+        self.store.purge_node(
+            "meshtastic:!a35b4144"
+        )
+
+        self.assertEqual(
+            self.store.load_all_neighbors(),
+            [unrelated],
         )
 
     def test_purge_missing_node_returns_zero_counts(

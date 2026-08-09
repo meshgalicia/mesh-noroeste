@@ -2318,6 +2318,19 @@ class ObservationStore:
                     ),
                 )
 
+            if normalized_network == "meshtastic":
+                connection.execute(
+                    """
+                    DELETE FROM neighbor_observations
+                    WHERE from_source_id = ?
+                       OR to_source_id = ?
+                    """,
+                    (
+                        normalized_source_id,
+                        normalized_source_id,
+                    ),
+                )
+
             changes_before_edges = (
                 connection.total_changes
             )
