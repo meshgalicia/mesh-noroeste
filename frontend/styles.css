@@ -789,6 +789,68 @@ h2 {
   text-align: right;
 }
 
+.observer-receptions-summary {
+  margin: 0 0 0.65rem;
+  color: #5e6a66;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.observer-reception-list {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.observer-reception-item {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #d9d4e8;
+  border-radius: 0.55rem;
+  background: #f7f4ff;
+}
+
+.observer-reception-link,
+.observer-reception-name {
+  overflow-wrap: anywhere;
+  color: var(--heading);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: left;
+}
+
+.observer-reception-link {
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
+}
+
+.observer-reception-link:hover {
+  color: var(--network-meshtastic);
+}
+
+.observer-reception-link:focus-visible {
+  border-radius: 0.2rem;
+  outline: 3px solid #7048e8;
+  outline-offset: 3px;
+}
+
+.observer-reception-meta {
+  color: #5e6a66;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
 .configuration-warnings > p {
   margin: 0;
   font-size: 0.8rem;

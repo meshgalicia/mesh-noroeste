@@ -2544,25 +2544,7 @@ function meshcoreAppSection(node) {
   return section;
 }
 
-function observerReceptionsSection(node) {
-  if (node.network !== "meshcore") {
-    return null;
-  }
-
-  const receptions = (
-    state.receptionsByNodeId.get(node.id) || []
-  );
-
-  if (receptions.length === 0) {
-    return null;
-  }
-
-  const observerIds = new Set(
-    receptions.map(
-      (reception) => reception.observer_id
-    )
-  );
-
+function observerReceptionSummary(receptions) {
   const latestObservedAt = receptions.reduce(
     (latest, reception) => (
       latest === null
@@ -2581,30 +2563,152 @@ function observerReceptionsSection(node) {
     .map((reception) => reception.path_len)
     .filter(Number.isInteger);
 
-  const bestSnr = (
-    snrValues.length > 0
-      ? Math.max(...snrValues)
-      : null
-  );
-
-  const shortestPath = (
-    pathLengths.length > 0
-      ? Math.min(...pathLengths)
-      : null
-  );
-
-  return detailSection(
-    "Recepcións dos observers",
-    [
-      ["Recepcións publicadas", receptions.length],
-      ["Observers distintos", observerIds.size],
-      ["Última recepción", formatDate(latestObservedAt)],
-      ["Mellor SNR", formatMetric(bestSnr, " dB")],
-      ["Ruta máis curta", formatMetric(shortestPath)],
-    ]
-  );
+  return {
+    count: receptions.length,
+    latestObservedAt,
+    bestSnr: (
+      snrValues.length > 0
+        ? Math.max(...snrValues)
+        : null
+    ),
+    shortestPath: (
+      pathLengths.length > 0
+        ? Math.min(...pathLengths)
+        : null
+    ),
+  };
 }
 
+function observerReceptionDescription(summary) {
+  const parts = [
+    (
+      summary.count === 1
+        ? "1 recepción"
+        : `${formatNumber(summary.count)} recepcións`
+    ),
+    `última ${formatDate(summary.latestObservedAt)}`,
+  ];
+
+  if (summary.bestSnr !== null) {
+    parts.push(`mellor SNR ${summary.bestSnr} dB`);
+  }
+
+  if (summary.shortestPath !== null) {
+    parts.push(`ruta mínima ${summary.shortestPath}`);
+  }
+
+  return parts.join(" · ");
+}
+
+function observerReceptionsSection(node) {
+  if (node.network !== "meshcore") {
+    return null;
+  }
+
+  const receptions = (
+    state.receptionsByNodeId.get(node.id) || []
+  );
+
+  if (receptions.length === 0) {
+    return null;
+  }
+
+  const receptionsByObserver = new Map();
+
+  for (const reception of receptions) {
+    const observerReceptions = (
+      receptionsByObserver.get(reception.observer_id) || []
+    );
+
+    observerReceptions.push(reception);
+    receptionsByObserver.set(
+      reception.observer_id,
+      observerReceptions
+    );
+  }
+
+  const section = document.createElement("section");
+  const heading = document.createElement("h3");
+  const summary = document.createElement("p");
+  const list = document.createElement("ul");
+
+  section.className = (
+    "detail-section observer-receptions-section"
+  );
+  heading.textContent = "Recepcións dos observers";
+  summary.className = "observer-receptions-summary";
+  summary.textContent = [
+    (
+      receptions.length === 1
+        ? "1 recepción publicada"
+        : `${formatNumber(receptions.length)} recepcións publicadas`
+    ),
+    (
+      receptionsByObserver.size === 1
+        ? "1 observer"
+        : `${formatNumber(receptionsByObserver.size)} observers`
+    ),
+  ].join(" · ");
+  list.className = "observer-reception-list";
+
+  const observers = Array.from(
+    receptionsByObserver.entries()
+  ).map(([observerId, observerReceptions]) => {
+    const observer = state.nodeById.get(observerId) || null;
+
+    return {
+      observer,
+      name: (
+        observer
+          ? nodeName(observer)
+          : observerId.replace(/^meshcore:/, "")
+      ),
+      summary: observerReceptionSummary(
+        observerReceptions
+      ),
+    };
+  }).sort((first, second) => (
+    second.summary.latestObservedAt.localeCompare(
+      first.summary.latestObservedAt
+    )
+    || first.name.localeCompare(
+      second.name,
+      "gl-ES"
+    )
+  ));
+
+  for (const entry of observers) {
+    const item = document.createElement("li");
+    const observerName = entry.observer
+      ? document.createElement("button")
+      : document.createElement("span");
+    const description = document.createElement("span");
+
+    item.className = "observer-reception-item";
+    observerName.className = entry.observer
+      ? "observer-reception-link"
+      : "observer-reception-name";
+    observerName.textContent = entry.name;
+
+    if (entry.observer) {
+      observerName.type = "button";
+      observerName.addEventListener("click", () => {
+        focusNode(entry.observer);
+      });
+    }
+
+    description.className = "observer-reception-meta";
+    description.textContent = observerReceptionDescription(
+      entry.summary
+    );
+
+    item.append(observerName, description);
+    list.append(item);
+  }
+
+  section.append(heading, summary, list);
+  return section;
+}
 
 function configurationWarningsSection(node) {
   if (node.network !== "meshtastic") {
