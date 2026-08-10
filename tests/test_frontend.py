@@ -421,6 +421,57 @@ class FrontendStaticTests(unittest.TestCase):
         for text in required_javascript:
             self.assertIn(text, self.javascript)
 
+    def test_meshcore_observed_connections_can_be_shown_on_the_map(
+        self,
+    ) -> None:
+        required_javascript = (
+            'meshcoreObserved: document.querySelector(',
+            '"#meshcore-observed-toggle"',
+            "function addMeshcoreObserved(edge)",
+            'edge.edge_type !== "observed"',
+            'edge.network !== "meshcore"',
+            "function addVisibleEdge(edge)",
+            "function globalEdgeEnabled(edge)",
+            "elements.meshcoreObserved.checked",
+            "elements.meshcoreObserved.addEventListener(",
+        )
+
+        for expected in required_javascript:
+            with self.subTest(expected=expected):
+                self.assertIn(expected, self.javascript)
+
+        for expected in (
+            'id="meshcore-observed-toggle"',
+            "Mostrar rutas observadas de MeshCore",
+            'class="legend-line meshcore-observed-line"',
+            "Ruta observada de MeshCore",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, self.html)
+
+        self.assertIn(
+            ".legend-line.meshcore-observed-line",
+            self.css,
+        )
+        self.assertIn(
+            "border-top-color: var(--meshcore-observed)",
+            self.css,
+        )
+
+    def test_meshcore_observed_connections_are_disabled_by_default(
+        self,
+    ) -> None:
+        control = self.html[
+            self.html.index('id="meshcore-observed-toggle"'):
+            self.html.index('id="neighbors-toggle"')
+        ]
+
+        self.assertNotIn(
+            "checked",
+            control,
+        )
+
+
     def test_neighbors_are_disabled_by_default(
         self,
     ) -> None:

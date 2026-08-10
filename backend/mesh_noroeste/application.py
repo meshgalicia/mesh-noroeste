@@ -49,6 +49,7 @@ from mesh_noroeste.meshcore_hub import (
     MeshCoreHubError,
     parse_meshcore_hub_advertisements,
     parse_meshcore_hub_nodes,
+    parse_meshcore_hub_packet_group_edges,
 )
 from mesh_noroeste.meshcore_map import (
     parse_meshcore_map,
@@ -109,6 +110,11 @@ MESHCORE_HUB_NODES_URL = (
 )
 MESHCORE_HUB_ADVERTISEMENTS_URL = (
     "https://hub.mesh.gal/api/v1/advertisements"
+)
+MESHCORE_HUB_PACKET_GROUPS_URL = (
+    "https://hub.mesh.gal/api/v1/packet-groups"
+    "?path_hash_bytes=2"
+    "&include_receptions=true"
 )
 MESHCORE_HUB_PAGE_SIZE = 100
 
@@ -934,6 +940,9 @@ def collect_meshcore_hub(
     advertisements_url: str = (
         MESHCORE_HUB_ADVERTISEMENTS_URL
     ),
+    packet_groups_url: str = (
+        MESHCORE_HUB_PACKET_GROUPS_URL
+    ),
     page_size: int = MESHCORE_HUB_PAGE_SIZE,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     max_bytes: int = DEFAULT_MAX_BYTES,
@@ -978,6 +987,7 @@ def collect_meshcore_hub(
 
     observations: list[NodeObservation] = []
     receptions: list[ObserverReception] = []
+    edges: list[EdgeObservation] = []
     seen_ids: set[str] = set()
     seen_reception_ids: set[str] = set()
     bytes_received = 0
@@ -1124,6 +1134,99 @@ def collect_meshcore_hub(
 
             advertisement_offset = next_offset
 
+        public_keys_by_path_hash_candidates: dict[
+            str,
+            list[str],
+        ] = {}
+
+        for observation in observations:
+            public_key = observation.source_id.upper()
+            path_hash = public_key[:4]
+
+            public_keys_by_path_hash_candidates.setdefault(
+                path_hash,
+                [],
+            ).append(public_key)
+
+        public_keys_by_path_hash = {
+            path_hash: candidates[0]
+            for path_hash, candidates
+            in public_keys_by_path_hash_candidates.items()
+            if len(candidates) == 1
+        }
+
+        packet_group_offset = 0
+
+        while True:
+            packet_group_page_url = (
+                _meshcore_hub_page_url(
+                    packet_groups_url,
+                    limit=page_size,
+                    offset=packet_group_offset,
+                )
+            )
+
+            fetched = fetch_json(
+                packet_group_page_url,
+                timeout=timeout,
+                max_bytes=max_bytes,
+                headers={
+                    "Authorization": (
+                        f"Bearer {normalized_api_key}"
+                    ),
+                },
+            )
+
+            document = fetched.document
+
+            if not isinstance(document, Mapping):
+                raise MeshCoreHubError(
+                    "A raíz de MeshCore Hub debe ser un obxecto"
+                )
+
+            records = document.get("items")
+
+            if not isinstance(records, list):
+                raise MeshCoreHubError(
+                    "O campo 'items' de MeshCore Hub "
+                    "debe ser unha lista"
+                )
+
+            page_edges = (
+                parse_meshcore_hub_packet_group_edges(
+                    document,
+                    source="meshcore_hub",
+                    public_keys_by_path_hash=(
+                        public_keys_by_path_hash
+                    ),
+                )
+            )
+
+            total = _meshcore_hub_page_total(
+                document,
+                expected_offset=packet_group_offset,
+                records_received=len(records),
+            )
+
+            final_url = fetched.final_url
+            bytes_received += fetched.bytes_received
+            edges.extend(page_edges)
+
+            next_offset = (
+                packet_group_offset + len(records)
+            )
+
+            if next_offset >= total:
+                break
+
+            if not records:
+                raise MeshCoreHubError(
+                    "A paxinación dos packet-groups de "
+                    "MeshCore Hub non avanzou"
+                )
+
+            packet_group_offset = next_offset
+
         allowed_observations = (
             _allowed_node_observations(
                 observations,
@@ -1136,6 +1239,12 @@ def collect_meshcore_hub(
                 excluded_node_ids,
             )
         )
+        allowed_edges = (
+            _allowed_edge_observations(
+                edges,
+                excluded_node_ids,
+            )
+        )
 
         inserted = store.save(
             allowed_observations
@@ -1144,6 +1253,9 @@ def collect_meshcore_hub(
             store.save_observer_receptions(
                 allowed_receptions
             )
+        )
+        store.save_edges(
+            allowed_edges
         )
 
     except Exception as exc:

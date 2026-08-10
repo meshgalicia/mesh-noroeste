@@ -338,6 +338,9 @@ const elements = {
   tracerouteAge: document.querySelector(
     "#traceroute-age"
   ),
+  meshcoreObserved: document.querySelector(
+    "#meshcore-observed-toggle"
+  ),
   neighbors: document.querySelector("#neighbors-toggle"),
   neighborInfo: document.querySelector(
     "#neighbor-info-toggle"
@@ -670,6 +673,7 @@ function connectionTypeLabel(edge) {
   return {
     traceroute: "Traceroute",
     neighbor: "Veciñanza",
+    observed: "Ruta observada",
   }[edge.edge_type] || edge.edge_type;
 }
 
@@ -842,7 +846,17 @@ function createConnectionsSection(node) {
     node,
     "traceroute"
   );
-  const total = neighbors.length + traceroutes.length;
+  const observed = connectionsForNode(
+    node,
+    "observed"
+  ).filter(
+    (edge) => edge.network === "meshcore"
+  );
+  const total = (
+    neighbors.length
+    + traceroutes.length
+    + observed.length
+  );
 
   section.className = "detail-section";
   heading.textContent = "Conexións publicadas";
@@ -874,6 +888,11 @@ function createConnectionsSection(node) {
       "traceroute",
       "traceroutes"
     ),
+    connectionCountLabel(
+      observed.length,
+      "ruta observada de MeshCore",
+      "rutas observadas de MeshCore"
+    ),
   ].join(" · ");
 
   section.append(
@@ -897,6 +916,17 @@ function createConnectionsSection(node) {
         emptyText: (
           "Non hai traceroutes publicados "
           + "para este nodo."
+        ),
+      }
+    ),
+    createConnectionGroup(
+      node,
+      {
+        title: "Rutas observadas de MeshCore",
+        connections: observed,
+        emptyText: (
+          "Non hai rutas observadas de MeshCore "
+          + "publicadas para este nodo."
         ),
       }
     )
@@ -1952,6 +1982,41 @@ function addTraceroute(edge) {
   ).addTo(state.edgeLayer);
 }
 
+function addMeshcoreObserved(edge) {
+  if (
+    edge.edge_type !== "observed"
+    || edge.network !== "meshcore"
+  ) {
+    return;
+  }
+
+  const fromNode = state.nodeById.get(edge.from_id);
+  const toNode = state.nodeById.get(edge.to_id);
+
+  if (!fromNode || !toNode) {
+    return;
+  }
+
+  const selected = edgeTouchesSelectedNode(edge);
+
+  L.polyline(
+    [
+      [fromNode.latitude, fromNode.longitude],
+      [toNode.latitude, toNode.longitude],
+    ],
+    {
+      pane: "routes",
+      renderer: state.renderer,
+      color: selected ? "#7048a8" : "#8f70b5",
+      weight: selected ? 2.6 : 1.8,
+      opacity: selected ? 0.94 : 0.62,
+      dashArray: "8 4 2 4",
+      interactive: false,
+    }
+  ).addTo(state.edgeLayer);
+}
+
+
 function addNeighbor(edge) {
   if (edge.edge_type !== "neighbor") {
     return;
@@ -1985,6 +2050,14 @@ function addNeighbor(edge) {
 function addVisibleEdge(edge) {
   if (edge.edge_type === "traceroute") {
     addTraceroute(edge);
+    return;
+  }
+
+  if (
+    edge.edge_type === "observed"
+    && edge.network === "meshcore"
+  ) {
+    addMeshcoreObserved(edge);
     return;
   }
 
@@ -2081,6 +2154,13 @@ function globalEdgeEnabled(edge) {
       && tracerouteSourceMatches(edge)
       && tracerouteAgeMatches(edge)
     );
+  }
+
+  if (
+    edge.edge_type === "observed"
+    && edge.network === "meshcore"
+  ) {
+    return elements.meshcoreObserved.checked;
   }
 
   if (edge.edge_type === "neighbor") {
@@ -4264,6 +4344,11 @@ function bindControls() {
   );
 
   elements.tracerouteAge.addEventListener(
+    "change",
+    () => applyFilters()
+  );
+
+  elements.meshcoreObserved.addEventListener(
     "change",
     () => applyFilters()
   );

@@ -19,6 +19,7 @@ from mesh_noroeste.application import (
     MALHA_PT_URL,
     MESHCORE_HUB_ADVERTISEMENTS_URL,
     MESHCORE_HUB_NODES_URL,
+    MESHCORE_HUB_PACKET_GROUPS_URL,
     MESHCORE_MAP_URL,
     MESHVIEW_ES_NEIGHBOR_EDGES_URL,
     MESHVIEW_ES_POSITION_PACKETS_URL,
@@ -1119,6 +1120,10 @@ class ApplicationTests(unittest.TestCase):
                 MESHCORE_HUB_ADVERTISEMENTS_URL
                 + "?limit=1&offset=0"
             )
+            packet_groups_url = (
+                MESHCORE_HUB_PACKET_GROUPS_URL
+                + "&limit=1&offset=0"
+            )
 
             first_document = meshcore_hub_document(
                 meshcore_hub_node(
@@ -1176,6 +1181,19 @@ class ApplicationTests(unittest.TestCase):
                     content_type="application/json",
                     bytes_received=200,
                 ),
+                JsonFetchResult(
+                    document={
+                        "items": [],
+                        "limit": 1,
+                        "offset": 0,
+                        "total": 0,
+                    },
+                    requested_url=packet_groups_url,
+                    final_url=packet_groups_url,
+                    status=200,
+                    content_type="application/json",
+                    bytes_received=50,
+                ),
             ]
 
             timestamps = iter(
@@ -1216,11 +1234,11 @@ class ApplicationTests(unittest.TestCase):
             )
             self.assertEqual(
                 result.final_url,
-                advertisements_url,
+                packet_groups_url,
             )
             self.assertEqual(
                 result.bytes_received,
-                820,
+                870,
             )
             self.assertEqual(
                 result.records_received,
@@ -1291,6 +1309,16 @@ class ApplicationTests(unittest.TestCase):
                             ),
                         },
                     ),
+                    call(
+                        packet_groups_url,
+                        timeout=20.0,
+                        max_bytes=20 * 1024 * 1024,
+                        headers={
+                            "Authorization": (
+                                "Bearer read-secret"
+                            ),
+                        },
+                    ),
                 ],
             )
 
@@ -1312,6 +1340,10 @@ class ApplicationTests(unittest.TestCase):
             second_advertisements_url = (
                 MESHCORE_HUB_ADVERTISEMENTS_URL
                 + "?limit=1&offset=1"
+            )
+            packet_groups_url = (
+                MESHCORE_HUB_PACKET_GROUPS_URL
+                + "&limit=1&offset=0"
             )
 
             node_document = meshcore_hub_document(
@@ -1364,6 +1396,19 @@ class ApplicationTests(unittest.TestCase):
                     content_type="application/json",
                     bytes_received=200,
                 ),
+                JsonFetchResult(
+                    document={
+                        "items": [],
+                        "limit": 1,
+                        "offset": 0,
+                        "total": 0,
+                    },
+                    requested_url=packet_groups_url,
+                    final_url=packet_groups_url,
+                    status=200,
+                    content_type="application/json",
+                    bytes_received=50,
+                ),
             ]
 
             timestamps = iter(
@@ -1400,6 +1445,182 @@ class ApplicationTests(unittest.TestCase):
             self.assertEqual(
                 store.count_observer_receptions(),
                 1,
+            )
+
+
+    def test_collect_meshcore_hub_saves_two_byte_packet_group_edges(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            settings = self.settings(root)
+
+            nodes_url = (
+                MESHCORE_HUB_NODES_URL
+                + "?limit=100&offset=0"
+            )
+            advertisements_url = (
+                MESHCORE_HUB_ADVERTISEMENTS_URL
+                + "?limit=100&offset=0"
+            )
+            packet_groups_url = (
+                "https://hub.mesh.gal/api/v1/packet-groups"
+                "?path_hash_bytes=2"
+                "&include_receptions=true"
+                "&limit=100"
+                "&offset=0"
+            )
+
+            first_public_key = "0101" + "11" * 30
+            second_public_key = "0202" + "22" * 30
+
+            nodes_document = meshcore_hub_document(
+                meshcore_hub_node(
+                    first_public_key,
+                    name="Primeiro salto",
+                    last_seen="2026-08-10T11:25:00Z",
+                ),
+                meshcore_hub_node(
+                    second_public_key,
+                    name="Segundo salto",
+                    last_seen="2026-08-10T11:26:00Z",
+                ),
+                limit=100,
+                offset=0,
+                total=2,
+            )
+
+            advertisements_document = {
+                "items": [],
+                "limit": 100,
+                "offset": 0,
+                "total": 0,
+            }
+
+            packet_groups_document = {
+                "items": [
+                    {
+                        "packet_hash": "64C4F8DA7624E41C",
+                        "path_hash_bytes": 2,
+                        "receptions": [
+                            {
+                                "observed_by": "ab" * 32,
+                                "observer_name": "Mapache",
+                                "snr": -4.5,
+                                "received_at": (
+                                    "2026-08-10T11:30:00Z"
+                                ),
+                                "path_hashes": [
+                                    "0101",
+                                    "0202",
+                                ],
+                            }
+                        ],
+                    }
+                ],
+                "limit": 100,
+                "offset": 0,
+                "total": 1,
+            }
+
+            fetched_pages = [
+                JsonFetchResult(
+                    document=nodes_document,
+                    requested_url=nodes_url,
+                    final_url=nodes_url,
+                    status=200,
+                    content_type="application/json",
+                    bytes_received=300,
+                ),
+                JsonFetchResult(
+                    document=advertisements_document,
+                    requested_url=advertisements_url,
+                    final_url=advertisements_url,
+                    status=200,
+                    content_type="application/json",
+                    bytes_received=100,
+                ),
+                JsonFetchResult(
+                    document=packet_groups_document,
+                    requested_url=packet_groups_url,
+                    final_url=packet_groups_url,
+                    status=200,
+                    content_type="application/json",
+                    bytes_received=200,
+                ),
+            ]
+
+            timestamps = iter(
+                (
+                    "2026-08-10T11:29:00Z",
+                    "2026-08-10T11:31:00Z",
+                )
+            )
+
+            with patch(
+                "mesh_noroeste.application.fetch_json",
+                side_effect=fetched_pages,
+            ) as mocked_fetch:
+                collect_meshcore_hub(
+                    settings=settings,
+                    api_read_key="read-secret",
+                    page_size=100,
+                    clock=lambda: next(timestamps),
+                )
+
+            store = ObservationStore(
+                settings.state_dir
+                / "mesh-noroeste.db"
+            )
+
+            edges = store.load_all_edges()
+
+            self.assertEqual(len(edges), 1)
+
+            edge = edges[0]
+
+            self.assertEqual(
+                edge.source,
+                "meshcore_hub",
+            )
+            self.assertEqual(
+                edge.network,
+                "meshcore",
+            )
+            self.assertEqual(
+                edge.edge_type,
+                "observed",
+            )
+            self.assertTrue(edge.directed)
+            self.assertEqual(
+                edge.from_source_id,
+                first_public_key,
+            )
+            self.assertEqual(
+                edge.to_source_id,
+                second_public_key,
+            )
+            self.assertEqual(
+                edge.observed_at,
+                "2026-08-10T11:30:00Z",
+            )
+            self.assertEqual(
+                edge.metrics["snr_db"],
+                -4.5,
+            )
+
+            self.assertEqual(
+                mocked_fetch.call_args_list[-1],
+                call(
+                    packet_groups_url,
+                    timeout=20.0,
+                    max_bytes=20 * 1024 * 1024,
+                    headers={
+                        "Authorization": (
+                            "Bearer read-secret"
+                        ),
+                    },
+                ),
             )
 
 

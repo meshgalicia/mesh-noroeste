@@ -8,8 +8,10 @@ import re
 from typing import Any
 
 from mesh_noroeste.domain import (
+    EdgeObservation,
     NodeObservation,
     ObserverReception,
+    make_edge_observation,
     make_observation,
     make_observer_reception,
 )
@@ -439,6 +441,205 @@ def parse_meshcore_hub_nodes(
         observations.append(observation)
 
     return tuple(observations)
+
+def parse_meshcore_hub_packet_group_edges(
+    document: Any,
+    *,
+    source: str,
+    public_keys_by_path_hash: Mapping[str, str],
+) -> tuple[EdgeObservation, ...]:
+    """Converte rutas resoltas de packet-groups en conexións observed."""
+
+    if not isinstance(source, str):
+        raise TypeError("source debe ser texto")
+
+    if not isinstance(public_keys_by_path_hash, Mapping):
+        raise TypeError(
+            "public_keys_by_path_hash debe ser un obxecto"
+        )
+
+    if not isinstance(document, Mapping):
+        raise MeshCoreHubError(
+            "A raíz de MeshCore Hub debe ser un obxecto"
+        )
+
+    records = document.get("items")
+
+    if not isinstance(records, list):
+        raise MeshCoreHubError(
+            "O campo 'items' de MeshCore Hub debe ser unha lista"
+        )
+
+    normalized_keys: dict[str, str] = {}
+
+    for path_hash, public_key in public_keys_by_path_hash.items():
+        if not isinstance(path_hash, str):
+            raise TypeError(
+                "Os hashes de ruta deben ser texto"
+            )
+
+        if not isinstance(public_key, str):
+            raise TypeError(
+                "As public keys resoltas deben ser texto"
+            )
+
+        normalized_hash = path_hash.strip().upper()
+        normalized_public_key = _advertisement_public_key(
+            public_key,
+            0,
+            field="public_keys_by_path_hash",
+        )
+
+        if len(normalized_hash) != 4:
+            continue
+
+        normalized_keys[normalized_hash] = (
+            normalized_public_key
+        )
+
+    edges: list[EdgeObservation] = []
+    seen: set[
+        tuple[str, str, str]
+    ] = set()
+
+    for index, record in enumerate(records):
+        if not isinstance(record, Mapping):
+            raise MeshCoreHubError(
+                f"Packet group {index}: debe ser un obxecto"
+            )
+
+        path_hash_bytes = record.get(
+            "path_hash_bytes"
+        )
+
+        if path_hash_bytes != 2:
+            continue
+
+        receptions = record.get("receptions")
+
+        if not isinstance(receptions, list):
+            raise MeshCoreHubError(
+                f"Packet group {index}: receptions debe ser unha lista"
+            )
+
+        for reception_index, reception in enumerate(
+            receptions
+        ):
+            if not isinstance(reception, Mapping):
+                raise MeshCoreHubError(
+                    f"Packet group {index}: recepción "
+                    f"{reception_index} debe ser un obxecto"
+                )
+
+            path_hashes = reception.get(
+                "path_hashes"
+            )
+
+            if path_hashes is None:
+                continue
+
+            if not isinstance(path_hashes, list):
+                raise MeshCoreHubError(
+                    f"Packet group {index}: recepción "
+                    f"{reception_index}: path_hashes debe "
+                    "ser unha lista ou null"
+                )
+
+            if len(path_hashes) < 2:
+                continue
+
+            observed_at = _advertisement_timestamp(
+                _required(
+                    reception,
+                    "received_at",
+                    reception_index,
+                ),
+                index,
+                field=(
+                    f"receptions[{reception_index}].received_at"
+                ),
+            )
+
+            snr_db = _advertisement_number(
+                reception.get("snr"),
+                index,
+                field=(
+                    f"receptions[{reception_index}].snr"
+                ),
+            )
+
+            resolved: list[str | None] = []
+
+            for path_index, path_hash in enumerate(
+                path_hashes
+            ):
+                if not isinstance(path_hash, str):
+                    raise MeshCoreHubError(
+                        f"Packet group {index}: recepción "
+                        f"{reception_index}: path_hashes"
+                        f"[{path_index}] debe ser texto"
+                    )
+
+                normalized_hash = (
+                    path_hash.strip().upper()
+                )
+
+                if len(normalized_hash) != 4:
+                    resolved.append(None)
+                    continue
+
+                resolved.append(
+                    normalized_keys.get(
+                        normalized_hash
+                    )
+                )
+
+            for from_key, to_key in zip(
+                resolved,
+                resolved[1:],
+            ):
+                if (
+                    from_key is None
+                    or to_key is None
+                    or from_key == to_key
+                ):
+                    continue
+
+                identity = (
+                    from_key,
+                    to_key,
+                    observed_at,
+                )
+
+                if identity in seen:
+                    continue
+
+                seen.add(identity)
+
+                try:
+                    edge = make_edge_observation(
+                        source=source,
+                        network="meshcore",
+                        from_source_id=from_key,
+                        to_source_id=to_key,
+                        edge_type="observed",
+                        directed=True,
+                        observed_at=observed_at,
+                        metrics={
+                            "snr_db": snr_db,
+                        },
+                    )
+                except MeshCoreHubError:
+                    raise
+                except (TypeError, ValueError) as exc:
+                    raise MeshCoreHubError(
+                        f"Packet group {index}: {exc}"
+                    ) from exc
+
+                edges.append(edge)
+
+    return tuple(edges)
+
 
 def parse_meshcore_hub_advertisements(
     document: Any,

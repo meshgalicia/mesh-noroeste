@@ -8,6 +8,7 @@ from mesh_noroeste.meshcore_hub import (
     MeshCoreHubError,
     parse_meshcore_hub_advertisements,
     parse_meshcore_hub_nodes,
+    parse_meshcore_hub_packet_group_edges,
 )
 
 
@@ -274,6 +275,161 @@ class MeshCoreHubAdvertisementTests(unittest.TestCase):
                 ),
                 source="meshcore_hub",
             )
+
+
+class MeshCoreHubPacketGroupEdgeTests(unittest.TestCase):
+    def test_two_byte_path_is_resolved_to_observed_edges(
+        self,
+    ) -> None:
+        nodes = {
+            "EA2B": ("ea2b" + "11" * 30),
+            "48B4": ("48b4" + "22" * 30),
+            "CAC2": ("cac2" + "33" * 30),
+        }
+
+        document = {
+            "items": [
+                {
+                    "packet_hash": "64C4F8DA7624E41C",
+                    "path_hash_bytes": 2,
+                    "receptions": [
+                        {
+                            "observed_by": "ab" * 32,
+                            "observer_name": "Mapache",
+                            "snr": -4.5,
+                            "received_at": (
+                                "2026-08-10T11:30:00Z"
+                            ),
+                            "path_hashes": [
+                                "EA2B",
+                                "48B4",
+                                "CAC2",
+                            ],
+                        }
+                    ],
+                }
+            ],
+            "limit": 100,
+            "offset": 0,
+            "total": 1,
+        }
+
+        edges = parse_meshcore_hub_packet_group_edges(
+            document,
+            source="meshcore_hub",
+            public_keys_by_path_hash=nodes,
+        )
+
+        self.assertEqual(len(edges), 2)
+
+        self.assertEqual(
+            edges[0].from_source_id,
+            nodes["EA2B"],
+        )
+        self.assertEqual(
+            edges[0].to_source_id,
+            nodes["48B4"],
+        )
+        self.assertEqual(
+            edges[1].from_source_id,
+            nodes["48B4"],
+        )
+        self.assertEqual(
+            edges[1].to_source_id,
+            nodes["CAC2"],
+        )
+
+        self.assertTrue(edges[0].directed)
+        self.assertEqual(
+            edges[0].edge_type,
+            "observed",
+        )
+        self.assertEqual(
+            edges[0].observed_at,
+            "2026-08-10T11:30:00Z",
+        )
+        self.assertEqual(
+            edges[0].metrics["snr_db"],
+            -4.5,
+        )
+
+    def test_unresolved_path_segment_is_not_invented(
+        self,
+    ) -> None:
+        first = "ea2b" + "11" * 30
+        third = "cac2" + "33" * 30
+
+        document = {
+            "items": [
+                {
+                    "packet_hash": "HASH",
+                    "path_hash_bytes": 2,
+                    "receptions": [
+                        {
+                            "observed_by": "ab" * 32,
+                            "snr": None,
+                            "received_at": (
+                                "2026-08-10T11:30:00Z"
+                            ),
+                            "path_hashes": [
+                                "EA2B",
+                                "FFFF",
+                                "CAC2",
+                            ],
+                        }
+                    ],
+                }
+            ],
+            "limit": 100,
+            "offset": 0,
+            "total": 1,
+        }
+
+        edges = parse_meshcore_hub_packet_group_edges(
+            document,
+            source="meshcore_hub",
+            public_keys_by_path_hash={
+                "EA2B": first,
+                "CAC2": third,
+            },
+        )
+
+        self.assertEqual(edges, ())
+
+    def test_non_two_byte_paths_are_ignored(
+        self,
+    ) -> None:
+        document = {
+            "items": [
+                {
+                    "packet_hash": "HASH",
+                    "path_hash_bytes": 1,
+                    "receptions": [
+                        {
+                            "observed_by": "ab" * 32,
+                            "received_at": (
+                                "2026-08-10T11:30:00Z"
+                            ),
+                            "path_hashes": [
+                                "EA",
+                                "48",
+                            ],
+                        }
+                    ],
+                }
+            ],
+            "limit": 100,
+            "offset": 0,
+            "total": 1,
+        }
+
+        edges = parse_meshcore_hub_packet_group_edges(
+            document,
+            source="meshcore_hub",
+            public_keys_by_path_hash={},
+        )
+
+        self.assertEqual(edges, ())
 
 
 class MeshCoreHubTests(unittest.TestCase):
