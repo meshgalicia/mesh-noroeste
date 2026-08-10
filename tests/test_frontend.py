@@ -784,6 +784,28 @@ class FrontendStaticTests(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertIn(expected, self.javascript)
 
+    def test_fragmented_meshcore_routes_are_detected_from_route_index(
+        self,
+    ) -> None:
+        required_javascript = (
+            "function meshcoreRouteFragments(edges)",
+            "edge.route_index",
+            "left.route_id === right.route_id",
+            "right.route_index > left.route_index + 1",
+            "function addMeshcoreRouteGap(",
+            "meshcore-route-gap",
+            "Ruta incompleta",
+        )
+
+        for expected in required_javascript:
+            with self.subTest(expected=expected):
+                self.assertIn(expected, self.javascript)
+
+        self.assertIn(
+            ".meshcore-route-gap",
+            self.css,
+        )
+
     def test_selected_node_connections_ignore_global_toggles(
         self,
     ) -> None:

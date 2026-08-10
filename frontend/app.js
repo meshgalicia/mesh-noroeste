@@ -2249,6 +2249,87 @@ function edgeBelongsToSelectedMeshcoreRoute(
   );
 }
 
+function meshcoreRouteFragments(edges) {
+  const ordered = edges
+    .filter(
+      (edge) => (
+        edge.edge_type === "observed"
+        && edge.network === "meshcore"
+        && edge.route_id
+        && Number.isInteger(edge.route_index)
+      )
+    )
+    .sort(
+      (left, right) => (
+        left.route_id.localeCompare(right.route_id)
+        || left.route_index - right.route_index
+      )
+    );
+
+  const fragments = [];
+
+  for (let index = 0; index < ordered.length - 1; index += 1) {
+    const left = ordered[index];
+    const right = ordered[index + 1];
+
+    if (
+      left.route_id === right.route_id
+      && right.route_index > left.route_index + 1
+    ) {
+      fragments.push({
+        left,
+        right,
+      });
+    }
+  }
+
+  return fragments;
+}
+
+function addMeshcoreRouteGap(fragment) {
+  const fromNode = state.nodeById.get(
+    fragment.left.to_id
+  );
+  const toNode = state.nodeById.get(
+    fragment.right.from_id
+  );
+
+  if (!fromNode || !toNode) {
+    return;
+  }
+
+  L.polyline(
+    [
+      [fromNode.latitude, fromNode.longitude],
+      [toNode.latitude, toNode.longitude],
+    ],
+    {
+      pane: "routes",
+      renderer: state.renderer,
+      color: "#6c757d",
+      weight: 1.4,
+      opacity: 0.72,
+      dashArray: "2 8",
+      interactive: false,
+    }
+  ).addTo(state.edgeLayer);
+
+  L.marker(
+    midpoint(fromNode, toNode),
+    {
+      pane: "routes",
+      interactive: false,
+      keyboard: false,
+      icon: L.divIcon({
+        className: "meshcore-route-gap",
+        html: '<span aria-hidden="true">?</span><span class="visually-hidden">Ruta incompleta</span>',
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+      }),
+    }
+  ).addTo(state.edgeLayer);
+}
+
 function renderVisibleEdges() {
   state.edgeLayer.clearLayers();
 
@@ -2296,6 +2377,13 @@ function renderVisibleEdges() {
     const edge of edgesInRenderOrder(selectedEdges)
   ) {
     addVisibleEdge(edge);
+  }
+
+  for (
+    const fragment
+    of meshcoreRouteFragments(selectedEdges)
+  ) {
+    addMeshcoreRouteGap(fragment);
   }
 
   updateVisibleStatistics(
