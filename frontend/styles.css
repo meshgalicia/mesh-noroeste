@@ -851,6 +851,29 @@ h2 {
   line-height: 1.4;
 }
 
+.observer-heard-nodes-details {
+  margin-top: 0.25rem;
+}
+
+.observer-heard-nodes-details > summary {
+  width: fit-content;
+  max-width: 100%;
+  color: var(--network-meshtastic);
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.observer-heard-nodes-details > summary:focus-visible {
+  border-radius: 0.2rem;
+  outline: 3px solid #7048e8;
+  outline-offset: 3px;
+}
+
+.observer-heard-nodes-details[open] > summary {
+  margin-bottom: 0.65rem;
+}
+
 .configuration-warnings > p {
   margin: 0;
   font-size: 0.8rem;

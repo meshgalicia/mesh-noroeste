@@ -268,6 +268,7 @@ const state = {
   neighborInfo: [],
   observerReceptions: [],
   receptionsByNodeId: new Map(),
+  receptionsByObserverId: new Map(),
   meshcoreActivityByNodeId: new Map(),
   stats: null,
   meta: null,
@@ -2825,6 +2826,135 @@ function observerReceptionsSection(node) {
   return section;
 }
 
+function observedNodesSection(node) {
+  if (
+    node.network !== "meshcore"
+    || node.is_observer !== true
+  ) {
+    return null;
+  }
+
+  const receptions = (
+    state.receptionsByObserverId.get(node.id) || []
+  );
+
+  if (receptions.length === 0) {
+    return null;
+  }
+
+  const receptionsByNode = new Map();
+
+  for (const reception of receptions) {
+    const nodeReceptions = (
+      receptionsByNode.get(reception.node_id) || []
+    );
+
+    nodeReceptions.push(reception);
+    receptionsByNode.set(
+      reception.node_id,
+      nodeReceptions
+    );
+  }
+
+  const entries = Array.from(
+    receptionsByNode.entries()
+  ).map(([observedNodeId, nodeReceptions]) => {
+    const observedNode = (
+      state.nodeById.get(observedNodeId) || null
+    );
+
+    return {
+      node: observedNode,
+      id: observedNodeId,
+      name: observedNode
+        ? nodeName(observedNode)
+        : observedNodeId.replace(/^meshcore:/, ""),
+      summary: observerReceptionSummary(nodeReceptions),
+    };
+  }).sort((first, second) => (
+    second.summary.latestObservedAt.localeCompare(
+      first.summary.latestObservedAt
+    )
+    || first.name.localeCompare(
+      second.name,
+      "gl-ES"
+    )
+  ));
+
+  const knownCount = entries.filter(
+    (entry) => entry.node !== null
+  ).length;
+  const positionedCount = entries.filter(
+    (entry) => (
+      entry.node !== null
+      && Number.isFinite(entry.node.latitude)
+      && Number.isFinite(entry.node.longitude)
+    )
+  ).length;
+
+  const section = document.createElement("section");
+  const heading = document.createElement("h3");
+  const summary = document.createElement("p");
+  const details = document.createElement("details");
+  const detailsSummary = document.createElement("summary");
+  const list = document.createElement("ul");
+
+  section.className = (
+    "detail-section observer-heard-nodes-section"
+  );
+  heading.textContent = "Nodos escoitados";
+
+  summary.className = "observer-receptions-summary";
+  summary.textContent = [
+    `${formatNumber(entries.length)} nodos distintos`,
+    `${formatNumber(knownCount)} coñecidos no mapa`,
+    `${formatNumber(positionedCount)} con posición`,
+    (
+      receptions.length === 1
+        ? "1 recepción"
+        : `${formatNumber(receptions.length)} recepcións`
+    ),
+  ].join(" · ");
+
+  details.className = "observer-heard-nodes-details";
+  detailsSummary.textContent = "Ver nodos escoitados";
+  list.className = "observer-reception-list";
+
+  for (const entry of entries) {
+    const item = document.createElement("li");
+    const nodeNameElement = entry.node
+      ? document.createElement("button")
+      : document.createElement("span");
+    const description = document.createElement("span");
+
+    item.className = "observer-reception-item";
+    nodeNameElement.className = entry.node
+      ? "observer-reception-link"
+      : "observer-reception-name";
+    nodeNameElement.textContent = entry.name;
+
+    if (entry.node) {
+      nodeNameElement.type = "button";
+      nodeNameElement.addEventListener("click", () => {
+        focusNode(entry.node);
+      });
+    }
+
+    description.className = "observer-reception-meta";
+    description.textContent = observerReceptionDescription(
+      entry.summary
+    );
+
+    item.append(nodeNameElement, description);
+    list.append(item);
+  }
+
+  details.append(detailsSummary, list);
+  section.append(heading, summary, details);
+
+  return section;
+}
+
 function configurationWarningsSection(node) {
   if (node.network !== "meshtastic") {
     return null;
@@ -3171,6 +3301,7 @@ function showNodeDetail(node) {
     ),
     createConnectionsSection(node),
     observerReceptionsSection(node),
+    observedNodesSection(node),
     configurationWarningsSection(node),
     detailSection(
       "Fontes",
@@ -4297,6 +4428,7 @@ async function initialize() {
       observerReceptions.receptions
     );
     state.receptionsByNodeId = new Map();
+    state.receptionsByObserverId = new Map();
     state.meshcoreActivityByNodeId = new Map();
 
     for (
@@ -4314,6 +4446,19 @@ async function initialize() {
       state.receptionsByNodeId.set(
         reception.node_id,
         receptions
+      );
+
+      const observerReceptions = (
+        state.receptionsByObserverId.get(
+          reception.observer_id
+        ) || []
+      );
+
+      observerReceptions.push(reception);
+
+      state.receptionsByObserverId.set(
+        reception.observer_id,
+        observerReceptions
       );
 
       const current = state.meshcoreActivityByNodeId.get(

@@ -238,6 +238,7 @@ class FrontendStaticTests(unittest.TestCase):
             "documents.observerReceptions.receptions",
             "state.observerReceptions = (",
             "state.receptionsByNodeId = new Map()",
+            "state.receptionsByObserverId = new Map()",
             "function observerReceptionSummary(receptions)",
             "function observerReceptionDescription(summary)",
             "function observerReceptionsSection(node)",
@@ -249,6 +250,14 @@ class FrontendStaticTests(unittest.TestCase):
             "observerReceptionDescription(",
             "focusNode(entry.observer)",
             "observerReceptionsSection(node)",
+            "function observedNodesSection(node)",
+            "state.receptionsByObserverId.get(node.id)",
+            '"Nodos escoitados"',
+            '"Ver nodos escoitados"',
+            "coñecidos no mapa",
+            "con posición",
+            "focusNode(entry.node)",
+            "observedNodesSection(node)",
         ):
             with self.subTest(expected=expected):
                 self.assertIn(expected, self.javascript)
@@ -259,6 +268,7 @@ class FrontendStaticTests(unittest.TestCase):
             ".observer-reception-item",
             ".observer-reception-link",
             ".observer-reception-meta",
+            ".observer-heard-nodes-details",
         ):
             with self.subTest(expected=expected):
                 self.assertIn(expected, self.css)
