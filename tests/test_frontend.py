@@ -434,6 +434,11 @@ class FrontendStaticTests(unittest.TestCase):
             "function globalEdgeEnabled(edge)",
             "elements.meshcoreObserved.checked",
             "elements.meshcoreObserved.addEventListener(",
+            'className: selected',
+            '? "meshcore-route-arrow selected"',
+            ': "meshcore-route-arrow"',
+            "midpoint(fromNode, toNode)",
+            "bearing(",
         )
 
         for expected in required_javascript:
@@ -455,6 +460,18 @@ class FrontendStaticTests(unittest.TestCase):
         )
         self.assertIn(
             "border-top-color: var(--meshcore-observed)",
+            self.css,
+        )
+        self.assertIn(
+            ".meshcore-route-arrow {",
+            self.css,
+        )
+        self.assertIn(
+            "color: var(--meshcore-observed)",
+            self.css,
+        )
+        self.assertIn(
+            ".meshcore-route-arrow.selected",
             self.css,
         )
 

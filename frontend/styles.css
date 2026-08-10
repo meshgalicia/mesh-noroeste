@@ -952,6 +952,33 @@ h2 {
   transform-origin: center;
 }
 
+.meshcore-route-arrow {
+  color: var(--meshcore-observed);
+  font-size: 0.85rem;
+  text-align: center;
+  text-shadow:
+    -1px -1px 0 #ffffff,
+    1px -1px 0 #ffffff,
+    -1px 1px 0 #ffffff,
+    1px 1px 0 #ffffff;
+}
+
+.meshcore-route-arrow span {
+  display: block;
+  transform-origin: center;
+}
+
+.meshcore-route-arrow.selected {
+  color: #7048a8;
+  filter:
+    drop-shadow(0 0 1px #ffffff)
+    drop-shadow(0 0 3px rgb(112 72 168 / 0.65));
+}
+
+.meshcore-route-arrow.selected span {
+  font-size: 1.05rem;
+}
+
 .leaflet-control-attribution {
   font-size: 0.68rem;
 }
@@ -2457,6 +2484,7 @@ h2 {
   .age-dot,
   .legend-line,
   .route-arrow,
+  .meshcore-route-arrow,
   .node-map-label {
     forced-color-adjust: none;
   }
@@ -2597,6 +2625,20 @@ h2 {
   }
 
   .route-arrow.selected {
+    color: Highlight;
+    filter: none;
+  }
+
+  .meshcore-route-arrow {
+    color: CanvasText;
+    text-shadow:
+      -1px -1px 0 Canvas,
+      1px -1px 0 Canvas,
+      -1px 1px 0 Canvas,
+      1px 1px 0 Canvas;
+  }
+
+  .meshcore-route-arrow.selected {
     color: Highlight;
     filter: none;
   }

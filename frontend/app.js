@@ -1999,11 +1999,13 @@ function addMeshcoreObserved(edge) {
 
   const selected = edgeTouchesSelectedNode(edge);
 
+  const routePoints = [
+    [fromNode.latitude, fromNode.longitude],
+    [toNode.latitude, toNode.longitude],
+  ];
+
   L.polyline(
-    [
-      [fromNode.latitude, fromNode.longitude],
-      [toNode.latitude, toNode.longitude],
-    ],
+    routePoints,
     {
       pane: "routes",
       renderer: state.renderer,
@@ -2012,6 +2014,27 @@ function addMeshcoreObserved(edge) {
       opacity: selected ? 0.94 : 0.62,
       dashArray: "8 4 2 4",
       interactive: false,
+    }
+  ).addTo(state.edgeLayer);
+
+  L.marker(
+    midpoint(fromNode, toNode),
+    {
+      pane: "routes",
+      interactive: false,
+      keyboard: false,
+      icon: L.divIcon({
+        className: selected
+          ? "meshcore-route-arrow selected"
+          : "meshcore-route-arrow",
+        html:
+          `<span style="transform:rotate(${bearing(
+            fromNode,
+            toNode
+          )}deg)">▲</span>`,
+        iconSize: selected ? [18, 18] : [14, 14],
+        iconAnchor: selected ? [9, 9] : [7, 7],
+      }),
     }
   ).addTo(state.edgeLayer);
 }
