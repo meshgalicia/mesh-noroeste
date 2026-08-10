@@ -257,31 +257,45 @@ class OzuloMapTests(unittest.TestCase):
                 source="ozulo_map",
             )
 
-    def test_neighbor_packet_without_snr_is_rejected(
+    def test_neighbor_without_snr_is_ignored(
         self,
     ) -> None:
-        with self.assertRaisesRegex(
-            OzuloMapError,
-            "falta snr",
-        ):
-            parse_ozulo_neighbor_packets(
-                {
-                    "packets": [{
-                        "import_time_us": (
-                            1_785_814_685_059_745
-                        ),
-                        "from_node_id": 2_956_739_956,
-                        "portnum": 71,
-                        "payload": (
-                            "node_id: 2956739956\n"
-                            "neighbors {\n"
-                            "  node_id: 2905611713\n"
-                            "}\n"
-                        ),
-                    }]
-                },
-                source="ozulo_map",
-            )
+        observations = parse_ozulo_neighbor_packets(
+            {
+                "packets": [{
+                    "import_time_us": (
+                        1_785_814_685_059_745
+                    ),
+                    "from_node_id": 2_956_739_956,
+                    "portnum": 71,
+                    "payload": (
+                        "node_id: 2956739956\n"
+                        "neighbors {\n"
+                        "  node_id: 2905611713\n"
+                        "}\n"
+                        "neighbors {\n"
+                        "  node_id: 899165990\n"
+                        "  snr: 6.75\n"
+                        "}\n"
+                    ),
+                }]
+            },
+            source="ozulo_map",
+        )
+
+        self.assertEqual(len(observations), 1)
+        self.assertEqual(
+            observations[0].from_source_id,
+            "!b03c4574",
+        )
+        self.assertEqual(
+            observations[0].to_source_id,
+            "!35982f26",
+        )
+        self.assertEqual(
+            observations[0].snr_db,
+            6.75,
+        )
 
     def test_traceroute_edge_is_normalized(self) -> None:
         edges = parse_ozulo_map_edges(

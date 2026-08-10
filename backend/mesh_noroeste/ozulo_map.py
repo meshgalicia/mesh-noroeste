@@ -545,10 +545,7 @@ def parse_ozulo_neighbor_packets(
                 )
 
             if snr_match is None:
-                raise OzuloMapError(
-                    f"Paquete {index}, veciño {neighbor_index}: "
-                    "falta snr"
-                )
+                continue
 
             try:
                 observation = make_neighbor_observation(
