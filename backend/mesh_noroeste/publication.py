@@ -400,6 +400,8 @@ def _public_edge_documents(
                 "directed": observation.directed,
                 "last_seen": observation.observed_at,
                 "metrics": observation.metrics,
+                "route_id": observation.route_id,
+                "route_index": observation.route_index,
             }
         )
 

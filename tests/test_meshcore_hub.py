@@ -353,6 +353,58 @@ class MeshCoreHubPacketGroupEdgeTests(unittest.TestCase):
             -4.5,
         )
 
+    def test_two_byte_path_preserves_route_identity(
+        self,
+    ) -> None:
+        nodes = {
+            "EA2B": ("ea2b" + "11" * 30),
+            "48B4": ("48b4" + "22" * 30),
+            "CAC2": ("cac2" + "33" * 30),
+        }
+
+        document = {
+            "items": [
+                {
+                    "packet_hash": "64C4F8DA7624E41C",
+                    "path_hash_bytes": 2,
+                    "receptions": [
+                        {
+                            "observed_by": "ab" * 32,
+                            "snr": -4.5,
+                            "received_at": (
+                                "2026-08-10T11:30:00Z"
+                            ),
+                            "path_hashes": [
+                                "EA2B",
+                                "48B4",
+                                "CAC2",
+                            ],
+                        }
+                    ],
+                }
+            ],
+            "limit": 100,
+            "offset": 0,
+            "total": 1,
+        }
+
+        edges = parse_meshcore_hub_packet_group_edges(
+            document,
+            source="meshcore_hub",
+            public_keys_by_path_hash=nodes,
+        )
+
+        self.assertEqual(len(edges), 2)
+        self.assertIsNotNone(edges[0].route_id)
+        self.assertEqual(
+            edges[0].route_id,
+            edges[1].route_id,
+        )
+        self.assertEqual(
+            [edge.route_index for edge in edges],
+            [0, 1],
+        )
+
     def test_unresolved_path_segment_is_not_invented(
         self,
     ) -> None:

@@ -2218,11 +2218,45 @@ function edgesInRenderOrder(edges) {
   );
 }
 
+function selectedMeshcoreRouteIds(edges) {
+  if (state.selectedNodeId === null) {
+    return new Set();
+  }
+
+  return new Set(
+    edges
+      .filter(
+        (edge) => (
+          edge.edge_type === "observed"
+          && edge.network === "meshcore"
+          && edge.route_id
+          && edgeTouchesSelectedNode(edge)
+        )
+      )
+      .map((edge) => edge.route_id)
+  );
+}
+
+function edgeBelongsToSelectedMeshcoreRoute(
+  edge,
+  routeIds
+) {
+  return (
+    edge.edge_type === "observed"
+    && edge.network === "meshcore"
+    && edge.route_id
+    && routeIds.has(edge.route_id)
+  );
+}
+
 function renderVisibleEdges() {
   state.edgeLayer.clearLayers();
 
   const candidateEdges = state.edges.filter(
     edgeEndpointsAreVisible
+  );
+  const selectedRouteIds = selectedMeshcoreRouteIds(
+    state.edges
   );
   const visibleNeighborInfo = (
     elements.neighborInfo.checked
@@ -2231,8 +2265,14 @@ function renderVisibleEdges() {
         )
       : []
   );
-  const selectedEdges = candidateEdges.filter(
-    edgeTouchesSelectedNode
+  const selectedEdges = state.edges.filter(
+    (edge) => (
+      edgeTouchesSelectedNode(edge)
+      || edgeBelongsToSelectedMeshcoreRoute(
+        edge,
+        selectedRouteIds
+      )
+    )
   );
   const regularEdges = candidateEdges.filter(
     (edge) => (

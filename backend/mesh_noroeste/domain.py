@@ -373,6 +373,8 @@ class EdgeObservation:
     directed: bool
     observed_at: str
     metrics: dict[str, float | None]
+    route_id: str | None = None
+    route_index: int | None = None
 
     @property
     def from_id(self) -> str:
@@ -525,6 +527,8 @@ def make_edge_observation(
     directed: bool,
     observed_at: datetime | str | int | float,
     metrics: Mapping[str, Any] | None = None,
+    route_id: Any = None,
+    route_index: Any = None,
 ) -> EdgeObservation:
     """Crea una observación normalizada de una conexión."""
 
@@ -639,6 +643,46 @@ def make_edge_observation(
     else:
         metric_values = metrics
 
+    normalized_route_id = _optional_text(
+        route_id,
+        "route_id",
+        512,
+    )
+    normalized_route_index = _optional_integer(
+        route_index,
+        "route_index",
+        minimum=0,
+    )
+
+    if (
+        normalized_route_id is None
+        and normalized_route_index is not None
+    ):
+        raise ValueError(
+            "route_index require route_id"
+        )
+
+    if (
+        normalized_route_id is not None
+        and normalized_route_index is None
+    ):
+        raise ValueError(
+            "route_id require route_index"
+        )
+
+    if (
+        normalized_route_id is not None
+        and (
+            normalized_network != "meshcore"
+            or normalized_source != "meshcore_hub"
+            or normalized_edge_type != "observed"
+        )
+    ):
+        raise ValueError(
+            "Os metadatos de ruta só se admiten "
+            "en rutas observed de meshcore_hub"
+        )
+
     return EdgeObservation(
         source=normalized_source,
         network=normalized_network,
@@ -657,6 +701,8 @@ def make_edge_observation(
                 "rssi_dbm",
             ),
         },
+        route_id=normalized_route_id,
+        route_index=normalized_route_index,
     )
 
 

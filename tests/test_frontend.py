@@ -675,7 +675,9 @@ class FrontendStaticTests(unittest.TestCase):
             "satellite ? 0.62 : 0.48",
             "function edgeEndpointsAreVisible(edge)",
             "const candidateEdges = state.edges.filter(",
-            "const selectedEdges = candidateEdges.filter(",
+            "const selectedRouteIds = selectedMeshcoreRouteIds(",
+            "const selectedEdges = state.edges.filter(",
+            "edgeBelongsToSelectedMeshcoreRoute(",
             "const regularEdges = candidateEdges.filter(",
             "!edgeTouchesSelectedNode(edge)",
             "&& globalEdgeEnabled(edge)",
@@ -762,12 +764,32 @@ class FrontendStaticTests(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertIn(expected, self.css)
 
+    def test_selected_meshcore_node_shows_complete_observed_routes(
+        self,
+    ) -> None:
+        for expected in (
+            "function selectedMeshcoreRouteIds(edges)",
+            'edge.edge_type === "observed"',
+            'edge.network === "meshcore"',
+            "edge.route_id",
+            "edgeTouchesSelectedNode(edge)",
+            ".map((edge) => edge.route_id)",
+            "function edgeBelongsToSelectedMeshcoreRoute(",
+            "routeIds.has(edge.route_id)",
+            "const selectedRouteIds = selectedMeshcoreRouteIds(",
+            "const selectedEdges = state.edges.filter(",
+            "edgeBelongsToSelectedMeshcoreRoute(",
+            "selectedRouteIds",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, self.javascript)
+
     def test_selected_node_connections_ignore_global_toggles(
         self,
     ) -> None:
         selected_block = self.javascript[
             self.javascript.index(
-                "const selectedEdges = candidateEdges.filter("
+                "const selectedEdges = state.edges.filter("
             ):
             self.javascript.index(
                 "const regularEdges = candidateEdges.filter("
@@ -776,6 +798,10 @@ class FrontendStaticTests(unittest.TestCase):
 
         self.assertIn(
             "edgeTouchesSelectedNode",
+            selected_block,
+        )
+        self.assertIn(
+            "edgeBelongsToSelectedMeshcoreRoute",
             selected_block,
         )
         self.assertNotIn(

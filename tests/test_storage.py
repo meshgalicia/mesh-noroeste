@@ -356,6 +356,48 @@ class ObservationStoreTests(unittest.TestCase):
 
 
 class EdgeObservationStoreTests(unittest.TestCase):
+    def test_edge_route_metadata_survives_storage(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            database = (
+                Path(temporary)
+                / "mesh-noroeste.db"
+            )
+            store = ObservationStore(database)
+
+            edge = make_edge_observation(
+                source="meshcore_hub",
+                network="meshcore",
+                from_source_id="01" * 32,
+                to_source_id="02" * 32,
+                edge_type="observed",
+                directed=True,
+                observed_at="2026-08-10T11:30:00Z",
+                metrics={"snr_db": -4.5},
+                route_id=(
+                    "64C4F8DA7624E41C:"
+                    + ("ab" * 32)
+                    + ":2026-08-10T11:30:00Z"
+                ),
+                route_index=0,
+            )
+
+            self.assertEqual(store.save_edges([edge]), 1)
+
+            loaded = store.load_all_edges()
+
+            self.assertEqual(len(loaded), 1)
+            self.assertEqual(
+                loaded[0].route_id,
+                edge.route_id,
+            )
+            self.assertEqual(
+                loaded[0].route_index,
+                0,
+            )
+
+
     def setUp(self) -> None:
         self.temporary_directory = (
             tempfile.TemporaryDirectory()

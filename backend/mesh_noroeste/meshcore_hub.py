@@ -594,9 +594,43 @@ def parse_meshcore_hub_packet_group_edges(
                     )
                 )
 
-            for from_key, to_key in zip(
-                resolved,
-                resolved[1:],
+            packet_hash = record.get("packet_hash")
+
+            if not isinstance(packet_hash, str):
+                raise MeshCoreHubError(
+                    f"Packet group {index}: packet_hash debe ser texto"
+                )
+
+            normalized_packet_hash = packet_hash.strip().upper()
+
+            if not normalized_packet_hash:
+                raise MeshCoreHubError(
+                    f"Packet group {index}: packet_hash non pode estar baleiro"
+                )
+
+            observed_by = _advertisement_public_key(
+                _required(
+                    reception,
+                    "observed_by",
+                    reception_index,
+                ),
+                index,
+                field=(
+                    f"receptions[{reception_index}].observed_by"
+                ),
+            )
+
+            route_id = (
+                f"{normalized_packet_hash}:"
+                f"{observed_by}:"
+                f"{observed_at}"
+            )
+
+            for route_index, (from_key, to_key) in enumerate(
+                zip(
+                    resolved,
+                    resolved[1:],
+                )
             ):
                 if (
                     from_key is None
@@ -628,6 +662,8 @@ def parse_meshcore_hub_packet_group_edges(
                         metrics={
                             "snr_db": snr_db,
                         },
+                        route_id=route_id,
+                        route_index=route_index,
                     )
                 except MeshCoreHubError:
                     raise

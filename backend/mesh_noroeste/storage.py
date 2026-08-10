@@ -31,7 +31,7 @@ from mesh_noroeste.normalization import (
 )
 
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 
 @contextmanager
@@ -861,6 +861,7 @@ class ObservationStore:
                 7,
                 8,
                 9,
+                10,
                 SCHEMA_VERSION,
             }:
                 raise RuntimeError(
@@ -1008,6 +1009,12 @@ class ObservationStore:
 
                     observed_at TEXT NOT NULL,
                     metrics_json TEXT NOT NULL,
+                    route_id TEXT,
+                    route_index INTEGER
+                        CHECK (
+                            route_index IS NULL
+                            OR route_index >= 0
+                        ),
 
                     inserted_at TEXT NOT NULL DEFAULT (
                         strftime(
@@ -1328,6 +1335,33 @@ class ObservationStore:
             _migrate_observer_reception_identity(
                 connection
             )
+
+            edge_columns = {
+                row["name"]
+                for row in connection.execute(
+                    "PRAGMA table_info(edge_observations)"
+                )
+            }
+
+            if "route_id" not in edge_columns:
+                connection.execute(
+                    """
+                    ALTER TABLE edge_observations
+                    ADD COLUMN route_id TEXT
+                    """
+                )
+
+            if "route_index" not in edge_columns:
+                connection.execute(
+                    """
+                    ALTER TABLE edge_observations
+                    ADD COLUMN route_index INTEGER
+                        CHECK (
+                            route_index IS NULL
+                            OR route_index >= 0
+                        )
+                    """
+                )
 
             if current_version < SCHEMA_VERSION:
                 _populate_observation_cursors(
@@ -1682,6 +1716,8 @@ class ObservationStore:
                     sort_keys=True,
                     separators=(",", ":"),
                 ),
+                observation.route_id,
+                observation.route_index,
                 observation.source,
                 observation.id,
                 observation.observed_at,
@@ -1717,9 +1753,11 @@ class ObservationStore:
                     edge_type,
                     directed,
                     observed_at,
-                    metrics_json
+                    metrics_json,
+                    route_id,
+                    route_index
                 )
-                SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
+                SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 WHERE NOT EXISTS (
                     SELECT 1
                     FROM edge_observation_cursors
@@ -1812,6 +1850,8 @@ class ObservationStore:
                     sort_keys=True,
                     separators=(",", ":"),
                 ),
+                observation.route_id,
+                observation.route_index,
             )
             for observation in received
         ]
@@ -1908,9 +1948,11 @@ class ObservationStore:
                     edge_type,
                     directed,
                     observed_at,
-                    metrics_json
+                    metrics_json,
+                    route_id,
+                    route_index
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 allowed_rows,
             )
@@ -2218,7 +2260,9 @@ class ObservationStore:
                     edge_type,
                     directed,
                     observed_at,
-                    metrics_json
+                    metrics_json,
+                    route_id,
+                    route_index
                 FROM edge_observations
                 ORDER BY
                     canonical_id ASC,
@@ -2243,6 +2287,8 @@ class ObservationStore:
                     metrics=json.loads(
                         row["metrics_json"]
                     ),
+                    route_id=row["route_id"],
+                    route_index=row["route_index"],
                 )
                 for row in rows
             ]

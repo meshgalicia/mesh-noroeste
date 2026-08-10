@@ -449,6 +449,8 @@ class PublicationTests(unittest.TestCase):
                     "snr_db": 7.5,
                     "rssi_dbm": None,
                 },
+                "route_id": None,
+                "route_index": None,
             },
         )
 
@@ -466,6 +468,80 @@ class PublicationTests(unittest.TestCase):
             documents["stats.json"]["networks"][
                 "meshcore"
             ]["edges"],
+            0,
+        )
+
+    def test_meshcore_observed_route_identity_is_published(
+        self,
+    ) -> None:
+        first_key = "01" * 32
+        second_key = "02" * 32
+
+        observations = [
+            make_observation(
+                source="meshcore_hub",
+                network="meshcore",
+                source_id=first_key,
+                observed_at="2026-08-10T11:29:00Z",
+                latitude=42.1,
+                longitude=-8.1,
+                position_updated_at="2026-08-10T11:29:00Z",
+            ),
+            make_observation(
+                source="meshcore_hub",
+                network="meshcore",
+                source_id=second_key,
+                observed_at="2026-08-10T11:29:00Z",
+                latitude=42.2,
+                longitude=-8.2,
+                position_updated_at="2026-08-10T11:29:00Z",
+            ),
+        ]
+
+        route_id = (
+            "64C4F8DA7624E41C:"
+            + ("ab" * 32)
+            + ":2026-08-10T11:30:00Z"
+        )
+
+        edge = make_edge_observation(
+            source="meshcore_hub",
+            network="meshcore",
+            from_source_id=first_key,
+            to_source_id=second_key,
+            edge_type="observed",
+            directed=True,
+            observed_at="2026-08-10T11:30:00Z",
+            metrics={"snr_db": -4.5},
+            route_id=route_id,
+            route_index=0,
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            documents = build_public_documents(
+                observations,
+                edge_observations=[edge],
+                generated_at="2026-08-10T11:31:00Z",
+                settings=self.settings(
+                    Path(temporary)
+                ),
+                region_bounds={
+                    "south": 36.5,
+                    "west": -10.5,
+                    "north": 44.5,
+                    "east": -3.5,
+                },
+            )
+
+        published = documents["edges.json"]["edges"]
+
+        self.assertEqual(len(published), 1)
+        self.assertEqual(
+            published[0]["route_id"],
+            route_id,
+        )
+        self.assertEqual(
+            published[0]["route_index"],
             0,
         )
 
