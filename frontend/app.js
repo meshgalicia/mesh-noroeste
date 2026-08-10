@@ -380,6 +380,12 @@ const elements = {
   mqttGatewaySummary: document.querySelector(
     "#mqtt-gateway-summary"
   ),
+  meshcoreObserverFilter: document.querySelector(
+    "#meshcore-observer-filter"
+  ),
+  meshcoreObserverSummary: document.querySelector(
+    "#meshcore-observer-summary"
+  ),
   meshcoreActivityFilter: document.querySelector(
     "#meshcore-activity-filter"
   ),
@@ -976,6 +982,21 @@ function isMqttGateway(node) {
   );
 }
 
+function isMeshcoreObserver(node) {
+  return (
+    node.network === "meshcore"
+    && node.is_observer === true
+  );
+}
+
+function meshcoreObserverFilterEnabled() {
+  return (
+    elements.meshcoreObserverFilter.getAttribute(
+      "aria-pressed"
+    ) === "true"
+  );
+}
+
 function meshcoreActivityEnabled() {
   return (
     elements.meshcoreActivityFilter.getAttribute(
@@ -1057,6 +1078,10 @@ function matchesFilters(node) {
         "aria-pressed"
       ) !== "true"
       || isMqttGateway(node)
+    )
+    && (
+      !meshcoreObserverFilterEnabled()
+      || isMeshcoreObserver(node)
     )
   );
 }
@@ -2423,6 +2448,19 @@ function updateMqttGatewaySummary() {
   );
 }
 
+function updateMeshcoreObserverSummary() {
+  const available = state.nodes.filter(
+    (node) => (
+      matchesBaseFilters(node)
+      && isMeshcoreObserver(node)
+    )
+  ).length;
+
+  elements.meshcoreObserverSummary.textContent = (
+    `${formatNumber(available)} dispoñibles`
+  );
+}
+
 function updateMeshcoreActivitySummary() {
   const available = state.nodes.filter(
     (node) => (
@@ -2452,6 +2490,7 @@ function updateMeshcoreActivityControls() {
 
 function applyFilters({ fit = false } = {}) {
   updateMqttGatewaySummary();
+  updateMeshcoreObserverSummary();
   updateMeshcoreActivitySummary();
   state.visibleNodes = state.nodes.filter(matchesFilters);
   state.visibleIds = new Set(
@@ -4442,6 +4481,20 @@ function bindControls() {
       );
 
       elements.mqttGatewayFilter.setAttribute(
+        "aria-pressed",
+        String(!enabled)
+      );
+
+      applyFilters();
+    }
+  );
+
+  elements.meshcoreObserverFilter.addEventListener(
+    "click",
+    () => {
+      const enabled = meshcoreObserverFilterEnabled();
+
+      elements.meshcoreObserverFilter.setAttribute(
         "aria-pressed",
         String(!enabled)
       );

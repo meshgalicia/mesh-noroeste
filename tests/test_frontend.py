@@ -1312,6 +1312,53 @@ class FrontendStaticTests(unittest.TestCase):
             self.parser.scripts,
         )
 
+    def test_meshcore_observer_filter_is_available(
+        self,
+    ) -> None:
+        for expected in (
+            'id="meshcore-observer-filter"',
+            'id="meshcore-observer-summary"',
+            "Só Observers MeshCore",
+            "Mostra unicamente os observers publicados",
+            "polo Hub.",
+        ):
+            with self.subTest(html=expected):
+                self.assertIn(expected, self.html)
+
+        for expected in (
+            "meshcoreObserverFilter: document.querySelector(",
+            '"#meshcore-observer-filter"',
+            "meshcoreObserverSummary: document.querySelector(",
+            '"#meshcore-observer-summary"',
+            "function isMeshcoreObserver(node)",
+            'node.network === "meshcore"',
+            "node.is_observer === true",
+            "function meshcoreObserverFilterEnabled()",
+            "function updateMeshcoreObserverSummary()",
+            "elements.meshcoreObserverFilter.addEventListener(",
+        ):
+            with self.subTest(javascript=expected):
+                self.assertIn(expected, self.javascript)
+
+        matches_start = self.javascript.index(
+            "function matchesFilters(node)"
+        )
+        matches_end = self.javascript.index(
+            "function searchText(node)",
+            matches_start,
+        )
+        matches = self.javascript[matches_start:matches_end]
+
+        self.assertIn(
+            "!meshcoreObserverFilterEnabled()",
+            matches,
+        )
+        self.assertIn(
+            "|| isMeshcoreObserver(node)",
+            matches,
+        )
+
+
     def test_meshcore_activity_mode_uses_hub_receptions(
         self,
     ) -> None:
