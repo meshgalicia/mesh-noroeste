@@ -1165,8 +1165,19 @@ class PublicationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
 
+            edge = make_edge_observation(
+                source="meshview_es",
+                network="meshtastic",
+                from_source_id="a35b4144",
+                to_source_id="b1234567",
+                edge_type="traceroute",
+                directed=True,
+                observed_at="2026-07-25T11:30:00Z",
+            )
+
             documents = build_public_documents(
                 self.observations(),
+                edge_observations=[edge],
                 generated_at=NOW,
                 settings=self.settings(root),
             )

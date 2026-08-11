@@ -111,6 +111,20 @@
         },
         "metrics": {
           "$ref": "#/$defs/metrics"
+        },
+        "route_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "route_index": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
         }
       },
       "allOf": [
