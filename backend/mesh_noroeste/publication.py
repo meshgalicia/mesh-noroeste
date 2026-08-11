@@ -410,6 +410,7 @@ def _public_edge_documents(
 
 def _public_neighbor_documents(
     observations: tuple[NeighborObservation, ...],
+    published_node_ids: set[str],
     excluded_node_ids: set[str],
 ) -> list[dict[str, Any]]:
     """Ordena e filtra o histórico público de NeighborInfo."""
@@ -430,7 +431,9 @@ def _public_neighbor_documents(
             )
 
         if (
-            observation.from_id in excluded_node_ids
+            observation.from_id not in published_node_ids
+            or observation.to_id not in published_node_ids
+            or observation.from_id in excluded_node_ids
             or observation.to_id in excluded_node_ids
         ):
             continue
@@ -695,6 +698,7 @@ def build_public_documents(
 
     neighbor_info = _public_neighbor_documents(
         received_neighbors,
+        published_node_ids,
         excluded_ids,
     )
 

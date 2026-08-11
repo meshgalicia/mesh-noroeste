@@ -2208,6 +2208,43 @@ class RetentionTests(unittest.TestCase):
         )
 
 
+    def test_prune_deletes_expired_neighbors(
+        self,
+    ) -> None:
+        expired = make_neighbor_observation(
+            source="ozulo_map",
+            from_source_id="a35b4144",
+            to_source_id="b1234567",
+            observed_at="2026-05-01T10:00:00Z",
+            snr_db=1.0,
+        )
+        current = make_neighbor_observation(
+            source="ozulo_map",
+            from_source_id="a35b4144",
+            to_source_id="b1234567",
+            observed_at="2026-07-25T10:00:00Z",
+            snr_db=6.0,
+        )
+
+        self.assertEqual(
+            self.store.save_neighbors([expired, current]),
+            2,
+        )
+
+        deleted = self.store.prune(
+            "2026-07-01T00:00:00Z"
+        )
+
+        self.assertEqual(
+            deleted["neighbor_observations"],
+            1,
+        )
+        self.assertEqual(
+            self.store.load_all_neighbors(),
+            [current],
+        )
+
+
     def test_prune_deletes_all_expired_edges_and_uses_cursor(
         self,
     ) -> None:

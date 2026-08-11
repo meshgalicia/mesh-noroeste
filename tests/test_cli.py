@@ -1362,6 +1362,7 @@ class CommandLineTests(unittest.TestCase):
                 response["deleted"],
                 {
                     "edge_observations": 0,
+                    "neighbor_observations": 0,
                     "node_observations": 0,
                     "observer_receptions": 0,
                     "source_runs": 0,

@@ -2300,9 +2300,21 @@ class ApplicationTests(unittest.TestCase):
                 snr_db=4.5,
             )
 
+            neighbor_node = make_observation(
+                source="ozulo_map",
+                network="meshtastic",
+                source_id="b1234567",
+                observed_at="2026-07-25T11:20:00Z",
+                latitude=42.95,
+                longitude=-8.05,
+                position_updated_at=(
+                    "2026-07-25T11:20:00Z"
+                ),
+            )
+
             self.assertEqual(
-                store.save([older, newer]),
-                2,
+                store.save([older, newer, neighbor_node]),
+                3,
             )
             self.assertEqual(
                 store.save_neighbors([neighbor]),
@@ -2347,11 +2359,11 @@ class ApplicationTests(unittest.TestCase):
             )
             self.assertEqual(
                 result.observation_count,
-                2,
+                3,
             )
             self.assertEqual(
                 result.node_count,
-                1,
+                2,
             )
             self.assertEqual(
                 result.edge_count,
@@ -2429,7 +2441,7 @@ class ApplicationTests(unittest.TestCase):
 
             self.assertEqual(
                 len(nodes_document["nodes"]),
-                1,
+                2,
             )
             self.assertEqual(
                 nodes_document["nodes"][0]["id"],
@@ -2443,7 +2455,7 @@ class ApplicationTests(unittest.TestCase):
             )
             self.assertEqual(
                 stats_document["totals"]["nodes"],
-                1,
+                2,
             )
 
 

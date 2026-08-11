@@ -570,9 +570,34 @@ class PublicationTests(unittest.TestCase):
             snr_db=6.75,
         )
 
+        nodes = [
+            make_observation(
+                source="ozulo_map",
+                network="meshtastic",
+                source_id="b03c4574",
+                observed_at="2026-08-04T03:40:00Z",
+                latitude=42.9,
+                longitude=-8.0,
+                position_updated_at=(
+                    "2026-08-04T03:40:00Z"
+                ),
+            ),
+            make_observation(
+                source="ozulo_map",
+                network="meshtastic",
+                source_id="ad301dc1",
+                observed_at="2026-08-04T03:40:00Z",
+                latitude=42.91,
+                longitude=-8.01,
+                position_updated_at=(
+                    "2026-08-04T03:40:00Z"
+                ),
+            ),
+        ]
+
         with tempfile.TemporaryDirectory() as temporary:
             documents = build_public_documents(
-                self.observations(),
+                nodes,
                 neighbor_observations=[
                     later,
                     earlier,
@@ -629,6 +654,82 @@ class PublicationTests(unittest.TestCase):
                 ],
             },
         )
+
+    def test_neighbor_info_requires_published_endpoints(
+        self,
+    ) -> None:
+        nodes = [
+            make_observation(
+                source="ozulo_map",
+                network="meshtastic",
+                source_id="b03c4574",
+                observed_at="2026-08-04T03:40:00Z",
+                latitude=42.9,
+                longitude=-8.0,
+                position_updated_at=(
+                    "2026-08-04T03:40:00Z"
+                ),
+            ),
+            make_observation(
+                source="ozulo_map",
+                network="meshtastic",
+                source_id="ad301dc1",
+                observed_at="2026-08-04T03:40:00Z",
+                latitude=42.91,
+                longitude=-8.01,
+                position_updated_at=(
+                    "2026-08-04T03:40:00Z"
+                ),
+            ),
+        ]
+
+        valid = make_neighbor_observation(
+            source="ozulo_map",
+            from_source_id="b03c4574",
+            to_source_id="ad301dc1",
+            observed_at="2026-08-04T03:38:05Z",
+            snr_db=4.0,
+        )
+        orphan = make_neighbor_observation(
+            source="ozulo_map",
+            from_source_id="b03c4574",
+            to_source_id="35982f26",
+            observed_at="2026-08-04T03:38:06Z",
+            snr_db=6.75,
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            documents = build_public_documents(
+                nodes,
+                neighbor_observations=[
+                    valid,
+                    orphan,
+                ],
+                generated_at=(
+                    "2026-08-04T09:35:13Z"
+                ),
+                settings=self.settings(
+                    Path(temporary)
+                ),
+            )
+
+        observations = documents[
+            "neighbor-info.json"
+        ]["observations"]
+
+        self.assertEqual(
+            len(observations),
+            1,
+        )
+        self.assertEqual(
+            observations[0]["from_id"],
+            "meshtastic:!b03c4574",
+        )
+        self.assertEqual(
+            observations[0]["to_id"],
+            "meshtastic:!ad301dc1",
+        )
+
 
     def test_neighbor_info_rejects_wrong_objects(
         self,

@@ -2721,6 +2721,14 @@ class ObservationStore:
                 (normalized_before,),
             ).rowcount
 
+            deleted_neighbors = connection.execute(
+                """
+                DELETE FROM neighbor_observations
+                WHERE observed_at < ?
+                """,
+                (normalized_before,),
+            ).rowcount
+
             deleted_observer_receptions = connection.execute(
                 """
                 DELETE FROM observer_receptions
@@ -2761,6 +2769,7 @@ class ObservationStore:
         return {
             "node_observations": deleted_nodes,
             "edge_observations": deleted_edges,
+            "neighbor_observations": deleted_neighbors,
             "observer_receptions": (
                 deleted_observer_receptions
             ),
