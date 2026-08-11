@@ -1653,6 +1653,20 @@ function createMap() {
     }
   );
 
+  const cleanLayer = L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/"
+      + "light_nolabels/{z}/{x}/{y}.png",
+    {
+      maxZoom: 20,
+      subdomains: "abcd",
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">'
+        + "OpenStreetMap</a> contributors "
+        + '&copy; <a href="https://carto.com/attributions">'
+        + "CARTO</a>",
+    }
+  );
+
   const satelliteLayer = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/"
       + "World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -1666,6 +1680,7 @@ function createMap() {
 
   state.baseLayers = new Map([
     ["street", streetLayer],
+    ["clean", cleanLayer],
     ["satellite", satelliteLayer],
   ]);
 

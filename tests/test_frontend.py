@@ -1720,6 +1720,25 @@ class FrontendStaticTests(unittest.TestCase):
             self.css,
         )
 
+    def test_clean_basemap_is_available(
+        self,
+    ) -> None:
+        for expected in (
+            'value="clean"',
+            "<span>Limpo</span>",
+        ):
+            with self.subTest(html=expected):
+                self.assertIn(expected, self.html)
+
+        for expected in (
+            "const cleanLayer = L.tileLayer(",
+            "light_nolabels/{z}/{x}/{y}",
+            '["clean", cleanLayer]',
+        ):
+            with self.subTest(javascript=expected):
+                self.assertIn(expected, self.javascript)
+
+
     def test_selected_connections_are_less_obtrusive(
         self,
     ) -> None:
