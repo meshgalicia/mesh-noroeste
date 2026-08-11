@@ -7,8 +7,10 @@ from io import BytesIO
 import unittest
 from unittest.mock import patch
 from urllib.error import URLError
+from urllib.request import Request
 
 from mesh_noroeste.http_client import (
+    _SafeRedirectHandler,
     FetchError,
     fetch_bytes,
     fetch_json,
@@ -130,6 +132,34 @@ class HttpClientTests(unittest.TestCase):
         self.assertEqual(
             request.get_header("Authorization"),
             "Bearer abc123",
+        )
+
+    def test_cross_host_redirect_drops_authorization(
+        self,
+    ) -> None:
+        redirect = _SafeRedirectHandler()
+
+        original = Request(
+            "https://hub.mesh.gal/api/v1/nodes",
+            headers={
+                "Authorization": "Bearer segredo-de-proba",
+            },
+        )
+
+        redirected = redirect.redirect_request(
+            original,
+            None,
+            302,
+            "Found",
+            {},
+            "https://example.org/roubado",
+        )
+
+        self.assertIsNotNone(redirected)
+        assert redirected is not None
+
+        self.assertIsNone(
+            redirected.get_header("Authorization")
         )
 
     def test_multiple_headers_are_forwarded(

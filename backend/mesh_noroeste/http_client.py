@@ -8,12 +8,75 @@ import math
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import (
+    HTTPRedirectHandler,
+    Request,
+    build_opener,
+)
 
 
 DEFAULT_TIMEOUT_SECONDS = 20.0
 DEFAULT_MAX_BYTES = 20 * 1024 * 1024
 DEFAULT_USER_AGENT = "Mesh-Noroeste/0.1.0"
+
+
+class _SafeRedirectHandler(HTTPRedirectHandler):
+    """Evita reenviar credenciais a outra orixe HTTP."""
+
+    def redirect_request(
+        self,
+        request,
+        fp,
+        code,
+        msg,
+        headers,
+        newurl,
+    ):
+        redirected = super().redirect_request(
+            request,
+            fp,
+            code,
+            msg,
+            headers,
+            newurl,
+        )
+
+        if redirected is None:
+            return None
+
+        previous = urlsplit(request.full_url)
+        target = urlsplit(newurl)
+
+        if target.scheme.lower() != "https":
+            raise FetchError(
+                "Non se permiten redireccións fóra de HTTPS"
+            )
+
+        previous_origin = (
+            previous.hostname,
+            previous.port or 443,
+        )
+        target_origin = (
+            target.hostname,
+            target.port or 443,
+        )
+
+        if previous_origin != target_origin:
+            redirected.remove_header("Authorization")
+
+        return redirected
+
+
+_SAFE_OPENER = build_opener(_SafeRedirectHandler())
+
+
+def urlopen(request, *, timeout):
+    """Abre unha petición usando a política segura de redireccións."""
+
+    return _SAFE_OPENER.open(
+        request,
+        timeout=timeout,
+    )
 
 
 class FetchError(RuntimeError):
