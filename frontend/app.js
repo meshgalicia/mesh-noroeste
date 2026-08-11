@@ -1466,11 +1466,19 @@ function createNodeIcon(node) {
   });
 }
 
+function escapeHtmlText(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function bindNodeTooltip(marker, node) {
   marker.unbindTooltip();
 
-  const content = document.createElement("span");
-  content.textContent = (
+  const name = (
     node.network === "meshcore"
     && node.is_observer === true
   )
@@ -1478,7 +1486,7 @@ function bindNodeTooltip(marker, node) {
     : nodeName(node);
 
   marker.bindTooltip(
-    content,
+    escapeHtmlText(name),
     {
       className: "node-tooltip",
       direction: "top",

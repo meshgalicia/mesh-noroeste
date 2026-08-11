@@ -2147,9 +2147,12 @@ class FrontendStaticTests(unittest.TestCase):
         )
 
 
-    def test_node_tooltip_uses_text_content_not_html(
+    def test_node_tooltip_escapes_html(
         self,
     ) -> None:
+        escape_start = self.javascript.index(
+            "function escapeHtmlText(value) {"
+        )
         start = self.javascript.index(
             "function bindNodeTooltip(marker, node) {"
         )
@@ -2157,18 +2160,20 @@ class FrontendStaticTests(unittest.TestCase):
             "\nfunction refreshNodeMarker(",
             start,
         )
-        function = self.javascript[start:end]
+        function = self.javascript[escape_start:end]
 
-        self.assertIn(
-            'document.createElement("span")',
-            function,
-        )
-        self.assertIn(
-            ".textContent =",
-            function,
-        )
-        self.assertIn(
+        for expected in (
+            '.replaceAll("&", "&amp;")',
+            '.replaceAll("<", "&lt;")',
+            '.replaceAll(">", "&gt;")',
+            "escapeHtmlText(name)",
             "marker.bindTooltip(",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, function)
+
+        self.assertNotIn(
+            'document.createElement("span")',
             function,
         )
 
