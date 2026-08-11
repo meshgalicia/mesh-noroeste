@@ -595,6 +595,21 @@ class FrontendStaticTests(unittest.TestCase):
             with self.subTest(javascript=expected):
                 self.assertIn(expected, self.javascript)
 
+    def test_connection_controls_identify_their_network(
+        self,
+    ) -> None:
+        for expected in (
+            "Mostrar traceroutes Meshtastic",
+            "Mostrar rutas completas de MeshCore",
+            "Mostrar rutas fragmentadas de MeshCore",
+            "Mostrar veciñanzas observadas MeshCore",
+            "Mostrar veciñanzas Meshtastic",
+            "Mostrar anuncios NeighborInfo Meshtastic",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, self.html)
+
+
     def test_neighbors_are_disabled_by_default(
         self,
     ) -> None:
