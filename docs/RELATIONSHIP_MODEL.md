@@ -92,8 +92,10 @@ Características:
 - a ausencia nun anuncio posterior non proba que a relación desaparecese;
 - non equivale automaticamente a unha veciñanza consolidada.
 
-A interface poderá presentalo como «veciños observados» ou mediante unha serie
-temporal, pero non como `neighbor` sen unha regra explícita de consolidación.
+Mesh Noroeste conserva estas observacións como histórico específico e
+publícaas en `neighbor-info.json`. A interface preséntaas como «veciños
+observados», separadas das relacións `neighbor` consolidadas e dos
+traceroutes.
 
 ### 4.4. `observed` e `unknown`
 
@@ -111,10 +113,10 @@ NeighborInfo é unha observación Meshtastic emitida por un nodo concreto.
 
 Por tanto:
 
-- non se reutilizará `observed` sen definir antes unha semántica compatible;
-- non se modificará o significado de `neighbor`;
-- NeighborInfo non se publicará como traceroute;
-- deberá decidirse se se amplía `edges.json` ou se se crea outro documento.
+- non se reutiliza `observed` para representar NeighborInfo;
+- non se modifica o significado de `neighbor`;
+- NeighborInfo non se publica como traceroute;
+- publícase nun documento específico, `neighbor-info.json`.
 
 ## 5. Capacidades comprobadas das fontes
 
@@ -234,28 +236,38 @@ xeración.
 Actualmente:
 
 - só se publican nodos con posición dentro da rexión;
-- só se publican conexións cuxos dous extremos están en `nodes.json`.
+- só se publican conexións cuxos dous extremos están en `nodes.json`;
+- só se publican observacións NeighborInfo cando os seus dous extremos están
+  tamén no `nodes.json` da mesma xeración.
 
 A base de datos pode conter observacións válidas que non aparecen na xeración
 pública.
 
-## 9. Decisións pendentes para NeighborInfo
+## 9. Implementación de NeighborInfo
 
-Antes de implementalo debe decidirse:
+NeighborInfo está implementado como unha entidade específica,
+`NeighborObservation`, separada de `EdgeObservation`.
 
-1. Se se conserva o histórico ou só a última observación.
-2. O período de retención.
-3. A identidade de cada observación.
-4. Se se usa `edge_observations` ou unha entidade específica.
-5. Se se amplía `edges.json` ou se crea outro documento.
-6. Como representar nodos observados sen posición.
-7. Como diferenciar na interface:
+Regras actuais:
+
+1. Consérvase o histórico das observacións recibidas dentro da retención.
+2. As observacións completas teñen a mesma retención máxima de 30 días que o
+   resto dos datos históricos publicables.
+3. A identidade dunha observación combina fonte, emisor, veciño observado e
+   marca temporal.
+4. Persístese na táboa específica `neighbor_observations`.
+5. Publícase no documento independente `neighbor-info.json`.
+6. Unha observación só se publica cando os seus dous extremos existen no
+   `nodes.json` da mesma xeración.
+7. A interface diferencia explicitamente:
    - veciñanza publicada;
    - veciño observado;
    - traceroute.
-8. Como conservar varias fontes para unha relación equivalente.
+8. A exclusión de calquera dos dous extremos impide almacenar novas
+   observacións e impide tamén a súa publicación.
 
-NeighborInfo non se implementará como un simple alias de `neighbor`.
+NeighborInfo non é un alias de `neighbor`: conserva dirección, marca temporal
+e SNR da observación orixinal sen convertela nunha veciñanza consolidada.
 
 ## 10. Evolución futura
 
