@@ -409,7 +409,7 @@ class FrontendStaticTests(unittest.TestCase):
             "function addNeighbor(edge)",
             'edge.edge_type !== "neighbor"',
             "function addVisibleEdge(edge)",
-            "function globalEdgeEnabled(edge)",
+            "function globalEdgeEnabled(",
             "elements.neighbors.checked",
             "elements.neighbors.addEventListener(",
             'selected ? "#006d77" : "#343a40"',
@@ -421,19 +421,72 @@ class FrontendStaticTests(unittest.TestCase):
         for text in required_javascript:
             self.assertIn(text, self.javascript)
 
+    def test_meshcore_routes_can_be_filtered_by_completeness(
+        self,
+    ) -> None:
+        for expected in (
+            'id="meshcore-complete-routes-toggle"',
+            "Mostrar rutas completas de MeshCore",
+            'id="meshcore-fragmented-routes-toggle"',
+            "Mostrar rutas fragmentadas de MeshCore",
+        ):
+            with self.subTest(html=expected):
+                self.assertIn(expected, self.html)
+
+        for expected in (
+            "meshcoreCompleteRoutes: document.querySelector(",
+            '"#meshcore-complete-routes-toggle"',
+            "meshcoreFragmentedRoutes: document.querySelector(",
+            '"#meshcore-fragmented-routes-toggle"',
+            "function meshcoreRouteCompleteness(edges)",
+            "const indexesByRouteId = new Map()",
+            "const complete = new Set()",
+            "const fragmented = new Set()",
+            "value > ordered[index - 1] + 1",
+            "function meshcoreObservedEdgeEnabled(",
+            "routeCompleteness.fragmented.has(edge.route_id)",
+            "elements.meshcoreFragmentedRoutes.checked",
+            "elements.meshcoreCompleteRoutes.checked",
+            "elements.meshcoreCompleteRoutes.addEventListener(",
+            "elements.meshcoreFragmentedRoutes.addEventListener(",
+        ):
+            with self.subTest(javascript=expected):
+                self.assertIn(expected, self.javascript)
+
+        complete_control = self.html[
+            self.html.index(
+                'id="meshcore-complete-routes-toggle"'
+            ):
+            self.html.index(
+                'id="meshcore-fragmented-routes-toggle"'
+            )
+        ]
+        fragmented_control = self.html[
+            self.html.index(
+                'id="meshcore-fragmented-routes-toggle"'
+            ):
+            self.html.index('id="neighbors-toggle"')
+        ]
+
+        self.assertNotIn("checked", complete_control)
+        self.assertNotIn("checked", fragmented_control)
+
     def test_meshcore_observed_connections_can_be_shown_on_the_map(
         self,
     ) -> None:
         required_javascript = (
-            'meshcoreObserved: document.querySelector(',
-            '"#meshcore-observed-toggle"',
+            'meshcoreCompleteRoutes: document.querySelector(',
+            '"#meshcore-complete-routes-toggle"',
+            'meshcoreFragmentedRoutes: document.querySelector(',
+            '"#meshcore-fragmented-routes-toggle"',
             "function addMeshcoreObserved(edge)",
             'edge.edge_type !== "observed"',
             'edge.network !== "meshcore"',
             "function addVisibleEdge(edge)",
-            "function globalEdgeEnabled(edge)",
-            "elements.meshcoreObserved.checked",
-            "elements.meshcoreObserved.addEventListener(",
+            "function globalEdgeEnabled(",
+            "function meshcoreObservedEdgeEnabled(",
+            "elements.meshcoreCompleteRoutes.checked",
+            "elements.meshcoreFragmentedRoutes.checked",
             'className: selected',
             '? "meshcore-route-arrow selected"',
             ': "meshcore-route-arrow"',
@@ -446,8 +499,10 @@ class FrontendStaticTests(unittest.TestCase):
                 self.assertIn(expected, self.javascript)
 
         for expected in (
-            'id="meshcore-observed-toggle"',
-            "Mostrar rutas observadas de MeshCore",
+            'id="meshcore-complete-routes-toggle"',
+            "Mostrar rutas completas de MeshCore",
+            'id="meshcore-fragmented-routes-toggle"',
+            "Mostrar rutas fragmentadas de MeshCore",
             'class="legend-line meshcore-observed-line"',
             "Ruta observada de MeshCore",
         ):
@@ -474,20 +529,6 @@ class FrontendStaticTests(unittest.TestCase):
             ".meshcore-route-arrow.selected",
             self.css,
         )
-
-    def test_meshcore_observed_connections_are_disabled_by_default(
-        self,
-    ) -> None:
-        control = self.html[
-            self.html.index('id="meshcore-observed-toggle"'):
-            self.html.index('id="neighbors-toggle"')
-        ]
-
-        self.assertNotIn(
-            "checked",
-            control,
-        )
-
 
     def test_neighbors_are_disabled_by_default(
         self,
@@ -680,7 +721,8 @@ class FrontendStaticTests(unittest.TestCase):
             "edgeBelongsToSelectedMeshcoreRoute(",
             "const regularEdges = candidateEdges.filter(",
             "!edgeTouchesSelectedNode(edge)",
-            "&& globalEdgeEnabled(edge)",
+            "&& globalEdgeEnabled(",
+            "routeCompleteness",
             "function closeNodeDetail()",
             "state.selectedNodeId = null",
         )
@@ -845,7 +887,11 @@ class FrontendStaticTests(unittest.TestCase):
             regular_block,
         )
         self.assertIn(
-            "globalEdgeEnabled(edge)",
+            "globalEdgeEnabled(",
+            regular_block,
+        )
+        self.assertIn(
+            "routeCompleteness",
             regular_block,
         )
 

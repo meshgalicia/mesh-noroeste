@@ -338,8 +338,11 @@ const elements = {
   tracerouteAge: document.querySelector(
     "#traceroute-age"
   ),
-  meshcoreObserved: document.querySelector(
-    "#meshcore-observed-toggle"
+  meshcoreCompleteRoutes: document.querySelector(
+    "#meshcore-complete-routes-toggle"
+  ),
+  meshcoreFragmentedRoutes: document.querySelector(
+    "#meshcore-fragmented-routes-toggle"
   ),
   neighbors: document.querySelector("#neighbors-toggle"),
   neighborInfo: document.querySelector(
@@ -2195,7 +2198,76 @@ function tracerouteAgeMatches(edge) {
   return ageHours <= maximumHours;
 }
 
-function globalEdgeEnabled(edge) {
+function meshcoreRouteCompleteness(edges) {
+  const indexesByRouteId = new Map();
+
+  for (const edge of edges) {
+    if (
+      edge.edge_type !== "observed"
+      || edge.network !== "meshcore"
+      || !edge.route_id
+      || !Number.isInteger(edge.route_index)
+    ) {
+      continue;
+    }
+
+    const indexes = indexesByRouteId.get(
+      edge.route_id
+    ) || [];
+
+    indexes.push(edge.route_index);
+    indexesByRouteId.set(edge.route_id, indexes);
+  }
+
+  const complete = new Set();
+  const fragmented = new Set();
+
+  for (const [routeId, indexes] of indexesByRouteId) {
+    const ordered = [...new Set(indexes)].sort(
+      (left, right) => left - right
+    );
+
+    const hasGap = ordered.some(
+      (value, index) => (
+        index > 0
+        && value > ordered[index - 1] + 1
+      )
+    );
+
+    (hasGap ? fragmented : complete).add(routeId);
+  }
+
+  return {
+    complete,
+    fragmented,
+  };
+}
+
+function meshcoreObservedEdgeEnabled(
+  edge,
+  routeCompleteness
+) {
+  if (
+    edge.edge_type !== "observed"
+    || edge.network !== "meshcore"
+  ) {
+    return false;
+  }
+
+  if (
+    edge.route_id
+    && routeCompleteness.fragmented.has(edge.route_id)
+  ) {
+    return elements.meshcoreFragmentedRoutes.checked;
+  }
+
+  return elements.meshcoreCompleteRoutes.checked;
+}
+
+function globalEdgeEnabled(
+  edge,
+  routeCompleteness
+) {
   if (edge.edge_type === "traceroute") {
     return (
       elements.traceroutes.checked
@@ -2208,7 +2280,10 @@ function globalEdgeEnabled(edge) {
     edge.edge_type === "observed"
     && edge.network === "meshcore"
   ) {
-    return elements.meshcoreObserved.checked;
+    return meshcoreObservedEdgeEnabled(
+      edge,
+      routeCompleteness
+    );
   }
 
   if (edge.edge_type === "neighbor") {
@@ -2364,6 +2439,9 @@ function renderVisibleEdges() {
   const selectedRouteIds = selectedMeshcoreRouteIds(
     state.edges
   );
+  const routeCompleteness = meshcoreRouteCompleteness(
+    state.edges
+  );
   const visibleNeighborInfo = (
     elements.neighborInfo.checked
       ? state.neighborInfo.filter(
@@ -2384,7 +2462,10 @@ function renderVisibleEdges() {
     (edge) => (
       state.selectedNodeId === null
       && !edgeTouchesSelectedNode(edge)
-      && globalEdgeEnabled(edge)
+      && globalEdgeEnabled(
+        edge,
+        routeCompleteness
+      )
     )
   );
 
@@ -4552,7 +4633,12 @@ function bindControls() {
     () => applyFilters()
   );
 
-  elements.meshcoreObserved.addEventListener(
+  elements.meshcoreCompleteRoutes.addEventListener(
+    "change",
+    () => applyFilters()
+  );
+
+  elements.meshcoreFragmentedRoutes.addEventListener(
     "change",
     () => applyFilters()
   );
