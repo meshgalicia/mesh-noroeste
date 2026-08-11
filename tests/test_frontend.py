@@ -530,6 +530,27 @@ class FrontendStaticTests(unittest.TestCase):
             self.css,
         )
 
+    def test_meshcore_observed_neighbors_can_be_shown(
+        self,
+    ) -> None:
+        for expected in (
+            'id="meshcore-neighbors-toggle"',
+            "Mostrar veciñanzas observadas MeshCore",
+        ):
+            with self.subTest(html=expected):
+                self.assertIn(expected, self.html)
+
+        for expected in (
+            "meshcoreNeighbors: document.querySelector(",
+            '"#meshcore-neighbors-toggle"',
+            "function meshcoreObservedNeighborPairs(edges)",
+            "function addMeshcoreObservedNeighbor(",
+            "elements.meshcoreNeighbors.checked",
+            "elements.meshcoreNeighbors.addEventListener(",
+        ):
+            with self.subTest(javascript=expected):
+                self.assertIn(expected, self.javascript)
+
     def test_neighbors_are_disabled_by_default(
         self,
     ) -> None:

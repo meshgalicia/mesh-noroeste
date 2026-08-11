@@ -344,6 +344,9 @@ const elements = {
   meshcoreFragmentedRoutes: document.querySelector(
     "#meshcore-fragmented-routes-toggle"
   ),
+  meshcoreNeighbors: document.querySelector(
+    "#meshcore-neighbors-toggle"
+  ),
   neighbors: document.querySelector("#neighbors-toggle"),
   neighborInfo: document.querySelector(
     "#neighbor-info-toggle"
@@ -2068,6 +2071,74 @@ function addMeshcoreObserved(edge) {
 }
 
 
+function meshcoreObservedNeighborPairs(edges) {
+  const pairs = new Map();
+
+  for (const edge of edges) {
+    if (
+      edge.edge_type !== "observed"
+      || edge.network !== "meshcore"
+      || !edge.from_id
+      || !edge.to_id
+      || edge.from_id === edge.to_id
+    ) {
+      continue;
+    }
+
+    const endpoints = [
+      edge.from_id,
+      edge.to_id,
+    ].sort();
+
+    const key = endpoints.join("|");
+    const previous = pairs.get(key);
+
+    if (
+      !previous
+      || String(edge.last_seen || "")
+        > String(previous.last_seen || "")
+    ) {
+      pairs.set(
+        key,
+        {
+          ...edge,
+          from_id: endpoints[0],
+          to_id: endpoints[1],
+          directed: false,
+        }
+      );
+    }
+  }
+
+  return Array.from(pairs.values());
+}
+
+function addMeshcoreObservedNeighbor(edge) {
+  const fromNode = state.nodeById.get(edge.from_id);
+  const toNode = state.nodeById.get(edge.to_id);
+
+  if (!fromNode || !toNode) {
+    return;
+  }
+
+  L.polyline(
+    [
+      [fromNode.latitude, fromNode.longitude],
+      [toNode.latitude, toNode.longitude],
+    ],
+    {
+      pane: "routes",
+      renderer: state.renderer,
+      color: "#087f8c",
+      weight: 1.8,
+      opacity: 0.48,
+      dashArray: "3 5",
+      interactive: false,
+    }
+  ).addTo(state.edgeLayer);
+}
+
+
 function addNeighbor(edge) {
   if (edge.edge_type !== "neighbor") {
     return;
@@ -2442,6 +2513,14 @@ function renderVisibleEdges() {
   const routeCompleteness = meshcoreRouteCompleteness(
     state.edges
   );
+  const visibleMeshcoreNeighbors = (
+    elements.meshcoreNeighbors.checked
+    && state.selectedNodeId === null
+      ? meshcoreObservedNeighborPairs(state.edges).filter(
+          edgeEndpointsAreVisible
+        )
+      : []
+  );
   const visibleNeighborInfo = (
     elements.neighborInfo.checked
       ? state.neighborInfo.filter(
@@ -2475,6 +2554,10 @@ function renderVisibleEdges() {
     addVisibleEdge(edge);
   }
 
+  for (const edge of visibleMeshcoreNeighbors) {
+    addMeshcoreObservedNeighbor(edge);
+  }
+
   for (const observation of visibleNeighborInfo) {
     addNeighborInfo(observation);
   }
@@ -2495,6 +2578,7 @@ function renderVisibleEdges() {
   updateVisibleStatistics(
     regularEdges.length
     + selectedEdges.length
+    + visibleMeshcoreNeighbors.length
     + visibleNeighborInfo.length
   );
 }
@@ -4639,6 +4723,11 @@ function bindControls() {
   );
 
   elements.meshcoreFragmentedRoutes.addEventListener(
+    "change",
+    () => applyFilters()
+  );
+
+  elements.meshcoreNeighbors.addEventListener(
     "change",
     () => applyFilters()
   );
