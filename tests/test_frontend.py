@@ -155,6 +155,50 @@ class FrontendStaticTests(unittest.TestCase):
             )
         )
 
+    def test_leaflet_assets_use_official_sri(
+        self,
+    ) -> None:
+        css_tag = re.search(
+            r'<link\s+rel="stylesheet"\s+'
+            r'href="https://unpkg\.com/leaflet@1\.9\.4/'
+            r'dist/leaflet\.css"(?P<attrs>[^>]*)>',
+            self.html,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(css_tag)
+        assert css_tag is not None
+
+        self.assertIn(
+            'integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/'
+            'miZyoHS5obTRR9BMY="',
+            css_tag.group(0),
+        )
+        self.assertIn(
+            'crossorigin=""',
+            css_tag.group(0),
+        )
+
+        script_tag = re.search(
+            r'<script\s+'
+            r'src="https://unpkg\.com/leaflet@1\.9\.4/'
+            r'dist/leaflet\.js"(?P<attrs>[^>]*)>',
+            self.html,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(script_tag)
+        assert script_tag is not None
+
+        self.assertIn(
+            'integrity="sha256-20nQCchB9co0qIjJZRGuk2/'
+            'Z9VM+kNiyxNV1lvTlZBo="',
+            script_tag.group(0),
+        )
+        self.assertIn(
+            'crossorigin=""',
+            script_tag.group(0),
+        )
+
+
     def test_favicon_is_declared(self) -> None:
         self.assertIn(
             "./favicon.ico",
