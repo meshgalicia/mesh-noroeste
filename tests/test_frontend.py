@@ -470,9 +470,9 @@ class FrontendStaticTests(unittest.TestCase):
     ) -> None:
         for expected in (
             'id="meshcore-complete-routes-toggle"',
-            "Mostrar rutas completas de MeshCore",
+            "Mostrar rutas completas",
             'id="meshcore-fragmented-routes-toggle"',
-            "Mostrar rutas fragmentadas de MeshCore",
+            "Mostrar rutas fragmentadas",
         ):
             with self.subTest(html=expected):
                 self.assertIn(expected, self.html)
@@ -544,9 +544,9 @@ class FrontendStaticTests(unittest.TestCase):
 
         for expected in (
             'id="meshcore-complete-routes-toggle"',
-            "Mostrar rutas completas de MeshCore",
+            "Mostrar rutas completas",
             'id="meshcore-fragmented-routes-toggle"',
-            "Mostrar rutas fragmentadas de MeshCore",
+            "Mostrar rutas fragmentadas",
             'class="legend-line meshcore-observed-line"',
             "Ruta observada de MeshCore",
         ):
@@ -579,7 +579,7 @@ class FrontendStaticTests(unittest.TestCase):
     ) -> None:
         for expected in (
             'id="meshcore-neighbors-toggle"',
-            "Mostrar veciñanzas observadas MeshCore",
+            "Mostrar veciñanzas observadas",
         ):
             with self.subTest(html=expected):
                 self.assertIn(expected, self.html)
@@ -599,15 +599,82 @@ class FrontendStaticTests(unittest.TestCase):
         self,
     ) -> None:
         for expected in (
-            "Mostrar traceroutes Meshtastic",
-            "Mostrar rutas completas de MeshCore",
-            "Mostrar rutas fragmentadas de MeshCore",
-            "Mostrar veciñanzas observadas MeshCore",
-            "Mostrar veciñanzas Meshtastic",
-            "Mostrar anuncios NeighborInfo Meshtastic",
+            'connection-network-heading">Meshtastic',
+            'connection-network-heading">MeshCore',
         ):
             with self.subTest(expected=expected):
                 self.assertIn(expected, self.html)
+
+        for redundant in (
+            "Mostrar traceroutes Meshtastic",
+            "Mostrar veciñanzas Meshtastic",
+            "Mostrar anuncios NeighborInfo Meshtastic",
+            "Mostrar rutas completas de MeshCore",
+            "Mostrar rutas fragmentadas de MeshCore",
+            "Mostrar veciñanzas observadas MeshCore",
+        ):
+            with self.subTest(redundant=redundant):
+                self.assertNotIn(redundant, self.html)
+
+
+    def test_connection_controls_are_grouped_by_network(
+        self,
+    ) -> None:
+        start = self.html.index(
+            'class="control-subheading">Conexións'
+        )
+        end = self.html.index(
+            'class="control-subheading">Capa base',
+            start,
+        )
+        block = self.html[start:end]
+
+        meshtastic = block.index(
+            'class="control-subheading connection-network-heading">'
+            'Meshtastic'
+        )
+        traceroutes = block.index(
+            'id="traceroutes-toggle"'
+        )
+        neighbors = block.index(
+            'id="neighbors-toggle"'
+        )
+        neighbor_info = block.index(
+            'id="neighbor-info-toggle"'
+        )
+
+        meshcore = block.index(
+            'class="control-subheading connection-network-heading">'
+            'MeshCore'
+        )
+        complete = block.index(
+            'id="meshcore-complete-routes-toggle"'
+        )
+        fragmented = block.index(
+            'id="meshcore-fragmented-routes-toggle"'
+        )
+        observed_neighbors = block.index(
+            'id="meshcore-neighbors-toggle"'
+        )
+
+        self.assertLess(meshtastic, traceroutes)
+        self.assertLess(traceroutes, neighbors)
+        self.assertLess(neighbors, neighbor_info)
+        self.assertLess(neighbor_info, meshcore)
+        self.assertLess(meshcore, complete)
+        self.assertLess(complete, fragmented)
+        self.assertLess(fragmented, observed_neighbors)
+
+        for expected in (
+            "<span>Mostrar traceroutes</span>",
+            "<span>Mostrar veciñanzas</span>",
+            "<span>Mostrar anuncios NeighborInfo</span>",
+            "<span>Mostrar rutas completas</span>",
+            "<span>Mostrar rutas fragmentadas</span>",
+            "<span>Mostrar veciñanzas observadas</span>",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, block)
 
 
     def test_neighbors_are_disabled_by_default(
