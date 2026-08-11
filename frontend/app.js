@@ -1469,13 +1469,16 @@ function createNodeIcon(node) {
 function bindNodeTooltip(marker, node) {
   marker.unbindTooltip();
 
+  const content = document.createElement("span");
+  content.textContent = (
+    node.network === "meshcore"
+    && node.is_observer === true
+  )
+    ? `${nodeName(node)} · Observer`
+    : nodeName(node);
+
   marker.bindTooltip(
-    (
-      node.network === "meshcore"
-      && node.is_observer === true
-    )
-      ? `${nodeName(node)} · Observer`
-      : nodeName(node),
+    content,
     {
       className: "node-tooltip",
       direction: "top",

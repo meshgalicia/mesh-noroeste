@@ -2147,5 +2147,32 @@ class FrontendStaticTests(unittest.TestCase):
         )
 
 
+    def test_node_tooltip_uses_text_content_not_html(
+        self,
+    ) -> None:
+        start = self.javascript.index(
+            "function bindNodeTooltip(marker, node) {"
+        )
+        end = self.javascript.index(
+            "\nfunction refreshNodeMarker(",
+            start,
+        )
+        function = self.javascript[start:end]
+
+        self.assertIn(
+            'document.createElement("span")',
+            function,
+        )
+        self.assertIn(
+            ".textContent =",
+            function,
+        )
+        self.assertIn(
+            "marker.bindTooltip(",
+            function,
+        )
+
+
+
 if __name__ == "__main__":
     unittest.main()
