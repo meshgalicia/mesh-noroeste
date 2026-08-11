@@ -1376,6 +1376,36 @@ class FrontendStaticTests(unittest.TestCase):
             self.javascript,
         )
 
+    def test_type_filter_reset_only_appears_when_needed(
+        self,
+    ) -> None:
+        start = self.javascript.index(
+            "function updateFilterSummaries() {"
+        )
+        end = self.javascript.index(
+            "\nfunction storedControlsCollapsed(",
+            start,
+        )
+        function = self.javascript[start:end]
+
+        self.assertIn(
+            "const allCategoriesSelected =",
+            function,
+        )
+        self.assertIn(
+            "selectedCategoryCount === categoryButtons.length",
+            function,
+        )
+        self.assertIn(
+            "elements.typeFilterReset.disabled = allCategoriesSelected;",
+            function,
+        )
+        self.assertIn(
+            "elements.typeFilterReset.hidden = allCategoriesSelected;",
+            function,
+        )
+
+
     def test_collapsible_and_interactive_filters(
         self,
     ) -> None:

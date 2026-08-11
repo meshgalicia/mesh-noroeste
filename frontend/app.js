@@ -3996,9 +3996,12 @@ function updateFilterSummaries() {
     "Ningún"
   );
 
-  elements.typeFilterReset.disabled = (
+  const allCategoriesSelected = (
     selectedCategoryCount === categoryButtons.length
   );
+
+  elements.typeFilterReset.disabled = allCategoriesSelected;
+  elements.typeFilterReset.hidden = allCategoriesSelected;
 }
 
 function storedControlsCollapsed() {
