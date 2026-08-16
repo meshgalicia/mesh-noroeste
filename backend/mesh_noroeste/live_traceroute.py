@@ -84,3 +84,62 @@ def parse_live_traceroute_payload(
         snr_towards=tuple(snr_towards),
         snr_back=tuple(snr_back),
     )
+
+
+@dataclass(frozen=True, slots=True)
+class LiveTraceroutePath:
+    """Percorridos informados por RouteDiscovery nos dous sentidos."""
+
+    towards: tuple[str, ...]
+    back: tuple[str, ...]
+    snr_towards: tuple[int, ...]
+    snr_back: tuple[int, ...]
+
+    @property
+    def has_towards(self) -> bool:
+        return bool(self.towards)
+
+    @property
+    def has_back(self) -> bool:
+        return bool(self.back)
+
+
+def build_live_traceroute_path(
+    *,
+    from_source_id: str,
+    to_source_id: str,
+    payload: LiveTraceroutePayload,
+) -> LiveTraceroutePath:
+    """Constrúe os percorridos explícitos sen mesturalos coas recepcións."""
+
+    if not isinstance(payload, LiveTraceroutePayload):
+        raise TypeError(
+            "payload debe ser LiveTraceroutePayload"
+        )
+
+    origin = normalize_meshtastic_id(from_source_id)
+    destination = normalize_meshtastic_id(to_source_id)
+
+    if origin == destination:
+        raise ValueError(
+            "orixe e destino do traceroute deben ser distintos"
+        )
+
+    towards = (
+        (origin, *payload.route, destination)
+        if payload.route
+        else ()
+    )
+
+    back = (
+        (destination, *payload.route_back, origin)
+        if payload.route_back
+        else ()
+    )
+
+    return LiveTraceroutePath(
+        towards=towards,
+        back=back,
+        snr_towards=payload.snr_towards,
+        snr_back=payload.snr_back,
+    )
