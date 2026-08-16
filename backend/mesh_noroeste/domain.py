@@ -362,6 +362,74 @@ class ObserverReception:
 
 
 @dataclass(frozen=True, slots=True)
+class MeshtasticLivePacket:
+    """Paquete Meshtastic observado por unha fonte live."""
+
+    source: str
+    packet_id: int
+    from_source_id: str
+    to_source_id: str
+    portnum: int
+    channel: str | None
+    imported_at_us: int
+    long_name: str | None
+    to_long_name: str | None
+    payload: str
+
+    @property
+    def from_id(self) -> str:
+        return f"meshtastic:{self.from_source_id}"
+
+    @property
+    def to_id(self) -> str:
+        return f"meshtastic:{self.to_source_id}"
+
+    @property
+    def id(self) -> str:
+        return (
+            "meshtastic:live_packet:"
+            f"{self.packet_id}:"
+            f"{self.from_source_id}"
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class MeshtasticLiveReception:
+    """Recepción dun paquete Meshtastic atribuída a un gateway."""
+
+    source: str
+    packet_id: int
+    from_source_id: str
+    gateway_source_id: str
+    rx_time: int
+    hop_limit: int
+    hop_start: int | None
+    snr_db: float | None
+    rssi_dbm: float | None
+    channel: str | None
+    topic: str | None
+    imported_at_us: int
+
+    @property
+    def from_id(self) -> str:
+        return f"meshtastic:{self.from_source_id}"
+
+    @property
+    def gateway_id(self) -> str:
+        return f"meshtastic:{self.gateway_source_id}"
+
+    @property
+    def id(self) -> str:
+        return (
+            "meshtastic:live_reception:"
+            f"{self.packet_id}:"
+            f"{self.from_source_id}:"
+            f"{self.gateway_source_id}:"
+            f"{self.imported_at_us}"
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class EdgeObservation:
     """Observación normalizada de una conexión entre nodos."""
 
