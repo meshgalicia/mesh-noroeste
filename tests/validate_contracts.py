@@ -57,6 +57,10 @@ PAIRS = (
         ROOT / "schemas/configuration-warnings-v1.schema.json",
         ROOT / "tests/fixtures/configuration-warnings.valid.json",
     ),
+    (
+        ROOT / "schemas/live-v1.schema.json",
+        ROOT / "tests/fixtures/live.valid.json",
+    ),
 )
 
 
@@ -540,6 +544,158 @@ def validate_configuration_warnings(
     )
 
 
+def validate_live(document: dict[str, Any]) -> None:
+    ids: set[str] = set()
+
+    for source, state in document["sources"].items():
+        previous_cursor = state["previous_cursor"]
+        next_cursor = state["next_cursor"]
+
+        if (
+            previous_cursor is not None
+            and next_cursor is not None
+            and next_cursor < previous_cursor
+        ):
+            raise AssertionError(
+                f"O cursor live retrocede en {source}"
+            )
+
+    previous_order: tuple[int, int, str] | None = None
+
+    for event in document["events"]:
+        event_id = event["id"]
+
+        if event_id in ids:
+            raise AssertionError(
+                f"Evento live duplicado: {event_id}"
+            )
+
+        ids.add(event_id)
+
+        expected_id = (
+            "meshtastic:live_packet:"
+            f"{event['packet_id']}:"
+            f"{event['from_id'].removeprefix('meshtastic:')}"
+        )
+
+        if event_id != expected_id:
+            raise AssertionError(
+                f"Identidade incoherente no evento {event_id}"
+            )
+
+        order = (
+            event["imported_at_us"],
+            event["packet_id"],
+            event["from_id"],
+        )
+
+        if previous_order is not None and order < previous_order:
+            raise AssertionError(
+                "Os eventos live non están ordenados "
+                "do máis antigo ao máis recente"
+            )
+
+        previous_order = order
+
+        observed = event["observed"]
+        stages = observed["stages"]
+
+        if observed["stage_count"] != len(stages):
+            raise AssertionError(
+                f"stage_count incoherente en {event_id}"
+            )
+
+        gateway_count = sum(
+            len(stage["gateways"])
+            for stage in stages
+        )
+
+        if observed["gateway_count"] != gateway_count:
+            raise AssertionError(
+                f"gateway_count incoherente en {event_id}"
+            )
+
+        for stage in stages:
+            hop_start = stage["hop_start"]
+            hop_limit = stage["hop_limit"]
+            hops_used = stage["hops_used"]
+
+            expected_hops = (
+                hop_start - hop_limit
+                if hop_start is not None
+                and hop_start >= hop_limit
+                else None
+            )
+
+            if hops_used != expected_hops:
+                raise AssertionError(
+                    f"hops_used incoherente en {event_id}"
+                )
+
+        evidence = set(event["evidence"])
+
+        if observed["gateway_count"] > 0:
+            if "gateway_observation" not in evidence:
+                raise AssertionError(
+                    "Falta gateway_observation "
+                    f"en {event_id}"
+                )
+        elif "gateway_observation" in evidence:
+            raise AssertionError(
+                "gateway_observation sen recepcións "
+                f"en {event_id}"
+            )
+
+        traceroute = event["traceroute"]
+
+        has_route = (
+            traceroute is not None
+            and bool(
+                traceroute["towards"]
+                or traceroute["back"]
+            )
+        )
+
+        if has_route:
+            if "traceroute" not in evidence:
+                raise AssertionError(
+                    f"Falta evidencia traceroute en {event_id}"
+                )
+        elif "traceroute" in evidence:
+            raise AssertionError(
+                f"Evidencia traceroute sen ruta en {event_id}"
+            )
+
+        if traceroute is not None:
+            towards = traceroute["towards"]
+            back = traceroute["back"]
+
+            if towards:
+                if (
+                    towards[0] != event["from_id"]
+                    or towards[-1] != event["to_id"]
+                ):
+                    raise AssertionError(
+                        "Percorrido towards incoherente "
+                        f"en {event_id}"
+                    )
+
+            if back:
+                if (
+                    back[0] != event["to_id"]
+                    or back[-1] != event["from_id"]
+                ):
+                    raise AssertionError(
+                        "Percorrido back incoherente "
+                        f"en {event_id}"
+                    )
+
+    parse_timestamp(document["generated_at"])
+
+    print("OK semántica: live.valid.json")
+
+
+
 def main() -> int:
     print("=== VALIDACIÓN DE CONTRATOS ===")
 
@@ -572,6 +728,9 @@ def main() -> int:
         ROOT
         / "tests/fixtures/configuration-warnings.valid.json"
     )
+    live = load_json(
+        ROOT / "tests/fixtures/live.valid.json"
+    )
 
     validate_manifest(manifest)
     validate_nodes(nodes)
@@ -583,6 +742,7 @@ def main() -> int:
     validate_stats(stats)
     validate_meta(meta)
     validate_configuration_warnings(warnings)
+    validate_live(live)
 
     print()
     print("RESULTADO: todos los contratos son válidos.")

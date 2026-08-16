@@ -1,0 +1,83 @@
+{
+  "schema": "mesh-noroeste.live/v1",
+  "generated_at": "2026-08-16T20:00:00Z",
+  "sources": {
+    "ozulo_map": {
+      "previous_cursor": 1786905000000000,
+      "next_cursor": 1786905714164688,
+      "possible_gap": false
+    }
+  },
+  "events": [
+    {
+      "id": "meshtastic:live_packet:876627100:!a5b7f496",
+      "network": "meshtastic",
+      "source": "ozulo_map",
+      "packet_id": 876627100,
+      "from_id": "meshtastic:!a5b7f496",
+      "to_id": "meshtastic:!69856e70",
+      "portnum": 70,
+      "channel": "LongFast",
+      "imported_at_us": 1786905714164688,
+      "long_name": "Meshstatic",
+      "to_long_name": "Pradairo.B",
+      "evidence": [
+        "gateway_observation",
+        "traceroute"
+      ],
+      "observed": {
+        "gateway_count": 3,
+        "stage_count": 2,
+        "stages": [
+          {
+            "hop_limit": 2,
+            "hop_start": 3,
+            "hops_used": 1,
+            "gateways": [
+              {
+                "gateway_id": "meshtastic:!a0cc86a4",
+                "rx_time": 1786905675,
+                "snr_db": 6.0,
+                "rssi_dbm": -61.0,
+                "imported_at_us": 1786905714166586
+              }
+            ]
+          },
+          {
+            "hop_limit": 0,
+            "hop_start": 3,
+            "hops_used": 3,
+            "gateways": [
+              {
+                "gateway_id": "meshtastic:!b03c4574",
+                "rx_time": 1786905685,
+                "snr_db": -0.25,
+                "rssi_dbm": -96.0,
+                "imported_at_us": 1786905724048875
+              },
+              {
+                "gateway_id": "meshtastic:!43470adb",
+                "rx_time": 1786905691,
+                "snr_db": 6.5,
+                "rssi_dbm": -22.0,
+                "imported_at_us": 1786905734982428
+              }
+            ]
+          }
+        ]
+      },
+      "traceroute": {
+        "towards": [
+          "meshtastic:!a5b7f496",
+          "meshtastic:!a0cc788c",
+          "meshtastic:!69856e70"
+        ],
+        "back": [],
+        "snr_towards": [
+          -12
+        ],
+        "snr_back": []
+      }
+    }
+  ]
+}

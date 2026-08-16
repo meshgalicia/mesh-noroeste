@@ -1,0 +1,304 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mesh Noroeste live.json v1",
+  "description": "Tráfico Meshtastic en directo normalizado, mantendo separadas as observacións por gateways e a información RouteDiscovery.",
+  "type": "object",
+  "required": [
+    "schema",
+    "generated_at",
+    "sources",
+    "events"
+  ],
+  "properties": {
+    "schema": {
+      "const": "mesh-noroeste.live/v1"
+    },
+    "generated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "sources": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z0-9_][a-z0-9_.-]*$": {
+          "$ref": "#/$defs/source_state"
+        }
+      },
+      "additionalProperties": false
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/event"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "meshtastic_id": {
+      "type": "string",
+      "pattern": "^meshtastic:![0-9a-f]{8}$"
+    },
+    "source_state": {
+      "type": "object",
+      "required": [
+        "previous_cursor",
+        "next_cursor",
+        "possible_gap"
+      ],
+      "properties": {
+        "previous_cursor": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "next_cursor": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "possible_gap": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "gateway": {
+      "type": "object",
+      "required": [
+        "gateway_id",
+        "rx_time",
+        "snr_db",
+        "rssi_dbm",
+        "imported_at_us"
+      ],
+      "properties": {
+        "gateway_id": {
+          "$ref": "#/$defs/meshtastic_id"
+        },
+        "rx_time": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "snr_db": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "rssi_dbm": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "imported_at_us": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "stage": {
+      "type": "object",
+      "required": [
+        "hop_limit",
+        "hop_start",
+        "hops_used",
+        "gateways"
+      ],
+      "properties": {
+        "hop_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "hop_start": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 255
+        },
+        "hops_used": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 255
+        },
+        "gateways": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/gateway"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "observed": {
+      "type": "object",
+      "required": [
+        "gateway_count",
+        "stage_count",
+        "stages"
+      ],
+      "properties": {
+        "gateway_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stage_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/stage"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "traceroute": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": [
+        "towards",
+        "back",
+        "snr_towards",
+        "snr_back"
+      ],
+      "properties": {
+        "towards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/meshtastic_id"
+          }
+        },
+        "back": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/meshtastic_id"
+          }
+        },
+        "snr_towards": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "snr_back": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "event": {
+      "type": "object",
+      "required": [
+        "id",
+        "network",
+        "source",
+        "packet_id",
+        "from_id",
+        "to_id",
+        "portnum",
+        "channel",
+        "imported_at_us",
+        "long_name",
+        "to_long_name",
+        "evidence",
+        "observed",
+        "traceroute"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^meshtastic:live_packet:[0-9]+:![0-9a-f]{8}$"
+        },
+        "network": {
+          "const": "meshtastic"
+        },
+        "source": {
+          "type": "string",
+          "pattern": "^[a-z0-9_][a-z0-9_.-]*$"
+        },
+        "packet_id": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "from_id": {
+          "$ref": "#/$defs/meshtastic_id"
+        },
+        "to_id": {
+          "$ref": "#/$defs/meshtastic_id"
+        },
+        "portnum": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "channel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "imported_at_us": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "long_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "to_long_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "gateway_observation",
+              "traceroute"
+            ]
+          }
+        },
+        "observed": {
+          "$ref": "#/$defs/observed"
+        },
+        "traceroute": {
+          "$ref": "#/$defs/traceroute"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
