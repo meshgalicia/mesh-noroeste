@@ -310,6 +310,47 @@ class LiveFrontendTests(unittest.TestCase):
             )
 
 
+    def test_traceroute_playback_controls_exist(self) -> None:
+        for expected in (
+            'id="toggle-traceroute-playback"',
+                        'id="playback-status"',
+            "live-map-playback",
+            "aria-pressed",
+            "playbackActive: false",
+            "playbackToken: 0",
+            "playbackTimer: null",
+            "function playbackTracerouteEvents()",
+            "return filteredEventsByAge()",
+            "function stopTraceroutePlayback(",
+            "function animateEventOnce(",
+            "function runTraceroutePlayback(",
+            "function startTraceroutePlayback()",
+            "if (state.playbackActive) {",
+            "elements.toggleTraceroutePlayback.addEventListener(",
+                    ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript,
+            )
+
+
+
+    def test_playback_selected_route_is_rendered_outside_limit(
+        self,
+    ) -> None:
+        for expected in (
+            "const events = visibleEvents();",
+            "state.live.events.find(",
+            "event.id === state.selectedEventId",
+            "events.push(selectedEvent);",
+            "for (const event of events) {",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+
     def test_mobile_layout_exists(self) -> None:
         self.assertIn(
             "@media (max-width: 760px)",

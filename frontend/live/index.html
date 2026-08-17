@@ -353,6 +353,28 @@
         aria-label="Mapa do tráfico Meshtastic observado en directo"
       ></div>
 
+      <div
+        class="live-map-playback"
+        aria-label="Reprodución de RouteDiscovery"
+      >
+        <button
+          id="toggle-traceroute-playback"
+          class="live-map-playback-button"
+          type="button"
+        >
+          ▶ Reproducir
+        </button>
+
+        <span
+          id="playback-status"
+          class="live-map-playback-status"
+          role="status"
+          aria-live="polite"
+        >
+          Detido
+        </span>
+      </div>
+
       <nav
         id="live-mobile-toolbar"
         class="live-mobile-toolbar"

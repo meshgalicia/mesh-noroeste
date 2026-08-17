@@ -42,6 +42,9 @@ const state = {
   eventAnimationLayer: null,
   eventAnimationFrame: null,
   eventAnimationToken: 0,
+  playbackActive: false,
+  playbackToken: 0,
+  playbackTimer: null,
   mobilePanel: null,
   lastMobileTrigger: null,
 };
@@ -70,6 +73,12 @@ const elements = {
   ),
   showTraceroutes: document.querySelector(
     "#show-traceroutes"
+  ),
+  toggleTraceroutePlayback: document.querySelector(
+    "#toggle-traceroute-playback"
+  ),
+  playbackStatus: document.querySelector(
+    "#playback-status"
   ),
   refresh: document.querySelector("#refresh-live"),
   eventList: document.querySelector("#event-list"),
@@ -1372,7 +1381,274 @@ function animateSelectedEvent(event) {
   );
 }
 
+function playbackTracerouteEvents() {
+  return filteredEventsByAge()
+    .filter(
+      (event) => (
+        Boolean(event.traceroute)
+        && selectedEventAnimationSegments(event).length > 0
+      )
+    )
+    .sort(
+      (left, right) => (
+        Number(left.imported_at_us)
+        - Number(right.imported_at_us)
+      )
+    );
+}
+
+function updatePlaybackControls() {
+  const playable = (
+    playbackTracerouteEvents().length > 0
+  );
+
+  elements.toggleTraceroutePlayback.disabled = (
+    !playable && !state.playbackActive
+  );
+
+  elements.toggleTraceroutePlayback.textContent = (
+    state.playbackActive
+      ? "⏸ Pausar"
+      : "▶ Reproducir"
+  );
+
+  elements.toggleTraceroutePlayback.setAttribute(
+    "aria-pressed",
+    String(state.playbackActive)
+  );
+}
+
+function stopTraceroutePlayback({
+  clearSelection = false,
+} = {}) {
+  state.playbackActive = false;
+  state.playbackToken += 1;
+
+  if (state.playbackTimer !== null) {
+    window.clearTimeout(
+      state.playbackTimer
+    );
+    state.playbackTimer = null;
+  }
+
+  cancelSelectedEventAnimation();
+
+  if (clearSelection) {
+    state.selectedEventId = null;
+    renderEvents();
+    renderEventList();
+  }
+
+  elements.playbackStatus.textContent = (
+    "Reprodución detida"
+  );
+
+  updatePlaybackControls();
+}
+
+function animateEventOnce(
+  event,
+  onComplete
+) {
+  cancelSelectedEventAnimation();
+
+  const segments = selectedEventAnimationSegments(
+    event
+  );
+
+  if (
+    segments.length === 0
+    || prefersReducedMotion()
+  ) {
+    onComplete();
+    return;
+  }
+
+  const totalDistance = segments.reduce(
+    (total, segment) => total + segment.length,
+    0
+  );
+
+  if (!Number.isFinite(totalDistance) || totalDistance <= 0) {
+    onComplete();
+    return;
+  }
+
+  const movementDuration = Math.max(
+    1_800,
+    Math.min(
+      6_000,
+      segments.length * 700
+    )
+  );
+
+  const marker = L.circleMarker(
+    segments[0].from,
+    {
+      pane: "live-animation",
+      radius: 5.5,
+      color: "#17201d",
+      weight: 2.5,
+      opacity: 1,
+      fillColor: "#ffffff",
+      fillOpacity: 1,
+      interactive: false,
+    }
+  ).addTo(state.eventAnimationLayer);
+
+  const animationToken = state.eventAnimationToken;
+  let startedAt = null;
+
+  const frame = (timestamp) => {
+    if (
+      animationToken !== state.eventAnimationToken
+      || !state.playbackActive
+    ) {
+      return;
+    }
+
+    if (startedAt === null) {
+      startedAt = timestamp;
+    }
+
+    const elapsed = timestamp - startedAt;
+    const progress = Math.min(
+      1,
+      elapsed / movementDuration
+    );
+
+    const point = animationPointAtDistance(
+      segments,
+      totalDistance * progress
+    );
+
+    if (point) {
+      marker.setLatLng(point);
+    }
+
+    if (progress >= 1) {
+      state.eventAnimationFrame = null;
+
+      state.playbackTimer = window.setTimeout(
+        onComplete,
+        700
+      );
+
+      return;
+    }
+
+    state.eventAnimationFrame = (
+      window.requestAnimationFrame(frame)
+    );
+  };
+
+  state.eventAnimationFrame = (
+    window.requestAnimationFrame(frame)
+  );
+}
+
+function runTraceroutePlayback(
+  events,
+  index,
+  playbackToken
+) {
+  if (
+    !state.playbackActive
+    || playbackToken !== state.playbackToken
+  ) {
+    return;
+  }
+
+  if (index >= events.length) {
+    stopTraceroutePlayback();
+    return;
+  }
+
+  const event = events[index];
+
+  state.selectedEventId = event.id;
+
+  renderEvents();
+  renderEventList();
+
+  elements.playbackStatus.textContent = (
+    `Reproducindo ${index + 1} de ${events.length}: `
+    + `${eventOriginName(event)} → ${eventDestinationName(event)}`
+  );
+
+  const start = () => {
+    if (
+      !state.playbackActive
+      || playbackToken !== state.playbackToken
+    ) {
+      return;
+    }
+
+    animateEventOnce(
+      event,
+      () => {
+        runTraceroutePlayback(
+          events,
+          index + 1,
+          playbackToken
+        );
+      }
+    );
+  };
+
+  state.map.once(
+    "moveend",
+    start
+  );
+
+  focusEvent(event);
+
+  window.setTimeout(
+    () => {
+      if (
+        state.playbackActive
+        && playbackToken === state.playbackToken
+        && state.eventAnimationLayer.getLayers().length === 0
+      ) {
+        start();
+      }
+    },
+    500
+  );
+}
+
+function startTraceroutePlayback() {
+  const events = playbackTracerouteEvents();
+
+  if (events.length === 0) {
+    elements.playbackStatus.textContent = (
+      "Non hai RouteDiscovery reproducibles cos filtros actuais"
+    );
+    updatePlaybackControls();
+    return;
+  }
+
+  stopTraceroutePlayback();
+
+  state.playbackActive = true;
+  state.playbackToken += 1;
+
+  const token = state.playbackToken;
+
+  updatePlaybackControls();
+
+  runTraceroutePlayback(
+    events,
+    0,
+    token
+  );
+}
+
 function syncSelectedEventAnimation() {
+  if (state.playbackActive) {
+    return;
+  }
+
   const event = selectedVisibleEvent();
 
   if (!event) {
@@ -1699,10 +1975,27 @@ function renderEvents() {
 
   let positioned = 0;
 
-  const selectedEvent = selectedVisibleEvent();
+  const events = visibleEvents();
+  const selectedEvent = (
+    state.selectedEventId
+      ? state.live.events.find(
+          (event) => event.id === state.selectedEventId
+        ) || null
+      : null
+  );
+
   const selectedEventId = selectedEvent?.id || null;
 
-  for (const event of visibleEvents()) {
+  if (
+    selectedEvent
+    && !events.some(
+      (event) => event.id === selectedEvent.id
+    )
+  ) {
+    events.push(selectedEvent);
+  }
+
+  for (const event of events) {
     let rendered = false;
 
     const selected = (
@@ -1981,6 +2274,7 @@ async function refreshLive() {
     renderEvents();
     renderEventList();
     syncSelectedEventAnimation();
+    updatePlaybackControls();
 
     elements.status.textContent = (
       `Actualizado ${new Intl.DateTimeFormat(
@@ -2067,8 +2361,22 @@ function bindControls() {
   elements.showTraceroutes.addEventListener(
     "change",
     () => {
+      stopTraceroutePlayback();
       renderEvents();
       syncSelectedEventAnimation();
+      updatePlaybackControls();
+    }
+  );
+
+  elements.toggleTraceroutePlayback.addEventListener(
+    "click",
+    () => {
+      if (state.playbackActive) {
+        stopTraceroutePlayback();
+        return;
+      }
+
+      startTraceroutePlayback();
     }
   );
 
