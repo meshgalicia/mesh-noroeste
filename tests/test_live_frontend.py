@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260817-live7",
-            "./live.js?v=20260817-live7",
+            "./live.css?v=20260817-live8",
+            "./live.js?v=20260817-live8",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -162,6 +162,45 @@ class LiveFrontendTests(unittest.TestCase):
             self.assertIn(
                 expected,
                 self.javascript + self.css,
+            )
+
+
+    def test_live_gateway_filter_exists(self) -> None:
+        for expected in (
+            'id="event-gateway"',
+            "Todos os gateways",
+            'eventGateway: document.querySelector(',
+            "function eventHasGateway(event, gatewayId)",
+            "function filteredEventsByGateway()",
+            "function gatewayOptionLabel(gatewayId)",
+            "function updateGatewayOptions()",
+            "filteredEventsByGateway()",
+            "function focusGateway(gatewayId)",
+            "function renderGatewaySelection()",
+            "gatewaySelectionLayer: null",
+            "live-selected-gateway-label",
+            "elements.eventGateway.addEventListener(",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript,
+            )
+
+
+    def test_live_time_filter_exists(self) -> None:
+        for expected in (
+            'id="event-age"',
+            '<option value="60">Última hora</option>',
+            '<option value="15">Últimos 15 min</option>',
+            '<option value="5">Últimos 5 min</option>',
+            'eventAge: document.querySelector("#event-age")',
+            "function filteredEventsByAge()",
+            "minutes * 60 * 1_000_000",
+            "elements.eventAge.addEventListener(",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript,
             )
 
 

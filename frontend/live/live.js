@@ -38,6 +38,7 @@ const state = {
   selectionLayer: null,
   selectedNodeId: null,
   nodeSearchSelectionLayer: null,
+  gatewaySelectionLayer: null,
   mobilePanel: null,
   lastMobileTrigger: null,
 };
@@ -55,6 +56,10 @@ const elements = {
   visibleEventCount: document.querySelector(
     "#visible-event-count"
   ),
+  eventGateway: document.querySelector(
+    "#event-gateway"
+  ),
+  eventAge: document.querySelector("#event-age"),
   eventLimit: document.querySelector("#event-limit"),
   showReceptions: document.querySelector(
     "#show-receptions"
@@ -627,6 +632,10 @@ function createMap() {
   state.nodeSearchSelectionLayer = (
     L.layerGroup().addTo(state.map)
   );
+
+  state.gatewaySelectionLayer = (
+    L.layerGroup().addTo(state.map)
+  );
 }
 
 function positionedNode(node) {
@@ -1040,16 +1049,210 @@ function selectEvent(event) {
 }
 
 
-function visibleEvents() {
-  const value = elements.eventLimit.value;
+function eventHasGateway(event, gatewayId) {
+  if (!gatewayId || gatewayId === "all") {
+    return true;
+  }
 
-  const events = [...state.live.events]
+  return gatewayIds(event).includes(gatewayId);
+}
+
+function focusGateway(gatewayId) {
+  if (!gatewayId || gatewayId === "all") {
+    return;
+  }
+
+  const point = nodePoint(gatewayId);
+
+  if (!point) {
+    return;
+  }
+
+  state.map.setView(
+    point,
+    Math.max(state.map.getZoom(), 13)
+  );
+}
+
+function renderGatewaySelection() {
+  state.gatewaySelectionLayer.clearLayers();
+
+  const gatewayId = elements.eventGateway.value;
+
+  if (!gatewayId || gatewayId === "all") {
+    return;
+  }
+
+  const point = nodePoint(gatewayId);
+
+  if (!point) {
+    return;
+  }
+
+  const node = state.nodeById.get(gatewayId);
+
+  const name = (
+    node?.long_name
+    || node?.short_name
+    || gatewayId
+  );
+
+  L.circleMarker(
+    point,
+    {
+      pane: "live-selection",
+      radius: 11,
+      color: "#0b7285",
+      weight: 4,
+      opacity: 1,
+      fillColor: "#ffffff",
+      fillOpacity: 0.2,
+      interactive: false,
+    }
+  )
+    .bindTooltip(
+      `<strong>${escapeHtml(name)}</strong>`
+      + `<br><span>Gateway filtrado</span>`,
+      {
+        permanent: true,
+        direction: "top",
+        offset: [0, -12],
+        className: "live-selected-gateway-label",
+      }
+    )
+    .addTo(state.gatewaySelectionLayer);
+}
+
+function filteredEventsByGateway() {
+  const gatewayId = elements.eventGateway.value;
+
+  if (gatewayId === "all") {
+    return [...state.live.events];
+  }
+
+  return state.live.events.filter(
+    (event) => eventHasGateway(event, gatewayId)
+  );
+}
+
+function gatewayOptionLabel(gatewayId) {
+  const node = state.nodeById.get(gatewayId);
+
+  if (!node) {
+    return gatewayId;
+  }
+
+  const name = (
+    node.long_name
+    || node.short_name
+    || gatewayId
+  );
+
+  return `${name} · ${gatewayId}`;
+}
+
+function updateGatewayOptions() {
+  const currentValue = elements.eventGateway.value;
+
+  const gatewayIdsSet = new Set();
+
+  for (const event of state.live?.events || []) {
+    for (const gatewayId of gatewayIds(event)) {
+      gatewayIdsSet.add(gatewayId);
+    }
+  }
+
+  const gatewayIdsList = [...gatewayIdsSet].sort(
+    (left, right) => (
+      gatewayOptionLabel(left).localeCompare(
+        gatewayOptionLabel(right),
+        "gl"
+      )
+    )
+  );
+
+  const fragment = document.createDocumentFragment();
+
+  const allOption = document.createElement("option");
+  allOption.value = "all";
+  allOption.textContent = (
+    `Todos os gateways (${formatNumber(gatewayIdsList.length)})`
+  );
+
+  fragment.append(allOption);
+
+  for (const gatewayId of gatewayIdsList) {
+    const option = document.createElement("option");
+
+    option.value = gatewayId;
+    option.textContent = gatewayOptionLabel(gatewayId);
+
+    fragment.append(option);
+  }
+
+  elements.eventGateway.replaceChildren(fragment);
+
+  if (
+    currentValue
+    && (
+      currentValue === "all"
+      || gatewayIdsSet.has(currentValue)
+    )
+  ) {
+    elements.eventGateway.value = currentValue;
+  } else {
+    elements.eventGateway.value = "all";
+  }
+}
+
+function filteredEventsByAge() {
+  const value = elements.eventAge.value;
+
+  const events = filteredEventsByGateway()
     .sort(
       (left, right) => (
         Number(right.imported_at_us)
         - Number(left.imported_at_us)
       )
     );
+
+  if (value === "all") {
+    return events;
+  }
+
+  const minutes = Number(value);
+
+  if (!Number.isFinite(minutes)) {
+    return events;
+  }
+
+  const newestTimestamp = events.reduce(
+    (maximum, event) => Math.max(
+      maximum,
+      Number(event.imported_at_us) || 0
+    ),
+    0
+  );
+
+  if (!newestTimestamp) {
+    return events;
+  }
+
+  const cutoff = (
+    newestTimestamp
+    - minutes * 60 * 1_000_000
+  );
+
+  return events.filter(
+    (event) => (
+      Number(event.imported_at_us) >= cutoff
+    )
+  );
+}
+
+function visibleEvents() {
+  const value = elements.eventLimit.value;
+  const events = filteredEventsByAge();
 
   if (value === "all") {
     return events;
@@ -1349,11 +1552,13 @@ async function refreshLive() {
 
     state.live = live;
 
+    updateGatewayOptions();
     updateEventLimitOptions();
+    renderGatewaySelection();
 
     if (
       state.selectedEventId
-      && !live.events.some(
+      && !visibleEvents().some(
         (event) => event.id === state.selectedEventId
       )
     ) {
@@ -1396,21 +1601,42 @@ function bindControls() {
     renderNodeSearchResults
   );
 
+  const refreshEventFilters = () => {
+    if (
+      state.selectedEventId
+      && !visibleEvents().some(
+        (event) => event.id === state.selectedEventId
+      )
+    ) {
+      state.selectedEventId = null;
+    }
+
+    renderEvents();
+    renderEventList();
+    updateVisibleEventSummary();
+  };
+
+  elements.eventGateway.addEventListener(
+    "change",
+    () => {
+      refreshEventFilters();
+      renderGatewaySelection();
+
+      focusGateway(
+        elements.eventGateway.value
+      );
+    }
+  );
+
+  elements.eventAge.addEventListener(
+    "change",
+    refreshEventFilters
+  );
+
   elements.eventLimit.addEventListener(
     "change",
     () => {
-      if (
-        state.selectedEventId
-        && !visibleEvents().some(
-          (event) => event.id === state.selectedEventId
-        )
-      ) {
-        state.selectedEventId = null;
-      }
-
-      renderEvents();
-      renderEventList();
-      updateVisibleEventSummary();
+      refreshEventFilters();
     }
   );
 

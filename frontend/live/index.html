@@ -32,7 +32,7 @@
 
   <link
     rel="stylesheet"
-    href="./live.css?v=20260817-live7"
+    href="./live.css?v=20260817-live8"
   >
 
   <script
@@ -43,7 +43,7 @@
   ></script>
 
   <script
-    src="./live.js?v=20260817-live7"
+    src="./live.js?v=20260817-live8"
     defer
   ></script>
 </head>
@@ -173,6 +173,27 @@
         data-mobile-panel="display"
         aria-labelledby="live-display-title"
       >
+        <label class="live-control">
+          <span>Gateway observador</span>
+
+          <select id="event-gateway">
+            <option value="all" selected>
+              Todos os gateways
+            </option>
+          </select>
+        </label>
+
+        <label class="live-control">
+          <span>Período</span>
+
+          <select id="event-age">
+            <option value="all" selected>Todo</option>
+            <option value="60">Última hora</option>
+            <option value="15">Últimos 15 min</option>
+            <option value="5">Últimos 5 min</option>
+          </select>
+        </label>
+
         <label class="live-control">
           <span>Eventos visibles</span>
 
