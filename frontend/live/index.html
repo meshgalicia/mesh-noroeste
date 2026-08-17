@@ -32,7 +32,7 @@
 
   <link
     rel="stylesheet"
-    href="./live.css?v=20260817-live3"
+    href="./live.css?v=20260817-live5"
   >
 
   <script
@@ -43,7 +43,7 @@
   ></script>
 
   <script
-    src="./live.js?v=20260817-live3"
+    src="./live.js?v=20260817-live5"
     defer
   ></script>
 </head>
@@ -56,7 +56,10 @@
   </noscript>
 
   <div class="live-app">
-    <aside class="live-sidebar">
+    <aside
+      id="live-sidebar"
+      class="live-sidebar"
+    >
       <header class="live-brand">
         <p class="eyebrow">Mesh Noroeste</p>
         <h1>Tráfico en directo</h1>
@@ -75,8 +78,60 @@
         </p>
       </header>
 
+      <header class="live-mobile-sheet-heading">
+        <strong id="live-mobile-sheet-title">
+          Controis
+        </strong>
+
+        <button
+          id="live-mobile-sheet-close"
+          class="live-mobile-sheet-close"
+          type="button"
+          aria-label="Pechar o panel"
+        >
+          ×
+        </button>
+      </header>
+
       <section
         class="live-section"
+        data-mobile-panel="search"
+        aria-labelledby="live-search-title"
+      >
+        <h2 id="live-search-title">
+          Buscar nodo
+        </h2>
+
+        <label class="live-control">
+          <span>Nome ou identificador</span>
+
+          <input
+            id="live-node-search"
+            type="search"
+            inputmode="search"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Ex. TCRobotics ou !bd5b4284"
+          >
+        </label>
+
+        <p
+          id="live-node-search-status"
+          class="live-search-status"
+          role="status"
+          aria-live="polite"
+        ></p>
+
+        <ul
+          id="live-node-search-results"
+          class="live-search-results"
+          hidden
+        ></ul>
+      </section>
+
+      <section
+        class="live-section"
+        data-mobile-panel="activity"
         aria-labelledby="live-summary-title"
       >
         <h2 id="live-summary-title">
@@ -115,6 +170,7 @@
 
       <section
         class="live-section"
+        data-mobile-panel="display"
         aria-labelledby="live-display-title"
       >
         <h2 id="live-display-title">
@@ -129,6 +185,7 @@
             <option value="50" selected>50</option>
             <option value="100">100</option>
             <option value="200">200</option>
+            <option value="all">Todos</option>
           </select>
         </label>
 
@@ -161,6 +218,7 @@
 
       <section
         class="live-section"
+        data-mobile-panel="events"
         aria-labelledby="live-events-title"
       >
         <h2 id="live-events-title">
@@ -193,12 +251,117 @@
       </footer>
     </aside>
 
+    <button
+      id="live-mobile-backdrop"
+      class="live-mobile-backdrop"
+      type="button"
+      tabindex="-1"
+      aria-hidden="true"
+      hidden
+    ></button>
+
     <main class="live-map-region">
       <div
         id="live-map"
         role="region"
         aria-label="Mapa do tráfico Meshtastic observado en directo"
       ></div>
+
+      <nav
+        id="live-mobile-toolbar"
+        class="live-mobile-toolbar"
+        aria-label="Controis do tráfico en directo"
+      >
+        <button
+          class="live-mobile-tab"
+          type="button"
+          data-live-mobile-target="search"
+          aria-controls="live-sidebar"
+          aria-expanded="false"
+          aria-pressed="false"
+        >
+          <span
+            class="live-mobile-tab-icon"
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 24 24">
+              <circle cx="10.5" cy="10.5" r="6.5"></circle>
+              <path d="m15.5 15.5 5 5"></path>
+            </svg>
+          </span>
+          <span>Buscar</span>
+        </button>
+
+        <button
+          class="live-mobile-tab"
+          type="button"
+          data-live-mobile-target="activity"
+          aria-controls="live-sidebar"
+          aria-expanded="false"
+          aria-pressed="false"
+        >
+          <span
+            class="live-mobile-tab-icon"
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M4 18V9"></path>
+              <path d="M10 18V5"></path>
+              <path d="M16 18v-7"></path>
+              <path d="M22 18V3"></path>
+            </svg>
+          </span>
+          <span>Actividade</span>
+        </button>
+
+        <button
+          class="live-mobile-tab"
+          type="button"
+          data-live-mobile-target="display"
+          aria-controls="live-sidebar"
+          aria-expanded="false"
+          aria-pressed="false"
+        >
+          <span
+            class="live-mobile-tab-icon"
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M4 6h16"></path>
+              <path d="M7 12h10"></path>
+              <path d="M10 18h4"></path>
+              <circle cx="9" cy="6" r="1.5"></circle>
+              <circle cx="15" cy="12" r="1.5"></circle>
+              <circle cx="12" cy="18" r="1.5"></circle>
+            </svg>
+          </span>
+          <span>Visualización</span>
+        </button>
+
+        <button
+          class="live-mobile-tab"
+          type="button"
+          data-live-mobile-target="events"
+          aria-controls="live-sidebar"
+          aria-expanded="false"
+          aria-pressed="false"
+        >
+          <span
+            class="live-mobile-tab-icon"
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M6 5h14"></path>
+              <path d="M6 12h14"></path>
+              <path d="M6 19h14"></path>
+              <circle cx="3" cy="5" r="1"></circle>
+              <circle cx="3" cy="12" r="1"></circle>
+              <circle cx="3" cy="19" r="1"></circle>
+            </svg>
+          </span>
+          <span>Eventos</span>
+        </button>
+      </nav>
 
       <div
         id="loading-panel"

@@ -17,6 +17,15 @@ const PUBLIC_LIVE_SCHEMA = (
 
 const REFRESH_INTERVAL_MS = 60_000;
 
+const LIVE_MOBILE_BREAKPOINT = "(max-width: 760px)";
+
+const LIVE_MOBILE_PANEL_TITLES = Object.freeze({
+  search: "Buscar nodo",
+  activity: "Actividade",
+  display: "Visualización",
+  events: "Últimos eventos",
+});
+
 const state = {
   map: null,
   nodeLayer: null,
@@ -27,6 +36,10 @@ const state = {
   refreshTimer: null,
   selectedEventId: null,
   selectionLayer: null,
+  selectedNodeId: null,
+  nodeSearchSelectionLayer: null,
+  mobilePanel: null,
+  lastMobileTrigger: null,
 };
 
 const elements = {
@@ -51,9 +64,234 @@ const elements = {
   ),
   refresh: document.querySelector("#refresh-live"),
   eventList: document.querySelector("#event-list"),
+  nodeSearch: document.querySelector("#live-node-search"),
+  nodeSearchStatus: document.querySelector(
+    "#live-node-search-status"
+  ),
+  nodeSearchResults: document.querySelector(
+    "#live-node-search-results"
+  ),
   loading: document.querySelector("#loading-panel"),
   error: document.querySelector("#error-panel"),
+  app: document.querySelector(".live-app"),
+  sidebar: document.querySelector("#live-sidebar"),
+  mapRegion: document.querySelector(".live-map-region"),
+  mobileBackdrop: document.querySelector(
+    "#live-mobile-backdrop"
+  ),
+  mobileSheetTitle: document.querySelector(
+    "#live-mobile-sheet-title"
+  ),
+  mobileSheetClose: document.querySelector(
+    "#live-mobile-sheet-close"
+  ),
+  mobileTabs: Array.from(
+    document.querySelectorAll(".live-mobile-tab")
+  ),
+  mobilePanels: Array.from(
+    document.querySelectorAll("[data-mobile-panel]")
+  ),
 };
+
+function isLiveMobileLayout() {
+  return window.matchMedia(
+    LIVE_MOBILE_BREAKPOINT
+  ).matches;
+}
+
+function syncLiveMobilePanel() {
+  const mobile = isLiveMobileLayout();
+  const panel = (
+    mobile
+      ? state.mobilePanel
+      : null
+  );
+  const open = Boolean(panel);
+
+  elements.app.classList.toggle(
+    "live-mobile-sheet-open",
+    open
+  );
+
+  for (const block of elements.mobilePanels) {
+    block.hidden = (
+      mobile
+      && block.dataset.mobilePanel !== panel
+    );
+  }
+
+  for (const button of elements.mobileTabs) {
+    const active = (
+      button.dataset.liveMobileTarget === panel
+    );
+
+    button.setAttribute(
+      "aria-pressed",
+      String(active)
+    );
+    button.setAttribute(
+      "aria-expanded",
+      String(active)
+    );
+  }
+
+  elements.mobileBackdrop.hidden = !open;
+
+  elements.mobileSheetTitle.textContent = (
+    open
+      ? LIVE_MOBILE_PANEL_TITLES[panel]
+      : "Controis"
+  );
+
+  if (open) {
+    elements.sidebar.setAttribute(
+      "role",
+      "dialog"
+    );
+    elements.sidebar.setAttribute(
+      "aria-modal",
+      "true"
+    );
+    elements.sidebar.setAttribute(
+      "aria-labelledby",
+      "live-mobile-sheet-title"
+    );
+
+    elements.mapRegion.inert = true;
+  } else {
+    elements.sidebar.removeAttribute("role");
+    elements.sidebar.removeAttribute("aria-modal");
+    elements.sidebar.removeAttribute(
+      "aria-labelledby"
+    );
+
+    elements.mapRegion.inert = false;
+  }
+}
+
+function setLiveMobilePanel(
+  panel,
+  {
+    restoreFocus = false,
+  } = {}
+) {
+  state.mobilePanel = (
+    panel && LIVE_MOBILE_PANEL_TITLES[panel]
+      ? panel
+      : null
+  );
+
+  syncLiveMobilePanel();
+
+  if (state.mobilePanel) {
+    window.requestAnimationFrame(() => {
+      if (state.mobilePanel === "search") {
+        elements.nodeSearch.focus({
+          preventScroll: true,
+        });
+        return;
+      }
+
+      elements.mobileSheetClose.focus({
+        preventScroll: true,
+      });
+    });
+
+    return;
+  }
+
+  if (
+    restoreFocus
+    && state.lastMobileTrigger
+  ) {
+    state.lastMobileTrigger.focus({
+      preventScroll: true,
+    });
+  }
+}
+
+function initializeLiveMobileNavigation() {
+  for (const button of elements.mobileTabs) {
+    button.addEventListener(
+      "click",
+      () => {
+        const target = (
+          button.dataset.liveMobileTarget
+        );
+
+        if (state.mobilePanel === target) {
+          setLiveMobilePanel(
+            null,
+            {
+              restoreFocus: true,
+            }
+          );
+          return;
+        }
+
+        state.lastMobileTrigger = button;
+        setLiveMobilePanel(target);
+      }
+    );
+  }
+
+  elements.mobileSheetClose.addEventListener(
+    "click",
+    () => {
+      setLiveMobilePanel(
+        null,
+        {
+          restoreFocus: true,
+        }
+      );
+    }
+  );
+
+  elements.mobileBackdrop.addEventListener(
+    "click",
+    () => {
+      setLiveMobilePanel(
+        null,
+        {
+          restoreFocus: true,
+        }
+      );
+    }
+  );
+
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (
+        event.key === "Escape"
+        && state.mobilePanel
+      ) {
+        setLiveMobilePanel(
+          null,
+          {
+            restoreFocus: true,
+          }
+        );
+      }
+    }
+  );
+
+  window.matchMedia(
+    LIVE_MOBILE_BREAKPOINT
+  ).addEventListener(
+    "change",
+    () => {
+      if (!isLiveMobileLayout()) {
+        state.mobilePanel = null;
+      }
+
+      syncLiveMobilePanel();
+      state.map?.invalidateSize();
+    }
+  );
+
+  syncLiveMobilePanel();
+}
 
 function formatNumber(value) {
   return new Intl.NumberFormat("gl-ES").format(value);
@@ -135,6 +373,112 @@ function updateVisibleEventSummary() {
 
   elements.visibleEventCount.textContent = (
     `${formatNumber(visible)} de ${formatNumber(total)}`
+  );
+}
+
+function normalizeSearchText(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase("gl-ES")
+    .trim();
+}
+
+function searchableNodeText(node) {
+  return normalizeSearchText(
+    [
+      node.long_name,
+      node.short_name,
+      node.id,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+}
+
+function focusNode(node) {
+  const point = nodePoint(node.id);
+
+  if (!point) {
+    return;
+  }
+
+  state.selectedNodeId = node.id;
+  renderNodeSearchSelection();
+
+  state.map.setView(
+    point,
+    Math.max(state.map.getZoom(), 14)
+  );
+
+  if (isLiveMobileLayout()) {
+    setLiveMobilePanel(null);
+  }
+}
+
+function renderNodeSearchResults() {
+  const query = normalizeSearchText(
+    elements.nodeSearch.value
+  );
+
+  if (!query) {
+    elements.nodeSearchResults.replaceChildren();
+    elements.nodeSearchResults.hidden = true;
+    elements.nodeSearchStatus.textContent = "";
+    return;
+  }
+
+  const matches = state.nodes
+    .filter(positionedNode)
+    .filter(
+      (node) => searchableNodeText(node).includes(query)
+    )
+    .slice(0, 20);
+
+  const fragment = document.createDocumentFragment();
+
+  for (const node of matches) {
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    const name = document.createElement("strong");
+    const identifier = document.createElement("span");
+
+    button.type = "button";
+    button.className = "live-search-result";
+
+    name.textContent = (
+      node.long_name
+      || node.short_name
+      || node.id
+    );
+
+    identifier.textContent = node.id;
+
+    button.append(name, identifier);
+
+    button.addEventListener(
+      "click",
+      () => focusNode(node)
+    );
+
+    item.append(button);
+    fragment.append(item);
+  }
+
+  elements.nodeSearchResults.replaceChildren(fragment);
+  elements.nodeSearchResults.hidden = matches.length === 0;
+
+  if (matches.length === 0) {
+    elements.nodeSearchStatus.textContent = (
+      "Non se atoparon nodos con posición."
+    );
+    return;
+  }
+
+  elements.nodeSearchStatus.textContent = (
+    `${formatNumber(matches.length)} resultado`
+    + (matches.length === 1 ? "" : "s")
+    + (matches.length === 20 ? " como máximo" : "")
   );
 }
 
@@ -280,6 +624,9 @@ function createMap() {
   state.eventLayer = L.layerGroup().addTo(state.map);
   state.nodeLayer = L.layerGroup().addTo(state.map);
   state.selectionLayer = L.layerGroup().addTo(state.map);
+  state.nodeSearchSelectionLayer = (
+    L.layerGroup().addTo(state.map)
+  );
 }
 
 function positionedNode(node) {
@@ -302,6 +649,59 @@ function nodePoint(nodeId) {
     Number(node.longitude),
   ];
 }
+
+function renderNodeSearchSelection() {
+  state.nodeSearchSelectionLayer.clearLayers();
+
+  if (!state.selectedNodeId) {
+    return;
+  }
+
+  const node = state.nodeById.get(
+    state.selectedNodeId
+  );
+
+  if (!node) {
+    return;
+  }
+
+  const point = nodePoint(node.id);
+
+  if (!point) {
+    return;
+  }
+
+  const name = (
+    node.long_name
+    || node.short_name
+    || node.id
+  );
+
+  L.circleMarker(
+    point,
+    {
+      pane: "live-selection",
+      radius: 9,
+      color: "#a61e4d",
+      weight: 3.5,
+      opacity: 1,
+      fillColor: "#ffffff",
+      fillOpacity: 0.32,
+      interactive: false,
+    }
+  )
+    .bindTooltip(
+      escapeHtml(name),
+      {
+        permanent: true,
+        direction: "top",
+        offset: [0, -10],
+        className: "live-selected-node-label",
+      }
+    )
+    .addTo(state.nodeSearchSelectionLayer);
+}
+
 
 function renderNodes() {
   state.nodeLayer.clearLayers();
@@ -608,19 +1008,42 @@ function selectEvent(event) {
 
 
 function visibleEvents() {
-  const limit = Number(elements.eventLimit.value);
+  const value = elements.eventLimit.value;
 
-  return [...state.live.events]
+  const events = [...state.live.events]
     .sort(
       (left, right) => (
         Number(right.imported_at_us)
         - Number(left.imported_at_us)
       )
-    )
-    .slice(
-      0,
-      Number.isFinite(limit) ? limit : 50
     );
+
+  if (value === "all") {
+    return events;
+  }
+
+  const limit = Number(value);
+
+  return events.slice(
+    0,
+    Number.isFinite(limit) ? limit : 50
+  );
+}
+
+function updateEventLimitOptions() {
+  const allOption = elements.eventLimit.querySelector(
+    'option[value="all"]'
+  );
+
+  if (!allOption) {
+    return;
+  }
+
+  const total = state.live?.events?.length || 0;
+
+  allOption.textContent = (
+    `Todos (${formatNumber(total)})`
+  );
 }
 
 function renderEvents() {
@@ -893,6 +1316,8 @@ async function refreshLive() {
 
     state.live = live;
 
+    updateEventLimitOptions();
+
     if (
       state.selectedEventId
       && !live.events.some(
@@ -933,6 +1358,11 @@ async function refreshLive() {
 }
 
 function bindControls() {
+  elements.nodeSearch.addEventListener(
+    "input",
+    renderNodeSearchResults
+  );
+
   elements.eventLimit.addEventListener(
     "change",
     () => {
@@ -971,6 +1401,7 @@ async function initialize() {
   try {
     createMap();
     bindControls();
+    initializeLiveMobileNavigation();
 
     await loadBaseData();
     await refreshLive();

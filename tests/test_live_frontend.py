@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260817-live3",
-            "./live.js?v=20260817-live3",
+            "./live.css?v=20260817-live5",
+            "./live.js?v=20260817-live5",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -131,6 +131,39 @@ class LiveFrontendTests(unittest.TestCase):
         ):
             with self.subTest(expected=expected):
                 self.assertIn(expected, self.css)
+
+    def test_live_node_search_exists(self) -> None:
+        for expected in (
+            'data-mobile-panel="search"',
+            'id="live-node-search"',
+            'id="live-node-search-results"',
+            'data-live-mobile-target="search"',
+            'search: "Buscar nodo"',
+            "function renderNodeSearchResults()",
+            "function focusNode(node)",
+            ".filter(positionedNode)",
+            "searchableNodeText(node).includes(query)",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript,
+            )
+
+    def test_node_search_selection_is_highlighted(
+        self,
+    ) -> None:
+        for expected in (
+            "selectedNodeId: null",
+            "nodeSearchSelectionLayer: null",
+            "function renderNodeSearchSelection()",
+            "state.selectedNodeId = node.id",
+            "live-selected-node-label",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript + self.css,
+            )
+
 
     def test_mobile_layout_exists(self) -> None:
         self.assertIn(
