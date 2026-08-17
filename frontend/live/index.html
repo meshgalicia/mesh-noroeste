@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="gl">
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <meta
+    name="description"
+    content="Visualización do tráfico Meshtastic observado en directo por Mesh Noroeste."
+  >
+
+  <meta name="theme-color" content="#006b8f">
+
+  <title>Tráfico en directo · Mesh Noroeste</title>
+
+  <link
+    rel="icon"
+    href="../favicon.ico"
+    sizes="32x32"
+  >
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
+
+  <link
+    rel="stylesheet"
+    href="./live.css?v=20260817-live2"
+  >
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+    defer
+  ></script>
+
+  <script
+    src="./live.js?v=20260817-live2"
+    defer
+  ></script>
+</head>
+
+<body>
+  <noscript>
+    <p class="noscript">
+      Esta visualización precisa JavaScript.
+    </p>
+  </noscript>
+
+  <div class="live-app">
+    <aside class="live-sidebar">
+      <header class="live-brand">
+        <p class="eyebrow">Mesh Noroeste</p>
+        <h1>Tráfico en directo</h1>
+
+        <p class="live-network">
+          Meshtastic · Comunidade O Zulo
+        </p>
+
+        <p
+          id="live-status"
+          class="live-status"
+          role="status"
+          aria-live="polite"
+        >
+          Cargando…
+        </p>
+      </header>
+
+      <section
+        class="live-section"
+        aria-labelledby="live-summary-title"
+      >
+        <h2 id="live-summary-title">
+          Actividade
+        </h2>
+
+        <dl class="live-summary">
+          <div>
+            <dt>Eventos</dt>
+            <dd id="event-count">—</dd>
+          </div>
+
+          <div>
+            <dt>RouteDiscovery</dt>
+            <dd id="traceroute-count">—</dd>
+          </div>
+
+          <div>
+            <dt>Representados</dt>
+            <dd id="positioned-count">—</dd>
+          </div>
+        </dl>
+
+        <dl class="live-window">
+          <div>
+            <dt>Período recibido</dt>
+            <dd id="live-window">—</dd>
+          </div>
+
+          <div>
+            <dt>Mostrando</dt>
+            <dd id="visible-event-count">—</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section
+        class="live-section"
+        aria-labelledby="live-display-title"
+      >
+        <h2 id="live-display-title">
+          Visualización
+        </h2>
+
+        <label class="live-control">
+          <span>Eventos visibles</span>
+
+          <select id="event-limit">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+          </select>
+        </label>
+
+        <label class="live-checkbox">
+          <input
+            id="show-receptions"
+            type="checkbox"
+            checked
+          >
+          <span>Recepcións observadas</span>
+        </label>
+
+        <label class="live-checkbox">
+          <input
+            id="show-traceroutes"
+            type="checkbox"
+            checked
+          >
+          <span>RouteDiscovery</span>
+        </label>
+
+        <button
+          id="refresh-live"
+          class="live-button"
+          type="button"
+        >
+          Actualizar agora
+        </button>
+      </section>
+
+      <section
+        class="live-section"
+        aria-labelledby="live-events-title"
+      >
+        <h2 id="live-events-title">
+          Últimos eventos
+        </h2>
+
+        <ol
+          id="event-list"
+          class="live-event-list"
+        ></ol>
+      </section>
+
+      <footer class="live-footer">
+        <p>
+          As liñas discontinuas indican unha
+          <strong>recepción observada por un gateway</strong>;
+          non demostran unha ligazón radio directa.
+        </p>
+
+        <p>
+          As rutas continuas proceden de
+          <strong>RouteDiscovery</strong>.
+        </p>
+
+        <p>
+          <a href="../">
+            Volver ao mapa principal
+          </a>
+        </p>
+      </footer>
+    </aside>
+
+    <main class="live-map-region">
+      <div
+        id="live-map"
+        role="region"
+        aria-label="Mapa do tráfico Meshtastic observado en directo"
+      ></div>
+
+      <div
+        id="loading-panel"
+        class="live-message"
+        role="status"
+        aria-live="polite"
+      >
+        <strong>Cargando tráfico en directo</strong>
+        <span>
+          Descargando nodos e observacións…
+        </span>
+      </div>
+
+      <div
+        id="error-panel"
+        class="live-message live-error"
+        role="alert"
+        hidden
+      ></div>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,813 @@
+"use strict";
+
+const MANIFEST_URL = "../data/manifest.json";
+const LIVE_URL = "../data/live.json";
+
+const PUBLIC_MANIFEST_SCHEMA = (
+  "mesh-noroeste.manifest/v1"
+);
+
+const PUBLIC_DATA_SCHEMA = (
+  "mesh-noroeste.data/v1"
+);
+
+const PUBLIC_LIVE_SCHEMA = (
+  "mesh-noroeste.live/v1"
+);
+
+const REFRESH_INTERVAL_MS = 60_000;
+
+const state = {
+  map: null,
+  nodeLayer: null,
+  eventLayer: null,
+  nodes: [],
+  nodeById: new Map(),
+  live: null,
+  refreshTimer: null,
+};
+
+const elements = {
+  status: document.querySelector("#live-status"),
+  eventCount: document.querySelector("#event-count"),
+  tracerouteCount: document.querySelector(
+    "#traceroute-count"
+  ),
+  positionedCount: document.querySelector(
+    "#positioned-count"
+  ),
+  liveWindow: document.querySelector("#live-window"),
+  visibleEventCount: document.querySelector(
+    "#visible-event-count"
+  ),
+  eventLimit: document.querySelector("#event-limit"),
+  showReceptions: document.querySelector(
+    "#show-receptions"
+  ),
+  showTraceroutes: document.querySelector(
+    "#show-traceroutes"
+  ),
+  refresh: document.querySelector("#refresh-live"),
+  eventList: document.querySelector("#event-list"),
+  loading: document.querySelector("#loading-panel"),
+  error: document.querySelector("#error-panel"),
+};
+
+function formatNumber(value) {
+  return new Intl.NumberFormat("gl-ES").format(value);
+}
+
+function eventDate(event) {
+  const microseconds = Number(event.imported_at_us);
+
+  if (!Number.isFinite(microseconds)) {
+    return null;
+  }
+
+  return new Date(microseconds / 1000);
+}
+
+function formatEventTime(event) {
+  const date = eventDate(event);
+
+  if (!date || Number.isNaN(date.getTime())) {
+    return "Hora descoñecida";
+  }
+
+  return new Intl.DateTimeFormat(
+    "gl-ES",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }
+  ).format(date);
+}
+
+function formatWindowDate(date) {
+  if (!date || Number.isNaN(date.getTime())) {
+    return "Hora descoñecida";
+  }
+
+  return new Intl.DateTimeFormat(
+    "gl-ES",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }
+  ).format(date);
+}
+
+function liveEventWindow(events) {
+  const dates = events
+    .map(eventDate)
+    .filter(
+      (date) => (
+        date
+        && !Number.isNaN(date.getTime())
+      )
+    )
+    .sort(
+      (left, right) => left.getTime() - right.getTime()
+    );
+
+  if (dates.length === 0) {
+    return "Sen hora dispoñible";
+  }
+
+  if (dates.length === 1) {
+    return formatWindowDate(dates[0]);
+  }
+
+  return [
+    formatWindowDate(dates[0]),
+    "–",
+    formatWindowDate(dates[dates.length - 1]),
+  ].join(" ");
+}
+
+function updateVisibleEventSummary() {
+  const visible = visibleEvents().length;
+  const total = state.live?.events?.length || 0;
+
+  elements.visibleEventCount.textContent = (
+    `${formatNumber(visible)} de ${formatNumber(total)}`
+  );
+}
+
+function nodeNameById(nodeId, fallback = null) {
+  const node = state.nodeById.get(nodeId);
+
+  if (node) {
+    return (
+      node.long_name
+      || node.short_name
+      || node.id
+    );
+  }
+
+  return fallback || nodeId;
+}
+
+function eventOriginName(event) {
+  return (
+    event.long_name
+    || nodeNameById(event.from_id)
+  );
+}
+
+function eventDestinationName(event) {
+  if (event.to_id === "meshtastic:!ffffffff") {
+    return "Broadcast";
+  }
+
+  return (
+    event.to_long_name
+    || nodeNameById(event.to_id)
+  );
+}
+
+async function fetchJson(url) {
+  const response = await fetch(
+    new URL(url, window.location.href),
+    {
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `${url}: resposta HTTP ${response.status}`
+    );
+  }
+
+  return response.json();
+}
+
+function validateManifest(manifest) {
+  if (
+    !manifest
+    || manifest.schema !== PUBLIC_MANIFEST_SCHEMA
+    || typeof manifest.generation !== "string"
+    || !manifest.generation
+    || !manifest.documents
+  ) {
+    throw new Error(
+      "manifest.json non usa o contrato esperado."
+    );
+  }
+
+  const nodesPath = (
+    `generations/${manifest.generation}/nodes.json`
+  );
+
+  if (
+    manifest.documents["nodes.json"]
+    !== nodesPath
+  ) {
+    throw new Error(
+      "manifest.json non referencia nodes.json correctamente."
+    );
+  }
+}
+
+function validateNodes(document) {
+  if (
+    !document
+    || document.schema !== PUBLIC_DATA_SCHEMA
+    || !Array.isArray(document.nodes)
+  ) {
+    throw new Error(
+      "nodes.json non usa o contrato esperado."
+    );
+  }
+}
+
+function validateLive(document) {
+  if (
+    !document
+    || document.schema !== PUBLIC_LIVE_SCHEMA
+    || !Array.isArray(document.events)
+    || !document.sources
+  ) {
+    throw new Error(
+      "live.json non usa o contrato esperado."
+    );
+  }
+}
+
+function createMap() {
+  state.map = L.map("live-map", {
+    preferCanvas: true,
+    minZoom: 5,
+    maxZoom: 18,
+  });
+
+  state.map.attributionControl.setPrefix(false);
+
+  state.map.createPane("live-routes");
+  state.map.getPane("live-routes").style.zIndex = "390";
+
+  state.map.createPane("live-nodes");
+  state.map.getPane("live-nodes").style.zIndex = "430";
+
+  L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/"
+      + "light_nolabels/{z}/{x}/{y}.png",
+    {
+      maxZoom: 20,
+      subdomains: "abcd",
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">'
+        + "OpenStreetMap</a> contributors "
+        + '&copy; <a href="https://carto.com/attributions">'
+        + "CARTO</a>",
+    }
+  ).addTo(state.map);
+
+  state.eventLayer = L.layerGroup().addTo(state.map);
+  state.nodeLayer = L.layerGroup().addTo(state.map);
+}
+
+function positionedNode(node) {
+  return (
+    node.network === "meshtastic"
+    && Number.isFinite(Number(node.latitude))
+    && Number.isFinite(Number(node.longitude))
+  );
+}
+
+function nodePoint(nodeId) {
+  const node = state.nodeById.get(nodeId);
+
+  if (!node || !positionedNode(node)) {
+    return null;
+  }
+
+  return [
+    Number(node.latitude),
+    Number(node.longitude),
+  ];
+}
+
+function renderNodes() {
+  state.nodeLayer.clearLayers();
+
+  for (const node of state.nodes) {
+    if (!positionedNode(node)) {
+      continue;
+    }
+
+    const marker = L.circleMarker(
+      [
+        Number(node.latitude),
+        Number(node.longitude),
+      ],
+      {
+        pane: "live-nodes",
+        radius: 4,
+        color: "#175632",
+        weight: 1.3,
+        opacity: 0.72,
+        fillColor: "#267a4d",
+        fillOpacity: 0.55,
+      }
+    );
+
+    const name = (
+      node.long_name
+      || node.short_name
+      || node.id
+    );
+
+    marker.bindTooltip(
+      `<div class="live-node-tooltip">`
+      + `<strong>${escapeHtml(name)}</strong>`
+      + `<span>${escapeHtml(node.id)}</span>`
+      + `</div>`,
+      {
+        direction: "top",
+      }
+    );
+
+    marker.addTo(state.nodeLayer);
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function eventTooltip(event, label) {
+  return [
+    `<strong>${escapeHtml(label)}</strong>`,
+    `${escapeHtml(eventOriginName(event))}`,
+    " → ",
+    `${escapeHtml(eventDestinationName(event))}`,
+    "<br>",
+    `${escapeHtml(formatEventTime(event))}`,
+    ` · portnum ${escapeHtml(event.portnum)}`,
+  ].join("");
+}
+
+function traceroutePaths(event) {
+  const traceroute = event.traceroute;
+
+  if (!traceroute) {
+    return [];
+  }
+
+  return [
+    {
+      label: "RouteDiscovery ida",
+      nodeIds: traceroute.towards || [],
+    },
+    {
+      label: "RouteDiscovery volta",
+      nodeIds: traceroute.back || [],
+    },
+  ];
+}
+
+function addTraceroute(event) {
+  let rendered = false;
+
+  for (const route of traceroutePaths(event)) {
+    const points = route.nodeIds
+      .map(nodePoint)
+      .filter(Boolean);
+
+    if (points.length < 2) {
+      continue;
+    }
+
+    L.polyline(
+      points,
+      {
+        pane: "live-routes",
+        color: "#5f3dc4",
+        weight: 3,
+        opacity: 0.82,
+      }
+    )
+      .bindTooltip(
+        eventTooltip(event, route.label),
+        {
+          className: "live-event-tooltip",
+          sticky: true,
+        }
+      )
+      .addTo(state.eventLayer);
+
+    rendered = true;
+  }
+
+  return rendered;
+}
+
+function gatewayIds(event) {
+  const ids = new Set();
+
+  for (const stage of event.observed?.stages || []) {
+    for (const gateway of stage.gateways || []) {
+      if (gateway.gateway_id) {
+        ids.add(gateway.gateway_id);
+      }
+    }
+  }
+
+  return [...ids];
+}
+
+function addGatewayObservations(event) {
+  const origin = nodePoint(event.from_id);
+
+  if (!origin) {
+    return false;
+  }
+
+  let rendered = false;
+
+  for (const gatewayId of gatewayIds(event)) {
+    if (gatewayId === event.from_id) {
+      continue;
+    }
+
+    const gateway = nodePoint(gatewayId);
+
+    if (!gateway) {
+      continue;
+    }
+
+    L.polyline(
+      [
+        origin,
+        gateway,
+      ],
+      {
+        pane: "live-routes",
+        color: "#343a40",
+        weight: 1.5,
+        opacity: 0.38,
+        dashArray: "4 7",
+      }
+    )
+      .bindTooltip(
+        eventTooltip(
+          event,
+          "Recepción observada por gateway"
+        ),
+        {
+          className: "live-event-tooltip",
+          sticky: true,
+        }
+      )
+      .addTo(state.eventLayer);
+
+    rendered = true;
+  }
+
+  return rendered;
+}
+
+function visibleEvents() {
+  const limit = Number(elements.eventLimit.value);
+
+  return [...state.live.events]
+    .sort(
+      (left, right) => (
+        Number(right.imported_at_us)
+        - Number(left.imported_at_us)
+      )
+    )
+    .slice(
+      0,
+      Number.isFinite(limit) ? limit : 50
+    );
+}
+
+function renderEvents() {
+  state.eventLayer.clearLayers();
+
+  let positioned = 0;
+
+  for (const event of visibleEvents()) {
+    let rendered = false;
+
+    if (
+      elements.showTraceroutes.checked
+      && event.traceroute
+    ) {
+      rendered = addTraceroute(event) || rendered;
+    }
+
+    if (elements.showReceptions.checked) {
+      rendered = (
+        addGatewayObservations(event)
+        || rendered
+      );
+    }
+
+    if (rendered) {
+      positioned += 1;
+    }
+  }
+
+  elements.positionedCount.textContent = (
+    formatNumber(positioned)
+  );
+}
+
+function renderEventList() {
+  const fragment = document.createDocumentFragment();
+
+  for (const event of visibleEvents()) {
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    const name = document.createElement("span");
+    const metadata = document.createElement("span");
+    const type = document.createElement("span");
+
+    button.type = "button";
+    button.className = "live-event-button";
+
+    name.className = "live-event-name";
+    name.textContent = [
+      eventOriginName(event),
+      "→",
+      eventDestinationName(event),
+    ].join(" ");
+
+    metadata.className = "live-event-meta";
+    metadata.textContent = [
+      formatEventTime(event),
+      `portnum ${event.portnum}`,
+      `${event.observed?.gateway_count || 0} gateway(s)`,
+    ].join(" · ");
+
+    const hasRoute = (
+      event.evidence?.includes("traceroute")
+    );
+
+    type.className = (
+      "live-event-type"
+      + (hasRoute ? " traceroute" : "")
+    );
+
+    type.textContent = (
+      hasRoute
+        ? "RouteDiscovery"
+        : "Recepción observada"
+    );
+
+    button.append(name, metadata, type);
+
+    button.addEventListener(
+      "click",
+      () => focusEvent(event)
+    );
+
+    item.append(button);
+    fragment.append(item);
+  }
+
+  elements.eventList.replaceChildren(fragment);
+}
+
+function eventPoints(event) {
+  const points = [];
+
+  for (const route of traceroutePaths(event)) {
+    for (const nodeId of route.nodeIds) {
+      const point = nodePoint(nodeId);
+
+      if (point) {
+        points.push(point);
+      }
+    }
+  }
+
+  const origin = nodePoint(event.from_id);
+
+  if (origin) {
+    points.push(origin);
+  }
+
+  for (const gatewayId of gatewayIds(event)) {
+    const point = nodePoint(gatewayId);
+
+    if (point) {
+      points.push(point);
+    }
+  }
+
+  return points;
+}
+
+function focusEvent(event) {
+  const points = eventPoints(event);
+
+  if (points.length === 0) {
+    return;
+  }
+
+  if (points.length === 1) {
+    state.map.setView(
+      points[0],
+      Math.max(state.map.getZoom(), 12)
+    );
+    return;
+  }
+
+  state.map.fitBounds(
+    points,
+    {
+      padding: [40, 40],
+      maxZoom: 13,
+    }
+  );
+}
+
+function updateSummary() {
+  const events = state.live.events;
+
+  const traceroutes = events.filter(
+    (event) => (
+      event.evidence?.includes("traceroute")
+    )
+  ).length;
+
+  elements.eventCount.textContent = (
+    formatNumber(events.length)
+  );
+
+  elements.tracerouteCount.textContent = (
+    formatNumber(traceroutes)
+  );
+
+  elements.liveWindow.textContent = (
+    liveEventWindow(events)
+  );
+
+  updateVisibleEventSummary();
+}
+
+function setInitialBounds() {
+  const points = state.nodes
+    .filter(positionedNode)
+    .map(
+      (node) => [
+        Number(node.latitude),
+        Number(node.longitude),
+      ]
+    );
+
+  if (points.length === 0) {
+    state.map.setView([42.8, -8.3], 7);
+    return;
+  }
+
+  state.map.fitBounds(
+    points,
+    {
+      padding: [24, 24],
+      maxZoom: 7,
+    }
+  );
+}
+
+async function loadBaseData() {
+  const manifest = await fetchJson(MANIFEST_URL);
+
+  validateManifest(manifest);
+
+  const manifestUrl = new URL(
+    MANIFEST_URL,
+    window.location.href
+  );
+
+  const nodesUrl = new URL(
+    manifest.documents["nodes.json"],
+    manifestUrl
+  );
+
+  const nodes = await fetchJson(nodesUrl);
+
+  validateNodes(nodes);
+
+  state.nodes = nodes.nodes;
+  state.nodeById = new Map(
+    state.nodes.map(
+      (node) => [node.id, node]
+    )
+  );
+
+  renderNodes();
+  setInitialBounds();
+}
+
+async function refreshLive() {
+  elements.refresh.disabled = true;
+
+  try {
+    const live = await fetchJson(LIVE_URL);
+
+    validateLive(live);
+
+    state.live = live;
+
+    updateSummary();
+    renderEvents();
+    renderEventList();
+
+    elements.status.textContent = (
+      `Actualizado ${new Intl.DateTimeFormat(
+        "gl-ES",
+        {
+          dateStyle: "short",
+          timeStyle: "medium",
+        }
+      ).format(new Date(live.generated_at))}`
+    );
+
+    elements.error.hidden = true;
+  } catch (error) {
+    console.error(error);
+
+    elements.error.textContent = (
+      "Non foi posible actualizar o tráfico en directo. "
+      + String(error.message || error)
+    );
+
+    elements.error.hidden = false;
+    elements.status.textContent = "Erro de actualización";
+  } finally {
+    elements.refresh.disabled = false;
+  }
+}
+
+function bindControls() {
+  elements.eventLimit.addEventListener(
+    "change",
+    () => {
+      renderEvents();
+      renderEventList();
+      updateVisibleEventSummary();
+    }
+  );
+
+  elements.showReceptions.addEventListener(
+    "change",
+    renderEvents
+  );
+
+  elements.showTraceroutes.addEventListener(
+    "change",
+    renderEvents
+  );
+
+  elements.refresh.addEventListener(
+    "click",
+    refreshLive
+  );
+}
+
+async function initialize() {
+  try {
+    createMap();
+    bindControls();
+
+    await loadBaseData();
+    await refreshLive();
+
+    elements.loading.hidden = true;
+
+    state.refreshTimer = window.setInterval(
+      refreshLive,
+      REFRESH_INTERVAL_MS
+    );
+  } catch (error) {
+    console.error(error);
+
+    elements.loading.hidden = true;
+
+    elements.error.textContent = (
+      "Non foi posible iniciar o mapa en directo. "
+      + String(error.message || error)
+    );
+
+    elements.error.hidden = false;
+    elements.status.textContent = "Erro de carga";
+  }
+}
+
+initialize();

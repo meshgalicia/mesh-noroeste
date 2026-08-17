@@ -1,0 +1,108 @@
+"""Probas estruturais da visualización web do tráfico live."""
+
+from __future__ import annotations
+
+from pathlib import Path
+import unittest
+
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+class LiveFrontendTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.html = (
+            ROOT / "frontend/live/index.html"
+        ).read_text(encoding="utf-8")
+
+        cls.javascript = (
+            ROOT / "frontend/live/live.js"
+        ).read_text(encoding="utf-8")
+
+        cls.css = (
+            ROOT / "frontend/live/live.css"
+        ).read_text(encoding="utf-8")
+
+    def test_live_page_has_independent_entrypoint(
+        self,
+    ) -> None:
+        for expected in (
+            "<title>Tráfico en directo · Mesh Noroeste</title>",
+            'id="live-map"',
+            "./live.css?v=20260817-live2",
+            "./live.js?v=20260817-live2",
+            "../",
+        ):
+            self.assertIn(expected, self.html)
+
+    def test_live_page_uses_live_contract(
+        self,
+    ) -> None:
+        for expected in (
+            'const LIVE_URL = "../data/live.json"',
+            '"mesh-noroeste.live/v1"',
+            "function validateLive(document)",
+            "document.schema !== PUBLIC_LIVE_SCHEMA",
+            "Array.isArray(document.events)",
+        ):
+            self.assertIn(expected, self.javascript)
+
+    def test_live_page_uses_manifest_for_node_positions(
+        self,
+    ) -> None:
+        for expected in (
+            'const MANIFEST_URL = "../data/manifest.json"',
+            '"mesh-noroeste.manifest/v1"',
+            'manifest.documents["nodes.json"]',
+            "state.nodeById = new Map(",
+            "function nodePoint(nodeId)",
+        ):
+            self.assertIn(expected, self.javascript)
+
+    def test_gateway_receptions_are_not_called_direct_links(
+        self,
+    ) -> None:
+        for expected in (
+            "function addGatewayObservations(event)",
+            'dashArray: "4 7"',
+            '"Recepción observada por gateway"',
+            "non demostran unha ligazón radio directa",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript + self.html,
+            )
+
+    def test_route_discovery_has_separate_rendering(
+        self,
+    ) -> None:
+        for expected in (
+            "function traceroutePaths(event)",
+            "traceroute.towards",
+            "traceroute.back",
+            "function addTraceroute(event)",
+            'color: "#5f3dc4"',
+        ):
+            self.assertIn(expected, self.javascript)
+
+    def test_page_refreshes_live_data_periodically(
+        self,
+    ) -> None:
+        for expected in (
+            "const REFRESH_INTERVAL_MS = 60_000",
+            "async function refreshLive()",
+            "window.setInterval(",
+            "REFRESH_INTERVAL_MS",
+        ):
+            self.assertIn(expected, self.javascript)
+
+    def test_mobile_layout_exists(self) -> None:
+        self.assertIn(
+            "@media (max-width: 760px)",
+            self.css,
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
