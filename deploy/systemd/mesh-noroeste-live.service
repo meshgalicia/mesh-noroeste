@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=oneshot
 WorkingDirectory=/srv/mesh-noroeste
 EnvironmentFile=/etc/mesh-noroeste/mesh-noroeste.env
-ExecStart=/srv/mesh-noroeste/.venv/bin/python -m mesh_noroeste.cli collect-ozulo-live
+ExecStart=/srv/mesh-noroeste/.venv/bin/python -m mesh_noroeste.cli collect-ozulo-live --output /srv/mesh-noroeste/frontend/data
 TimeoutStartSec=2min
 UMask=0022
 
