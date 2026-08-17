@@ -34,6 +34,9 @@ from mesh_noroeste.http_client import (
 from mesh_noroeste.malha_http import (
     MALHA_TIMEOUT_SECONDS,
 )
+from mesh_noroeste.live_runner import (
+    run_ozulo_live_once,
+)
 from mesh_noroeste.region import DEFAULT_REGION_NAME
 from mesh_noroeste.storage import ObservationStore
 from mesh_noroeste.exclusions import load_exclusions
@@ -299,6 +302,43 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Tamaño máximo permitido por descarga. "
             f"Por defecto: {DEFAULT_MAX_BYTES} bytes."
+        ),
+    )
+
+    ozulo_live_parser = subparsers.add_parser(
+        "collect-ozulo-live",
+        help=(
+            "Recolle e publica unha iteración incremental "
+            "do tráfico Meshtastic en directo de O Zulo."
+        ),
+    )
+
+    ozulo_live_parser.add_argument(
+        "--database",
+        type=Path,
+        default=None,
+        help=(
+            "Ruta da base SQLite. "
+            "Por defecto: MESH_STATE_DIR/mesh-noroeste.db"
+        ),
+    )
+
+    ozulo_live_parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help=(
+            "Directorio de saída para live.json. "
+            "Por defecto: MESH_DATA_DIR"
+        ),
+    )
+
+    ozulo_live_parser.add_argument(
+        "--generated-at",
+        default=None,
+        help=(
+            "Data de xeración ISO 8601 ou timestamp Unix. "
+            "Por defecto: data UTC actual."
         ),
     )
 
@@ -623,6 +663,55 @@ def _collect_ozulo(
     return 0
 
 
+def _collect_ozulo_live(
+    args: argparse.Namespace,
+    settings: Settings,
+) -> int:
+    database_path = _database_path(
+        settings,
+        args.database,
+    )
+
+    output = (
+        args.output.expanduser().resolve()
+        if args.output is not None
+        else settings.data_dir
+    )
+
+    generated_at = (
+        args.generated_at
+        if args.generated_at is not None
+        else _current_utc_timestamp()
+    )
+
+    store = ObservationStore(database_path)
+
+    result = run_ozulo_live_once(
+        store,
+        output,
+        generated_at=generated_at,
+    )
+
+    response = {
+        "status": "ok",
+        "source": result.source,
+        "database": str(database_path),
+        "previous_cursor": result.previous_cursor,
+        "next_cursor": result.next_cursor,
+        "events": result.events,
+        "possible_gap": result.possible_gap,
+        "bytes_received": result.bytes_received,
+        "output_path": str(result.output_path),
+    }
+
+    _print_response(
+        response,
+        compact=args.compact,
+    )
+
+    return 0
+
+
 def _collect_meshcore(
     args: argparse.Namespace,
     settings: Settings,
@@ -923,6 +1012,9 @@ def main(
 
         if args.command == "collect-ozulo":
             return _collect_ozulo(args, settings)
+
+        if args.command == "collect-ozulo-live":
+            return _collect_ozulo_live(args, settings)
 
         if args.command == "collect-meshcore":
             return _collect_meshcore(args, settings)

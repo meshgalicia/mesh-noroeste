@@ -26,6 +26,7 @@ from mesh_noroeste.http_client import FetchError
 from mesh_noroeste.malha_http import (
     MALHA_TIMEOUT_SECONDS,
 )
+from mesh_noroeste.live_runner import LiveRunResult
 from mesh_noroeste.publication import (
     PUBLIC_DOCUMENT_NAMES,
     PUBLIC_GENERATIONS_DIRECTORY,
@@ -677,6 +678,162 @@ class CommandLineTests(unittest.TestCase):
             self.assertEqual(
                 arguments["edges_url"],
                 OZULO_MAP_EDGES_URL,
+            )
+
+    def test_collect_ozulo_live_reports_success(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            database_path = root / "custom-live.db"
+            output = root / "live-public"
+            generated_at = "2026-08-17T10:00:00Z"
+            standard_output = StringIO()
+
+            live_result = LiveRunResult(
+                source="ozulo_map",
+                previous_cursor=900,
+                next_cursor=1000,
+                events=14,
+                possible_gap=False,
+                bytes_received=13908,
+                output_path=output / "live.json",
+            )
+
+            with patch.dict(
+                os.environ,
+                self.environment(root),
+                clear=True,
+            ):
+                with patch(
+                    "mesh_noroeste.cli.run_ozulo_live_once",
+                    return_value=live_result,
+                ) as mocked_run:
+                    with redirect_stdout(
+                        standard_output
+                    ):
+                        result = main(
+                            [
+                                "collect-ozulo-live",
+                                "--database",
+                                str(database_path),
+                                "--output",
+                                str(output),
+                                "--generated-at",
+                                generated_at,
+                            ]
+                        )
+
+            response = json.loads(
+                standard_output.getvalue()
+            )
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                response,
+                {
+                    "status": "ok",
+                    "source": "ozulo_map",
+                    "database": str(
+                        database_path.resolve()
+                    ),
+                    "previous_cursor": 900,
+                    "next_cursor": 1000,
+                    "events": 14,
+                    "possible_gap": False,
+                    "bytes_received": 13908,
+                    "output_path": str(
+                        output / "live.json"
+                    ),
+                },
+            )
+
+            mocked_run.assert_called_once()
+
+            positional = mocked_run.call_args.args
+            keyword = mocked_run.call_args.kwargs
+
+            self.assertEqual(len(positional), 2)
+            self.assertIsInstance(
+                positional[0],
+                ObservationStore,
+            )
+            self.assertEqual(
+                positional[0].database_path,
+                database_path.resolve(),
+            )
+            self.assertEqual(
+                positional[1],
+                output.resolve(),
+            )
+            self.assertEqual(
+                keyword,
+                {
+                    "generated_at": generated_at,
+                },
+            )
+
+    def test_collect_ozulo_live_uses_default_paths(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+
+            expected_database = (
+                root
+                / "state"
+                / "mesh-noroeste.db"
+            ).resolve()
+
+            expected_output = (
+                root / "data"
+            ).resolve()
+
+            live_result = LiveRunResult(
+                source="ozulo_map",
+                previous_cursor=None,
+                next_cursor=1000,
+                events=1,
+                possible_gap=False,
+                bytes_received=100,
+                output_path=(
+                    expected_output / "live.json"
+                ),
+            )
+
+            with patch.dict(
+                os.environ,
+                self.environment(root),
+                clear=True,
+            ):
+                with patch(
+                    "mesh_noroeste.cli.run_ozulo_live_once",
+                    return_value=live_result,
+                ) as mocked_run:
+                    with redirect_stdout(StringIO()):
+                        result = main(
+                            [
+                                "collect-ozulo-live",
+                                "--generated-at",
+                                "2026-08-17T10:00:00Z",
+                            ]
+                        )
+
+            self.assertEqual(result, 0)
+
+            positional = mocked_run.call_args.args
+
+            self.assertIsInstance(
+                positional[0],
+                ObservationStore,
+            )
+            self.assertEqual(
+                positional[0].database_path,
+                expected_database,
+            )
+            self.assertEqual(
+                positional[1],
+                expected_output,
             )
 
     def test_collect_meshcore_hub_reports_success(
