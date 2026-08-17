@@ -271,6 +271,45 @@ class LiveFrontendTests(unittest.TestCase):
             )
 
 
+    def test_mobile_tabs_remain_available_with_sheet_open(
+        self,
+    ) -> None:
+        for expected in (
+            'liveMap: document.querySelector("#live-map")',
+            "elements.liveMap.inert = true",
+            "elements.liveMap.inert = false",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+        self.assertNotIn(
+            "elements.mapRegion.inert = true",
+            self.javascript,
+        )
+
+        self.assertNotIn(
+            '"aria-modal",\n      "true"',
+            self.javascript,
+        )
+
+    def test_node_search_selection_can_be_cleared(
+        self,
+    ) -> None:
+        for expected in (
+            "function clearNodeSelection({",
+            "state.selectedNodeId = null",
+            "state.nodeSearchSelectionLayer?.clearLayers()",
+            "elements.nodeSearch.value = \"\"",
+            "clearSearch: true",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+
     def test_mobile_layout_exists(self) -> None:
         self.assertIn(
             "@media (max-width: 760px)",

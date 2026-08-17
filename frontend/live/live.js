@@ -85,6 +85,7 @@ const elements = {
   app: document.querySelector(".live-app"),
   sidebar: document.querySelector("#live-sidebar"),
   mapRegion: document.querySelector(".live-map-region"),
+  liveMap: document.querySelector("#live-map"),
   mobileBackdrop: document.querySelector(
     "#live-mobile-backdrop"
   ),
@@ -158,23 +159,18 @@ function syncLiveMobilePanel() {
       "dialog"
     );
     elements.sidebar.setAttribute(
-      "aria-modal",
-      "true"
-    );
-    elements.sidebar.setAttribute(
       "aria-labelledby",
       "live-mobile-sheet-title"
     );
 
-    elements.mapRegion.inert = true;
+    elements.liveMap.inert = true;
   } else {
     elements.sidebar.removeAttribute("role");
-    elements.sidebar.removeAttribute("aria-modal");
     elements.sidebar.removeAttribute(
       "aria-labelledby"
     );
 
-    elements.mapRegion.inert = false;
+    elements.liveMap.inert = false;
   }
 }
 
@@ -405,6 +401,22 @@ function searchableNodeText(node) {
   );
 }
 
+function clearNodeSelection({
+  clearSearch = false,
+} = {}) {
+  state.selectedNodeId = null;
+  state.nodeSearchSelectionLayer?.clearLayers();
+
+  if (!clearSearch) {
+    return;
+  }
+
+  elements.nodeSearch.value = "";
+  elements.nodeSearchResults.replaceChildren();
+  elements.nodeSearchResults.hidden = true;
+  elements.nodeSearchStatus.textContent = "";
+}
+
 function focusNode(node) {
   const point = nodePoint(node.id);
 
@@ -431,6 +443,8 @@ function renderNodeSearchResults() {
   );
 
   if (!query) {
+    clearNodeSelection();
+
     elements.nodeSearchResults.replaceChildren();
     elements.nodeSearchResults.hidden = true;
     elements.nodeSearchStatus.textContent = "";
@@ -1076,6 +1090,10 @@ function initializeRouteMapSelection() {
   state.map.on(
     "click",
     (mapEvent) => {
+      clearNodeSelection({
+        clearSearch: true,
+      });
+
       if (!elements.showTraceroutes.checked) {
         return;
       }
@@ -1366,6 +1384,10 @@ function syncSelectedEventAnimation() {
 }
 
 function selectEvent(event) {
+  clearNodeSelection({
+    clearSearch: true,
+  });
+
   const alreadySelected = (
     state.selectedEventId === event.id
   );
