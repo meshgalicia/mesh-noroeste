@@ -8,6 +8,8 @@ from typing import Any, Callable, Mapping
 
 from mesh_noroeste.live_pipeline import (
     build_live_document_from_ozulo_batch,
+    merge_live_documents,
+    read_live_document,
     write_live_document,
 )
 from mesh_noroeste.ozulo_live_poll import (
@@ -81,6 +83,15 @@ def run_ozulo_live_once(
     document = document_builder(
         batch,
         generated_at=generated_at,
+    )
+
+    previous_document = read_live_document(
+        output
+    )
+
+    document = merge_live_documents(
+        previous_document,
+        document,
     )
 
     output_path = writer(

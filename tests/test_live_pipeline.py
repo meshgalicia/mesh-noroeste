@@ -13,7 +13,10 @@ from mesh_noroeste.domain import (
     MeshtasticLiveReception,
 )
 from mesh_noroeste.live_pipeline import (
+    LIVE_RETENTION_SECONDS,
     build_live_document_from_ozulo_batch,
+    merge_live_documents,
+    read_live_document,
     write_live_document,
 )
 from mesh_noroeste.ozulo_live_poll import (
@@ -192,6 +195,222 @@ class LivePipelineTests(unittest.TestCase):
             ]["next_cursor"],
             1000,
         )
+
+    def test_live_documents_accumulate_within_retention(
+        self,
+    ) -> None:
+        previous = {
+            "schema": "mesh-noroeste.live/v1",
+            "generated_at": "2026-08-16T20:29:00Z",
+            "sources": {},
+            "events": [
+                {
+                    "id": "event-1",
+                    "imported_at_us": 1786912140000000,
+                    "packet_id": 1,
+                    "from_id": "meshtastic:!1",
+                },
+            ],
+        }
+
+        current = {
+            "schema": "mesh-noroeste.live/v1",
+            "generated_at": "2026-08-16T20:30:00Z",
+            "sources": {
+                "ozulo_map": {
+                    "previous_cursor": 1,
+                    "next_cursor": 2,
+                    "possible_gap": False,
+                },
+            },
+            "events": [
+                {
+                    "id": "event-2",
+                    "imported_at_us": 1786912200000000,
+                    "packet_id": 2,
+                    "from_id": "meshtastic:!2",
+                },
+            ],
+        }
+
+        merged = merge_live_documents(
+            previous,
+            current,
+        )
+
+        self.assertEqual(
+            [event["id"] for event in merged["events"]],
+            ["event-1", "event-2"],
+        )
+        self.assertEqual(
+            merged["generated_at"],
+            current["generated_at"],
+        )
+        self.assertEqual(
+            merged["sources"],
+            current["sources"],
+        )
+
+    def test_live_documents_deduplicate_events(
+        self,
+    ) -> None:
+        previous = {
+            "schema": "mesh-noroeste.live/v1",
+            "generated_at": "2026-08-16T20:29:00Z",
+            "sources": {},
+            "events": [
+                {
+                    "id": "same-event",
+                    "imported_at_us": 1786912140000000,
+                    "packet_id": 1,
+                    "from_id": "meshtastic:!1",
+                    "marker": "old",
+                },
+            ],
+        }
+
+        current = {
+            "schema": "mesh-noroeste.live/v1",
+            "generated_at": "2026-08-16T20:30:00Z",
+            "sources": {},
+            "events": [
+                {
+                    "id": "same-event",
+                    "imported_at_us": 1786912140000000,
+                    "packet_id": 1,
+                    "from_id": "meshtastic:!1",
+                    "marker": "new",
+                },
+            ],
+        }
+
+        merged = merge_live_documents(
+            previous,
+            current,
+        )
+
+        self.assertEqual(
+            len(merged["events"]),
+            1,
+        )
+        self.assertEqual(
+            merged["events"][0]["marker"],
+            "new",
+        )
+
+    def test_live_documents_expire_after_one_hour(
+        self,
+    ) -> None:
+        previous = {
+            "schema": "mesh-noroeste.live/v1",
+            "generated_at": "2026-08-16T19:00:00Z",
+            "sources": {},
+            "events": [
+                {
+                    "id": "expired",
+                    # 18:59:59 UTC: un segundo fóra
+                    # da xanela de 60 minutos.
+                    "imported_at_us": 1786906799000000,
+                    "packet_id": 1,
+                    "from_id": "meshtastic:!1",
+                },
+                {
+                    "id": "boundary",
+                    # 19:00:00 UTC: exactamente no límite.
+                    "imported_at_us": 1786906800000000,
+                    "packet_id": 2,
+                    "from_id": "meshtastic:!2",
+                },
+                {
+                    "id": "kept",
+                    # 19:30:00 UTC.
+                    "imported_at_us": 1786908600000000,
+                    "packet_id": 3,
+                    "from_id": "meshtastic:!3",
+                },
+            ],
+        }
+
+        current = {
+            "schema": "mesh-noroeste.live/v1",
+            "generated_at": "2026-08-16T20:00:00Z",
+            "sources": {},
+            "events": [],
+        }
+
+        merged = merge_live_documents(
+            previous,
+            current,
+        )
+
+        self.assertEqual(
+            LIVE_RETENTION_SECONDS,
+            60 * 60,
+        )
+        self.assertEqual(
+            [event["id"] for event in merged["events"]],
+            ["boundary", "kept"],
+        )
+
+    def test_empty_batch_keeps_recent_previous_events(
+        self,
+    ) -> None:
+        previous = {
+            "schema": "mesh-noroeste.live/v1",
+            "generated_at": "2026-08-16T20:29:00Z",
+            "sources": {},
+            "events": [
+                {
+                    "id": "recent",
+                    "imported_at_us": 1786912140000000,
+                    "packet_id": 1,
+                    "from_id": "meshtastic:!1",
+                },
+            ],
+        }
+
+        current = {
+            "schema": "mesh-noroeste.live/v1",
+            "generated_at": "2026-08-16T20:30:00Z",
+            "sources": {},
+            "events": [],
+        }
+
+        merged = merge_live_documents(
+            previous,
+            current,
+        )
+
+        self.assertEqual(
+            [event["id"] for event in merged["events"]],
+            ["recent"],
+        )
+        self.assertEqual(
+            merged["generated_at"],
+            "2026-08-16T20:30:00Z",
+        )
+
+    def test_written_live_document_can_be_read_back(
+        self,
+    ) -> None:
+        document = (
+            build_live_document_from_ozulo_batch(
+                batch(),
+                generated_at=GENERATED_AT,
+            )
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            write_live_document(
+                temporary,
+                document,
+            )
+
+            self.assertEqual(
+                read_live_document(temporary),
+                document,
+            )
+
 
     def test_document_is_written_atomically(
         self,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -23,6 +24,7 @@ from mesh_noroeste.ozulo_live_poll import (
 
 
 LIVE_FILENAME = "live.json"
+LIVE_RETENTION_SECONDS = 60 * 60
 
 
 def build_live_document_from_ozulo_batch(
@@ -56,6 +58,178 @@ def build_live_document_from_ozulo_batch(
             )
         },
     )
+
+
+def _live_document_path(
+    output: Path | str,
+) -> Path:
+    output_path = Path(
+        output
+    ).expanduser().resolve()
+
+    if output_path.exists() and output_path.is_dir():
+        return output_path / LIVE_FILENAME
+
+    if output_path.name == LIVE_FILENAME:
+        return output_path
+
+    if output_path.suffix:
+        return output_path
+
+    return output_path / LIVE_FILENAME
+
+
+def read_live_document(
+    output: Path | str,
+) -> dict[str, Any] | None:
+    """Le o documento live anterior, se existe."""
+
+    path = _live_document_path(output)
+
+    if not path.exists():
+        return None
+
+    document = json.loads(
+        path.read_text(encoding="utf-8")
+    )
+
+    if not isinstance(document, dict):
+        raise ValueError(
+            "O documento live anterior non é un obxecto"
+        )
+
+    if document.get("schema") != LIVE_SCHEMA_ID:
+        raise ValueError(
+            "O documento live anterior non usa o schema esperado"
+        )
+
+    events = document.get("events")
+
+    if not isinstance(events, list):
+        raise ValueError(
+            "O documento live anterior non contén events válidos"
+        )
+
+    return document
+
+
+def _timestamp_to_microseconds(
+    value: str,
+) -> int:
+    if not isinstance(value, str) or not value:
+        raise ValueError(
+            "generated_at debe ser unha data ISO 8601"
+        )
+
+    normalized = value
+
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+
+    moment = datetime.fromisoformat(normalized)
+
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+
+    return int(
+        moment.timestamp() * 1_000_000
+    )
+
+
+def merge_live_documents(
+    previous: Mapping[str, Any] | None,
+    current: Mapping[str, Any],
+    *,
+    retention_seconds: int = LIVE_RETENTION_SECONDS,
+) -> dict[str, Any]:
+    """Fusiona batches live nunha xanela temporal deslizante."""
+
+    if current.get("schema") != LIVE_SCHEMA_ID:
+        raise ValueError(
+            "O documento live actual non usa o schema esperado"
+        )
+
+    if (
+        not isinstance(retention_seconds, int)
+        or retention_seconds <= 0
+    ):
+        raise ValueError(
+            "retention_seconds debe ser un enteiro positivo"
+        )
+
+    generated_at = current.get("generated_at")
+
+    cutoff_us = (
+        _timestamp_to_microseconds(generated_at)
+        - retention_seconds * 1_000_000
+    )
+
+    documents = []
+
+    if previous is not None:
+        if previous.get("schema") != LIVE_SCHEMA_ID:
+            raise ValueError(
+                "O documento live anterior non usa o schema esperado"
+            )
+
+        documents.append(previous)
+
+    documents.append(current)
+
+    events_by_id: dict[str, dict[str, Any]] = {}
+
+    for document in documents:
+        events = document.get("events")
+
+        if not isinstance(events, list):
+            raise ValueError(
+                "O documento live non contén events válidos"
+            )
+
+        for event in events:
+            if not isinstance(event, dict):
+                raise ValueError(
+                    "Un evento live non é un obxecto"
+                )
+
+            event_id = event.get("id")
+            imported_at_us = event.get("imported_at_us")
+
+            if not isinstance(event_id, str) or not event_id:
+                raise ValueError(
+                    "Un evento live non ten id válido"
+                )
+
+            if (
+                not isinstance(imported_at_us, int)
+                or isinstance(imported_at_us, bool)
+            ):
+                raise ValueError(
+                    "Un evento live non ten imported_at_us válido"
+                )
+
+            if imported_at_us < cutoff_us:
+                continue
+
+            # O batch actual, procesado por último, prevalece
+            # se reaparece un mesmo evento.
+            events_by_id[event_id] = dict(event)
+
+    events = sorted(
+        events_by_id.values(),
+        key=lambda event: (
+            event["imported_at_us"],
+            event.get("packet_id", 0),
+            event.get("from_id", ""),
+        ),
+    )
+
+    return {
+        "schema": LIVE_SCHEMA_ID,
+        "generated_at": current["generated_at"],
+        "sources": dict(current.get("sources", {})),
+        "events": events,
+    }
 
 
 def _serialize_live_document(
@@ -115,24 +289,9 @@ def write_live_document(
         document
     )
 
-    output_path = Path(
+    document_path = _live_document_path(
         output
-    ).expanduser().resolve()
-
-    if output_path.exists() and output_path.is_dir():
-        document_path = (
-            output_path
-            / LIVE_FILENAME
-        )
-    elif output_path.name == LIVE_FILENAME:
-        document_path = output_path
-    elif output_path.suffix:
-        document_path = output_path
-    else:
-        document_path = (
-            output_path
-            / LIVE_FILENAME
-        )
+    )
 
     parent = document_path.parent
 
