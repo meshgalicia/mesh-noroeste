@@ -1,0 +1,12 @@
+[Unit]
+Description=Actualiza o tráfico Meshtastic en directo cada minuto
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=1min
+AccuracySec=5s
+Persistent=true
+Unit=mesh-noroeste-live.service
+
+[Install]
+WantedBy=timers.target
