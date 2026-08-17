@@ -757,14 +757,26 @@ function escapeHtml(value) {
 }
 
 function eventTooltip(event, label) {
+  const gatewayCount = (
+    event.observed?.gateway_count || 0
+  );
+
   return [
+    `<div class="live-event-tooltip-content">`,
     `<strong>${escapeHtml(label)}</strong>`,
+    `<span class="live-event-tooltip-route">`,
     `${escapeHtml(eventOriginName(event))}`,
-    " → ",
+    ` → `,
     `${escapeHtml(eventDestinationName(event))}`,
-    "<br>",
+    `</span>`,
+    `<span class="live-event-tooltip-meta">`,
     `${escapeHtml(formatEventTime(event))}`,
     ` · portnum ${escapeHtml(event.portnum)}`,
+    `</span>`,
+    `<span class="live-event-tooltip-meta">`,
+    `${escapeHtml(gatewayCount)} gateway(s) observador(es)`,
+    `</span>`,
+    `</div>`,
   ].join("");
 }
 
@@ -777,11 +789,13 @@ function traceroutePaths(event) {
 
   return [
     {
-      label: "RouteDiscovery ida",
+      key: "towards",
+      label: "RouteDiscovery · ida",
       nodeIds: traceroute.towards || [],
     },
     {
-      label: "RouteDiscovery volta",
+      key: "back",
+      label: "RouteDiscovery · volta",
       nodeIds: traceroute.back || [],
     },
   ];
@@ -805,27 +819,38 @@ function addTraceroute(
       continue;
     }
 
+    const routeColor = (
+      route.key === "back"
+        ? "#0b7285"
+        : "#5f3dc4"
+    );
+
     L.polyline(
       points,
       {
         pane: "live-routes",
         color: selected
           ? "#a61e4d"
-          : "#5f3dc4",
+          : routeColor,
         weight: selected ? 4.5 : 3,
         opacity: (
           dimmed
-            ? 0.12
+            ? 0.1
             : selected
               ? 1
-              : 0.76
+              : 0.82
+        ),
+        dashArray: (
+          route.key === "back"
+            ? "10 5"
+            : null
         ),
       }
     )
       .bindTooltip(
         eventTooltip(event, route.label),
         {
-          className: "live-event-tooltip",
+          className: "live-event-tooltip live-route-tooltip",
           sticky: true,
         }
       )
@@ -886,16 +911,16 @@ function addGatewayObservations(
         pane: "live-routes",
         color: selected
           ? "#a61e4d"
-          : "#343a40",
-        weight: selected ? 2.8 : 1.5,
+          : "#495057",
+        weight: selected ? 2.8 : 1.4,
         opacity: (
           dimmed
-            ? 0.08
+            ? 0.05
             : selected
-              ? 0.9
-              : 0.34
+              ? 0.92
+              : 0.28
         ),
-        dashArray: selected ? "5 5" : "4 7",
+        dashArray: selected ? "5 5" : "2 7",
       }
     )
       .bindTooltip(
@@ -904,7 +929,7 @@ function addGatewayObservations(
           "Recepción observada por gateway"
         ),
         {
-          className: "live-event-tooltip",
+          className: "live-event-tooltip live-reception-tooltip",
           sticky: true,
         }
       )

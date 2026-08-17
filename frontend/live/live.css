@@ -698,3 +698,57 @@ input:focus-visible {
   font-weight: 800;
   line-height: 1.15;
 }
+
+
+/* Semántica visual do tráfico live. */
+
+.live-event-tooltip-content {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 12rem;
+}
+
+.live-event-tooltip-content > strong {
+  font-size: 0.86rem;
+}
+
+.live-event-tooltip-route {
+  display: block;
+  margin-top: 0.1rem;
+  font-weight: 750;
+}
+
+.live-event-tooltip-meta {
+  display: block;
+  color: #5c6870;
+  font-size: 0.76rem;
+}
+
+.leaflet-tooltip.live-route-tooltip {
+  border-color: #8675c9;
+}
+
+.leaflet-tooltip.live-reception-tooltip {
+  border-color: #adb5bd;
+  background: rgb(255 255 255 / 0.96);
+}
+
+.live-event-button.selected {
+  border-color: var(--traceroute-selected);
+  background: #fff5f8;
+  box-shadow:
+    inset 4px 0 0 var(--traceroute-selected);
+}
+
+.live-event-button.selected
+.live-event-name {
+  color: #701433;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-sidebar,
+  .live-mobile-tab,
+  .live-event-button {
+    transition: none !important;
+  }
+}
