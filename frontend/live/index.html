@@ -32,7 +32,7 @@
 
   <link
     rel="stylesheet"
-    href="./live.css?v=20260817-live8"
+    href="./live.css?v=20260817-live15"
   >
 
   <script
@@ -43,7 +43,7 @@
   ></script>
 
   <script
-    src="./live.js?v=20260817-live8"
+    src="./live.js?v=20260817-live15"
     defer
   ></script>
 </head>
@@ -180,6 +180,16 @@
             <option value="all" selected>
               Todos os gateways
             </option>
+          </select>
+        </label>
+
+        <label class="live-control">
+          <span>Tipo de evento</span>
+
+          <select id="event-type">
+            <option value="all" selected>Todos</option>
+            <option value="traceroute">RouteDiscovery</option>
+            <option value="reception">Recepcións observadas</option>
           </select>
         </label>
 

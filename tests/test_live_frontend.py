@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260817-live8",
-            "./live.js?v=20260817-live8",
+            "./live.css?v=20260817-live15",
+            "./live.js?v=20260817-live15",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -201,6 +201,73 @@ class LiveFrontendTests(unittest.TestCase):
             self.assertIn(
                 expected,
                 self.html + self.javascript,
+            )
+
+
+    def test_live_event_type_filter_exists(self) -> None:
+        for expected in (
+            'id="event-type"',
+            '<option value="traceroute">RouteDiscovery</option>',
+            '<option value="reception">Recepcións observadas</option>',
+            'eventType: document.querySelector("#event-type")',
+            "function eventMatchesType(event)",
+            "function filteredEventsByType()",
+            'type === "traceroute"',
+            'type === "reception"',
+            "const events = filteredEventsByType();",
+            "elements.eventType.addEventListener(",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript,
+            )
+
+
+    def test_traceroute_can_be_selected_from_map(self) -> None:
+        for expected in (
+            "function pointToSegmentDistance(",
+            "function eventDistanceFromMapPoint(",
+            "function nearestTracerouteEvent(",
+            "function initializeRouteMapSelection()",
+            'state.map.on(',
+            '"click"',
+            "mapEvent.containerPoint",
+            "isLiveMobileLayout()",
+            "? 26",
+            ": 16",
+            "selectEvent(event);",
+            "initializeRouteMapSelection();",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+
+    def test_selected_route_can_be_animated(self) -> None:
+        for expected in (
+            "eventAnimationLayer: null",
+            "eventAnimationFrame: null",
+            "eventAnimationToken: 0",
+            'state.map.createPane("live-animation")',
+            "function prefersReducedMotion()",
+            "function cancelSelectedEventAnimation()",
+            "function selectedEventAnimationSegments(event)",
+            "function animationPointAtDistance(",
+            "function animateSelectedEvent(event)",
+            "function syncSelectedEventAnimation()",
+            "window.requestAnimationFrame(frame)",
+            "window.cancelAnimationFrame(",
+            "const pauseDuration = 900",
+            "const cycleDuration = (",
+            "cycleElapsed >= movementDuration",
+            'state.selectedEventId !== event.id',
+            "!elements.showTraceroutes.checked",
+            '"(prefers-reduced-motion: reduce)"',
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
             )
 
 

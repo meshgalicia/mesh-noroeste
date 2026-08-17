@@ -39,6 +39,9 @@ const state = {
   selectedNodeId: null,
   nodeSearchSelectionLayer: null,
   gatewaySelectionLayer: null,
+  eventAnimationLayer: null,
+  eventAnimationFrame: null,
+  eventAnimationToken: 0,
   mobilePanel: null,
   lastMobileTrigger: null,
 };
@@ -59,6 +62,7 @@ const elements = {
   eventGateway: document.querySelector(
     "#event-gateway"
   ),
+  eventType: document.querySelector("#event-type"),
   eventAge: document.querySelector("#event-age"),
   eventLimit: document.querySelector("#event-limit"),
   showReceptions: document.querySelector(
@@ -612,6 +616,14 @@ function createMap() {
     "live-selection"
   ).style.pointerEvents = "none";
 
+  state.map.createPane("live-animation");
+  state.map.getPane(
+    "live-animation"
+  ).style.zIndex = "480";
+  state.map.getPane(
+    "live-animation"
+  ).style.pointerEvents = "none";
+
   L.tileLayer(
     "https://{s}.basemaps.cartocdn.com/"
       + "light_nolabels/{z}/{x}/{y}.png",
@@ -634,6 +646,10 @@ function createMap() {
   );
 
   state.gatewaySelectionLayer = (
+    L.layerGroup().addTo(state.map)
+  );
+
+  state.eventAnimationLayer = (
     L.layerGroup().addTo(state.map)
   );
 }
@@ -862,16 +878,9 @@ function addTraceroute(
             ? "8 5"
             : null
         ),
+        interactive: false,
       }
-    )
-      .bindTooltip(
-        eventTooltip(event, route.label),
-        {
-          className: "live-event-tooltip live-route-tooltip",
-          sticky: true,
-        }
-      )
-      .addTo(state.eventLayer);
+    ).addTo(state.eventLayer);
 
     rendered = true;
   }
@@ -958,6 +967,132 @@ function addGatewayObservations(
   return rendered;
 }
 
+function pointToSegmentDistance(
+  point,
+  start,
+  end
+) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+
+  if (dx === 0 && dy === 0) {
+    return point.distanceTo(start);
+  }
+
+  const lengthSquared = (
+    dx * dx + dy * dy
+  );
+
+  const projection = (
+    (
+      (point.x - start.x) * dx
+      + (point.y - start.y) * dy
+    )
+    / lengthSquared
+  );
+
+  const ratio = Math.max(
+    0,
+    Math.min(1, projection)
+  );
+
+  const closest = L.point(
+    start.x + ratio * dx,
+    start.y + ratio * dy
+  );
+
+  return point.distanceTo(closest);
+}
+
+function eventDistanceFromMapPoint(
+  event,
+  containerPoint
+) {
+  let minimum = Number.POSITIVE_INFINITY;
+
+  for (const route of traceroutePaths(event)) {
+    const points = route.nodeIds
+      .map(nodePoint)
+      .filter(Boolean)
+      .map(
+        (point) => (
+          state.map.latLngToContainerPoint(point)
+        )
+      );
+
+    for (
+      let index = 0;
+      index < points.length - 1;
+      index += 1
+    ) {
+      minimum = Math.min(
+        minimum,
+        pointToSegmentDistance(
+          containerPoint,
+          points[index],
+          points[index + 1]
+        )
+      );
+    }
+  }
+
+  return minimum;
+}
+
+function nearestTracerouteEvent(
+  containerPoint
+) {
+  const threshold = (
+    isLiveMobileLayout()
+      ? 26
+      : 16
+  );
+
+  let nearest = null;
+  let nearestDistance = threshold;
+
+  for (const event of visibleEvents()) {
+    if (!event.traceroute) {
+      continue;
+    }
+
+    const distance = eventDistanceFromMapPoint(
+      event,
+      containerPoint
+    );
+
+    if (distance > nearestDistance) {
+      continue;
+    }
+
+    nearest = event;
+    nearestDistance = distance;
+  }
+
+  return nearest;
+}
+
+function initializeRouteMapSelection() {
+  state.map.on(
+    "click",
+    (mapEvent) => {
+      if (!elements.showTraceroutes.checked) {
+        return;
+      }
+
+      const event = nearestTracerouteEvent(
+        mapEvent.containerPoint
+      );
+
+      if (!event) {
+        return;
+      }
+
+      selectEvent(event);
+    }
+  );
+}
+
 function selectedVisibleEvent() {
   if (!state.selectedEventId) {
     return null;
@@ -1029,6 +1164,207 @@ function renderEventSelection() {
   }
 }
 
+function prefersReducedMotion() {
+  return window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  ).matches;
+}
+
+function cancelSelectedEventAnimation() {
+  state.eventAnimationToken += 1;
+
+  if (state.eventAnimationFrame !== null) {
+    window.cancelAnimationFrame(
+      state.eventAnimationFrame
+    );
+    state.eventAnimationFrame = null;
+  }
+
+  state.eventAnimationLayer?.clearLayers();
+}
+
+function selectedEventAnimationSegments(event) {
+  const segments = [];
+
+  for (const route of traceroutePaths(event)) {
+    const points = route.nodeIds
+      .map(nodePoint)
+      .filter(Boolean);
+
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const from = points[index];
+      const to = points[index + 1];
+
+      const length = state.map.distance(from, to);
+
+      if (
+        !Number.isFinite(length)
+        || length <= 0
+      ) {
+        continue;
+      }
+
+      segments.push({
+        from,
+        to,
+        length,
+      });
+    }
+  }
+
+  return segments;
+}
+
+function animationPointAtDistance(
+  segments,
+  targetDistance
+) {
+  let consumed = 0;
+
+  for (const segment of segments) {
+    const end = consumed + segment.length;
+
+    if (targetDistance <= end) {
+      const ratio = Math.max(
+        0,
+        Math.min(
+          1,
+          (
+            targetDistance - consumed
+          ) / segment.length
+        )
+      );
+
+      return [
+        segment.from[0]
+          + (
+            segment.to[0] - segment.from[0]
+          ) * ratio,
+        segment.from[1]
+          + (
+            segment.to[1] - segment.from[1]
+          ) * ratio,
+      ];
+    }
+
+    consumed = end;
+  }
+
+  return segments.at(-1)?.to || null;
+}
+
+function animateSelectedEvent(event) {
+  cancelSelectedEventAnimation();
+
+  if (
+    !event
+    || !event.traceroute
+    || !elements.showTraceroutes.checked
+    || prefersReducedMotion()
+  ) {
+    return;
+  }
+
+  const segments = selectedEventAnimationSegments(
+    event
+  );
+
+  if (segments.length === 0) {
+    return;
+  }
+
+  const totalDistance = segments.reduce(
+    (total, segment) => total + segment.length,
+    0
+  );
+
+  if (!Number.isFinite(totalDistance) || totalDistance <= 0) {
+    return;
+  }
+
+  const movementDuration = Math.max(
+    2_500,
+    Math.min(
+      9_000,
+      segments.length * 900
+    )
+  );
+
+  const pauseDuration = 900;
+  const cycleDuration = (
+    movementDuration + pauseDuration
+  );
+
+  const marker = L.circleMarker(
+    segments[0].from,
+    {
+      pane: "live-animation",
+      radius: 5.5,
+      color: "#17201d",
+      weight: 2.5,
+      opacity: 1,
+      fillColor: "#ffffff",
+      fillOpacity: 1,
+      interactive: false,
+    }
+  ).addTo(state.eventAnimationLayer);
+
+  const token = state.eventAnimationToken;
+  let startedAt = null;
+
+  const frame = (timestamp) => {
+    if (
+      token !== state.eventAnimationToken
+      || state.selectedEventId !== event.id
+    ) {
+      return;
+    }
+
+    if (startedAt === null) {
+      startedAt = timestamp;
+    }
+
+    const elapsed = timestamp - startedAt;
+    const cycleElapsed = (
+      elapsed % cycleDuration
+    );
+
+    const progress = (
+      cycleElapsed >= movementDuration
+        ? 1
+        : cycleElapsed / movementDuration
+    );
+
+    const point = animationPointAtDistance(
+      segments,
+      totalDistance * progress
+    );
+
+    if (point) {
+      marker.setLatLng(point);
+    }
+
+    state.eventAnimationFrame = (
+      window.requestAnimationFrame(frame)
+    );
+  };
+
+  state.eventAnimationFrame = (
+    window.requestAnimationFrame(frame)
+  );
+}
+
+function syncSelectedEventAnimation() {
+  const event = selectedVisibleEvent();
+
+  if (!event) {
+    cancelSelectedEventAnimation();
+    return;
+  }
+
+  animateSelectedEvent(event);
+}
+
 function selectEvent(event) {
   const alreadySelected = (
     state.selectedEventId === event.id
@@ -1043,9 +1379,33 @@ function selectEvent(event) {
   renderEvents();
   renderEventList();
 
-  if (!alreadySelected) {
-    focusEvent(event);
+  if (alreadySelected) {
+    syncSelectedEventAnimation();
+    return;
   }
+
+  const startAnimation = () => {
+    syncSelectedEventAnimation();
+  };
+
+  state.map.once(
+    "moveend",
+    startAnimation
+  );
+
+  focusEvent(event);
+
+  window.setTimeout(
+    () => {
+      if (
+        state.selectedEventId === event.id
+        && state.eventAnimationLayer.getLayers().length === 0
+      ) {
+        startAnimation();
+      }
+    },
+    700
+  );
 }
 
 
@@ -1123,14 +1483,44 @@ function renderGatewaySelection() {
     .addTo(state.gatewaySelectionLayer);
 }
 
-function filteredEventsByGateway() {
-  const gatewayId = elements.eventGateway.value;
+function eventMatchesType(event) {
+  const type = elements.eventType.value;
 
-  if (gatewayId === "all") {
-    return [...state.live.events];
+  if (type === "all") {
+    return true;
   }
 
+  const hasTraceroute = Boolean(
+    event.evidence?.includes("traceroute")
+    || event.traceroute
+  );
+
+  if (type === "traceroute") {
+    return hasTraceroute;
+  }
+
+  if (type === "reception") {
+    return !hasTraceroute;
+  }
+
+  return true;
+}
+
+function filteredEventsByType() {
   return state.live.events.filter(
+    eventMatchesType
+  );
+}
+
+function filteredEventsByGateway() {
+  const gatewayId = elements.eventGateway.value;
+  const events = filteredEventsByType();
+
+  if (gatewayId === "all") {
+    return events;
+  }
+
+  return events.filter(
     (event) => eventHasGateway(event, gatewayId)
   );
 }
@@ -1568,6 +1958,7 @@ async function refreshLive() {
     updateSummary();
     renderEvents();
     renderEventList();
+    syncSelectedEventAnimation();
 
     elements.status.textContent = (
       `Actualizado ${new Intl.DateTimeFormat(
@@ -1614,7 +2005,13 @@ function bindControls() {
     renderEvents();
     renderEventList();
     updateVisibleEventSummary();
+    syncSelectedEventAnimation();
   };
+
+  elements.eventType.addEventListener(
+    "change",
+    refreshEventFilters
+  );
 
   elements.eventGateway.addEventListener(
     "change",
@@ -1647,7 +2044,10 @@ function bindControls() {
 
   elements.showTraceroutes.addEventListener(
     "change",
-    renderEvents
+    () => {
+      renderEvents();
+      syncSelectedEventAnimation();
+    }
   );
 
   elements.refresh.addEventListener(
@@ -1661,6 +2061,7 @@ async function initialize() {
     createMap();
     bindControls();
     initializeLiveMobileNavigation();
+    initializeRouteMapSelection();
 
     await loadBaseData();
     await refreshLive();
