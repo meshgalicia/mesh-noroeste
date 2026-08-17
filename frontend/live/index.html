@@ -32,7 +32,7 @@
 
   <link
     rel="stylesheet"
-    href="./live.css?v=20260817-live6"
+    href="./live.css?v=20260817-live7"
   >
 
   <script
@@ -43,7 +43,7 @@
   ></script>
 
   <script
-    src="./live.js?v=20260817-live6"
+    src="./live.js?v=20260817-live7"
     defer
   ></script>
 </head>
@@ -173,10 +173,6 @@
         data-mobile-panel="display"
         aria-labelledby="live-display-title"
       >
-        <h2 id="live-display-title">
-          Visualización
-        </h2>
-
         <label class="live-control">
           <span>Eventos visibles</span>
 
@@ -206,6 +202,57 @@
           >
           <span>RouteDiscovery</span>
         </label>
+
+        <div
+          class="live-line-legend"
+          aria-label="Lenda das liñas do mapa"
+        >
+          <div class="live-line-legend-group">
+            <strong>RouteDiscovery</strong>
+
+            <div class="live-line-legend-options">
+              <div class="live-line-legend-item">
+                <span
+                  class="live-line-sample live-line-sample-towards"
+                  aria-hidden="true"
+                ></span>
+                <span>Ida</span>
+              </div>
+
+              <div class="live-line-legend-item">
+                <span
+                  class="live-line-sample live-line-sample-back"
+                  aria-hidden="true"
+                ></span>
+                <span>Volta</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="live-line-legend-group">
+            <strong>Recepción observada</strong>
+
+            <div class="live-line-legend-item">
+              <span
+                class="live-line-sample live-line-sample-reception"
+                aria-hidden="true"
+              ></span>
+              <span>Recepción</span>
+            </div>
+          </div>
+
+          <div class="live-line-legend-group">
+            <strong>Selección</strong>
+
+            <div class="live-line-legend-item">
+              <span
+                class="live-line-sample live-line-sample-selected"
+                aria-hidden="true"
+              ></span>
+              <span>Seleccionado</span>
+            </div>
+          </div>
+        </div>
 
         <button
           id="refresh-live"

@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260817-live6",
-            "./live.js?v=20260817-live6",
+            "./live.css?v=20260817-live7",
+            "./live.js?v=20260817-live7",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -65,7 +65,7 @@ class LiveFrontendTests(unittest.TestCase):
     ) -> None:
         for expected in (
             "function addGatewayObservations(",
-            'selected ? "5 5" : "2 7"',
+            'selected ? "5 5" : "4 6"',
             '"Recepción observada por gateway"',
             "non demostran unha ligazón radio directa",
         ):

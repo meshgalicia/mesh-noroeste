@@ -821,7 +821,7 @@ function addTraceroute(
 
     const routeColor = (
       route.key === "back"
-        ? "#0b7285"
+        ? "#087f8c"
         : "#5f3dc4"
     );
 
@@ -832,17 +832,25 @@ function addTraceroute(
         color: selected
           ? "#a61e4d"
           : routeColor,
-        weight: selected ? 4.5 : 3,
+        weight: (
+          selected
+            ? 4
+            : route.key === "back"
+              ? 2.8
+              : 2.2
+        ),
         opacity: (
           dimmed
             ? 0.1
             : selected
               ? 1
-              : 0.82
+              : route.key === "back"
+                ? 0.92
+                : 0.68
         ),
         dashArray: (
           route.key === "back"
-            ? "10 5"
+            ? "8 5"
             : null
         ),
       }
@@ -912,15 +920,15 @@ function addGatewayObservations(
         color: selected
           ? "#a61e4d"
           : "#495057",
-        weight: selected ? 2.8 : 1.4,
+        weight: selected ? 2.8 : 1.8,
         opacity: (
           dimmed
-            ? 0.05
+            ? 0.1
             : selected
               ? 0.92
-              : 0.28
+              : 0.52
         ),
-        dashArray: selected ? "5 5" : "2 7",
+        dashArray: selected ? "5 5" : "4 6",
       }
     )
       .bindTooltip(
