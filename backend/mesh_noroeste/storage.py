@@ -31,7 +31,7 @@ from mesh_noroeste.normalization import (
 )
 
 
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 
 
 @contextmanager
@@ -862,6 +862,7 @@ class ObservationStore:
                 8,
                 9,
                 10,
+                11,
                 SCHEMA_VERSION,
             }:
                 raise RuntimeError(
@@ -1237,6 +1238,25 @@ class ObservationStore:
                     from_source_id,
                     to_source_id
                 );
+
+                CREATE TABLE IF NOT EXISTS live_source_state (
+                    source TEXT PRIMARY KEY
+                        CHECK (
+                            source IN (
+                                'meshview_es',
+                                'malha_pt',
+                                'ozulo_map',
+                                'meshcore_map',
+                                'meshcore_hub'
+                            )
+                        ),
+
+                    cursor INTEGER NOT NULL
+                        CHECK (cursor >= 0),
+
+                    updated_at TEXT NOT NULL
+                )
+                WITHOUT ROWID;
 
                 CREATE TABLE IF NOT EXISTS source_runs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2775,6 +2795,101 @@ class ObservationStore:
             ),
             "source_runs": deleted_runs,
         }
+
+
+    def load_live_cursor(
+        self,
+        source: str,
+    ) -> int | None:
+        """Carga o último cursor confirmado dunha fonte live."""
+
+        normalized_source = _normalize_source(source)
+
+        self.initialize()
+
+        with _open_connection(
+            self.database_path
+        ) as connection:
+            row = connection.execute(
+                """
+                SELECT cursor
+                FROM live_source_state
+                WHERE source = ?
+                """,
+                (normalized_source,),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return int(row["cursor"])
+
+    def save_live_cursor(
+        self,
+        source: str,
+        cursor: int,
+        *,
+        updated_at: Any,
+    ) -> None:
+        """Confirma un cursor live sen permitir retrocesos."""
+
+        normalized_source = _normalize_source(source)
+
+        if isinstance(cursor, bool) or not isinstance(cursor, int):
+            raise TypeError(
+                "cursor debe ser un enteiro"
+            )
+
+        if cursor < 0:
+            raise ValueError(
+                "cursor non pode ser negativo"
+            )
+
+        normalized_updated_at = normalize_timestamp(
+            updated_at
+        )
+
+        self.initialize()
+
+        with _open_connection(
+            self.database_path
+        ) as connection:
+            previous = connection.execute(
+                """
+                SELECT cursor
+                FROM live_source_state
+                WHERE source = ?
+                """,
+                (normalized_source,),
+            ).fetchone()
+
+            if (
+                previous is not None
+                and cursor < previous["cursor"]
+            ):
+                raise ValueError(
+                    "O cursor live non pode retroceder"
+                )
+
+            connection.execute(
+                """
+                INSERT INTO live_source_state (
+                    source,
+                    cursor,
+                    updated_at
+                )
+                VALUES (?, ?, ?)
+                ON CONFLICT (source)
+                DO UPDATE SET
+                    cursor = excluded.cursor,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    normalized_source,
+                    cursor,
+                    normalized_updated_at,
+                ),
+            )
 
 
     def count(self) -> int:
