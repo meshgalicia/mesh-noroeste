@@ -351,3 +351,29 @@ input:focus-visible {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+.live-event-button.selected {
+  border-color: var(--traceroute-selected);
+  background: #fff5f7;
+  box-shadow:
+    inset 0 0 0 1px var(--traceroute-selected);
+}
+
+.live-event-button.selected .live-event-name {
+  color: #8f2449;
+}
+
+.live-event-button[aria-pressed="true"] {
+  position: relative;
+}
+
+.live-event-button[aria-pressed="true"]::before {
+  content: "";
+  position: absolute;
+  top: 0.55rem;
+  bottom: 0.55rem;
+  left: 0;
+  width: 0.25rem;
+  border-radius: 0 0.25rem 0.25rem 0;
+  background: var(--traceroute-selected);
+}

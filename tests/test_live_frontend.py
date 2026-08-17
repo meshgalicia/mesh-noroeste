@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260817-live2",
-            "./live.js?v=20260817-live2",
+            "./live.css?v=20260817-live3",
+            "./live.js?v=20260817-live3",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -64,8 +64,8 @@ class LiveFrontendTests(unittest.TestCase):
         self,
     ) -> None:
         for expected in (
-            "function addGatewayObservations(event)",
-            'dashArray: "4 7"',
+            "function addGatewayObservations(",
+            'selected ? "5 5" : "4 7"',
             '"Recepción observada por gateway"',
             "non demostran unha ligazón radio directa",
         ):
@@ -81,8 +81,8 @@ class LiveFrontendTests(unittest.TestCase):
             "function traceroutePaths(event)",
             "traceroute.towards",
             "traceroute.back",
-            "function addTraceroute(event)",
-            'color: "#5f3dc4"',
+            "function addTraceroute(",
+            '? "#a61e4d"\n          : "#5f3dc4"',
         ):
             self.assertIn(expected, self.javascript)
 
@@ -96,6 +96,41 @@ class LiveFrontendTests(unittest.TestCase):
             "REFRESH_INTERVAL_MS",
         ):
             self.assertIn(expected, self.javascript)
+
+    def test_events_can_be_selected_and_highlighted(
+        self,
+    ) -> None:
+        for expected in (
+            "selectedEventId: null",
+            "selectionLayer: null",
+            'state.map.createPane("live-selection")',
+            "function selectedVisibleEvent()",
+            "function eventNodeIds(event)",
+            "function renderEventSelection()",
+            "function selectEvent(event)",
+            "state.selectedEventId === event.id",
+            '"aria-pressed"',
+            '"live-event-button"',
+            '" selected"',
+            "selectedEventId !== null",
+            "&& !selected",
+            "renderEventSelection();",
+            'color: selected',
+            '? "#a61e4d"',
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(
+                    expected,
+                    self.javascript,
+                )
+
+        for expected in (
+            ".live-event-button.selected",
+            '.live-event-button[aria-pressed="true"]',
+            "var(--traceroute-selected)",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, self.css)
 
     def test_mobile_layout_exists(self) -> None:
         self.assertIn(

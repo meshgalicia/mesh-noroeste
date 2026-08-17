@@ -25,6 +25,8 @@ const state = {
   nodeById: new Map(),
   live: null,
   refreshTimer: null,
+  selectedEventId: null,
+  selectionLayer: null,
 };
 
 const elements = {
@@ -255,6 +257,12 @@ function createMap() {
   state.map.createPane("live-nodes");
   state.map.getPane("live-nodes").style.zIndex = "430";
 
+  state.map.createPane("live-selection");
+  state.map.getPane("live-selection").style.zIndex = "460";
+  state.map.getPane(
+    "live-selection"
+  ).style.pointerEvents = "none";
+
   L.tileLayer(
     "https://{s}.basemaps.cartocdn.com/"
       + "light_nolabels/{z}/{x}/{y}.png",
@@ -271,6 +279,7 @@ function createMap() {
 
   state.eventLayer = L.layerGroup().addTo(state.map);
   state.nodeLayer = L.layerGroup().addTo(state.map);
+  state.selectionLayer = L.layerGroup().addTo(state.map);
 }
 
 function positionedNode(node) {
@@ -378,7 +387,13 @@ function traceroutePaths(event) {
   ];
 }
 
-function addTraceroute(event) {
+function addTraceroute(
+  event,
+  {
+    selected = false,
+    dimmed = false,
+  } = {}
+) {
   let rendered = false;
 
   for (const route of traceroutePaths(event)) {
@@ -394,9 +409,17 @@ function addTraceroute(event) {
       points,
       {
         pane: "live-routes",
-        color: "#5f3dc4",
-        weight: 3,
-        opacity: 0.82,
+        color: selected
+          ? "#a61e4d"
+          : "#5f3dc4",
+        weight: selected ? 4.5 : 3,
+        opacity: (
+          dimmed
+            ? 0.12
+            : selected
+              ? 1
+              : 0.76
+        ),
       }
     )
       .bindTooltip(
@@ -428,7 +451,13 @@ function gatewayIds(event) {
   return [...ids];
 }
 
-function addGatewayObservations(event) {
+function addGatewayObservations(
+  event,
+  {
+    selected = false,
+    dimmed = false,
+  } = {}
+) {
   const origin = nodePoint(event.from_id);
 
   if (!origin) {
@@ -455,10 +484,18 @@ function addGatewayObservations(event) {
       ],
       {
         pane: "live-routes",
-        color: "#343a40",
-        weight: 1.5,
-        opacity: 0.38,
-        dashArray: "4 7",
+        color: selected
+          ? "#a61e4d"
+          : "#343a40",
+        weight: selected ? 2.8 : 1.5,
+        opacity: (
+          dimmed
+            ? 0.08
+            : selected
+              ? 0.9
+              : 0.34
+        ),
+        dashArray: selected ? "5 5" : "4 7",
       }
     )
       .bindTooltip(
@@ -478,6 +515,97 @@ function addGatewayObservations(event) {
 
   return rendered;
 }
+
+function selectedVisibleEvent() {
+  if (!state.selectedEventId) {
+    return null;
+  }
+
+  return visibleEvents().find(
+    (event) => event.id === state.selectedEventId
+  ) || null;
+}
+
+function eventNodeIds(event) {
+  const ids = new Set();
+
+  if (event.from_id) {
+    ids.add(event.from_id);
+  }
+
+  if (
+    event.to_id
+    && event.to_id !== "meshtastic:!ffffffff"
+  ) {
+    ids.add(event.to_id);
+  }
+
+  for (const gatewayId of gatewayIds(event)) {
+    ids.add(gatewayId);
+  }
+
+  for (const route of traceroutePaths(event)) {
+    for (const nodeId of route.nodeIds) {
+      if (nodeId) {
+        ids.add(nodeId);
+      }
+    }
+  }
+
+  return [...ids];
+}
+
+function renderEventSelection() {
+  state.selectionLayer.clearLayers();
+
+  const event = selectedVisibleEvent();
+
+  if (!event) {
+    return;
+  }
+
+  for (const nodeId of eventNodeIds(event)) {
+    const point = nodePoint(nodeId);
+
+    if (!point) {
+      continue;
+    }
+
+    L.circleMarker(
+      point,
+      {
+        pane: "live-selection",
+        radius: 8,
+        color: "#a61e4d",
+        weight: 3,
+        opacity: 1,
+        fillColor: "#ffffff",
+        fillOpacity: 0.28,
+        interactive: false,
+      }
+    ).addTo(state.selectionLayer);
+  }
+}
+
+function selectEvent(event) {
+  const alreadySelected = (
+    state.selectedEventId === event.id
+  );
+
+  state.selectedEventId = (
+    alreadySelected
+      ? null
+      : event.id
+  );
+
+  renderEvents();
+  renderEventList();
+
+  if (!alreadySelected) {
+    focusEvent(event);
+  }
+}
+
 
 function visibleEvents() {
   const limit = Number(elements.eventLimit.value);
@@ -500,19 +628,46 @@ function renderEvents() {
 
   let positioned = 0;
 
+  const selectedEvent = selectedVisibleEvent();
+  const selectedEventId = selectedEvent?.id || null;
+
   for (const event of visibleEvents()) {
     let rendered = false;
+
+    const selected = (
+      selectedEventId === event.id
+    );
+
+    const dimmed = (
+      selectedEventId !== null
+      && !selected
+    );
 
     if (
       elements.showTraceroutes.checked
       && event.traceroute
     ) {
-      rendered = addTraceroute(event) || rendered;
+      rendered = (
+        addTraceroute(
+          event,
+          {
+            selected,
+            dimmed,
+          }
+        )
+        || rendered
+      );
     }
 
     if (elements.showReceptions.checked) {
       rendered = (
-        addGatewayObservations(event)
+        addGatewayObservations(
+          event,
+          {
+            selected,
+            dimmed,
+          }
+        )
         || rendered
       );
     }
@@ -525,6 +680,8 @@ function renderEvents() {
   elements.positionedCount.textContent = (
     formatNumber(positioned)
   );
+
+  renderEventSelection();
 }
 
 function renderEventList() {
@@ -537,8 +694,19 @@ function renderEventList() {
     const metadata = document.createElement("span");
     const type = document.createElement("span");
 
+    const selected = (
+      state.selectedEventId === event.id
+    );
+
     button.type = "button";
-    button.className = "live-event-button";
+    button.className = (
+      "live-event-button"
+      + (selected ? " selected" : "")
+    );
+    button.setAttribute(
+      "aria-pressed",
+      String(selected)
+    );
 
     name.className = "live-event-name";
     name.textContent = [
@@ -573,7 +741,7 @@ function renderEventList() {
 
     button.addEventListener(
       "click",
-      () => focusEvent(event)
+      () => selectEvent(event)
     );
 
     item.append(button);
@@ -725,6 +893,15 @@ async function refreshLive() {
 
     state.live = live;
 
+    if (
+      state.selectedEventId
+      && !live.events.some(
+        (event) => event.id === state.selectedEventId
+      )
+    ) {
+      state.selectedEventId = null;
+    }
+
     updateSummary();
     renderEvents();
     renderEventList();
@@ -759,6 +936,15 @@ function bindControls() {
   elements.eventLimit.addEventListener(
     "change",
     () => {
+      if (
+        state.selectedEventId
+        && !visibleEvents().some(
+          (event) => event.id === state.selectedEventId
+        )
+      ) {
+        state.selectedEventId = null;
+      }
+
       renderEvents();
       renderEventList();
       updateVisibleEventSummary();
