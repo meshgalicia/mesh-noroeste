@@ -540,6 +540,40 @@ function eventInvolvesNode(
 }
 
 
+function nodeRolesInEvent(
+  event,
+  nodeId
+) {
+  if (!event || !nodeId) {
+    return [];
+  }
+
+  const roles = [];
+
+  if (event.from_id === nodeId) {
+    roles.push("Orixe");
+  }
+
+  if (event.to_id === nodeId) {
+    roles.push("Destino");
+  }
+
+  if (gatewayIds(event).includes(nodeId)) {
+    roles.push("Gateway");
+  }
+
+  const routeContainsNode = traceroutePaths(event).some(
+    (route) => route.nodeIds.includes(nodeId)
+  );
+
+  if (routeContainsNode) {
+    roles.push("Ruta");
+  }
+
+  return roles;
+}
+
+
 function nodeRelatedEvents(nodeId) {
   if (!state.live || !nodeId) {
     return [];
@@ -3335,6 +3369,7 @@ function renderEventList() {
     const name = document.createElement("span");
     const metadata = document.createElement("span");
     const type = document.createElement("span");
+    const roles = document.createElement("span");
 
     const selected = (
       state.selectedEventId === event.id
@@ -3379,7 +3414,33 @@ function renderEventList() {
         : "Paquete observado"
     );
 
+    roles.className = "live-event-node-roles";
+
+    if (state.nodeEventFilterId) {
+      for (
+        const role
+        of nodeRolesInEvent(
+          event,
+          state.nodeEventFilterId
+        )
+      ) {
+        const badge = document.createElement("span");
+
+        badge.className = (
+          "live-event-node-role "
+          + `role-${role.toLocaleLowerCase("gl-ES")}`
+        );
+
+        badge.textContent = role;
+        roles.append(badge);
+      }
+    }
+
     button.append(name, metadata, type);
+
+    if (roles.childElementCount > 0) {
+      button.append(roles);
+    }
 
     button.addEventListener(
       "click",

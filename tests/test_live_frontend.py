@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260818-live18",
-            "./live.js?v=20260818-live18",
+            "./live.css?v=20260818-live19",
+            "./live.js?v=20260818-live19",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -184,6 +184,33 @@ class LiveFrontendTests(unittest.TestCase):
             self.assertIn(
                 expected,
                 self.html + self.javascript + self.css,
+            )
+
+
+
+
+    def test_filtered_node_events_show_node_roles(
+        self,
+    ) -> None:
+        for expected in (
+            "function nodeRolesInEvent(",
+            'roles.push("Orixe")',
+            'roles.push("Destino")',
+            'roles.push("Gateway")',
+            'roles.push("Ruta")',
+            "route.nodeIds.includes(nodeId)",
+            '"live-event-node-roles"',
+            '"live-event-node-role "',
+            "state.nodeEventFilterId",
+            "roles.childElementCount > 0",
+            ".live-event-node-role.role-orixe",
+            ".live-event-node-role.role-destino",
+            ".live-event-node-role.role-gateway",
+            ".live-event-node-role.role-ruta",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript + self.css,
             )
 
 

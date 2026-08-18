@@ -1501,3 +1501,49 @@ input:focus-visible {
     width: 100%;
   }
 }
+
+/* Papel do nodo nos eventos cando se filtra a súa actividade. */
+.live-event-node-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.45rem;
+}
+
+.live-event-node-role {
+  display: inline-flex;
+  min-height: 1.45rem;
+  align-items: center;
+  padding: 0.12rem 0.42rem;
+  border: 1px solid #cfd6da;
+  border-radius: 999px;
+  background: #f7f9fa;
+  color: #43515a;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.live-event-node-role.role-orixe {
+  border-color: #8fbc9d;
+  background: #edf8f0;
+  color: #175632;
+}
+
+.live-event-node-role.role-destino {
+  border-color: #92bdc5;
+  background: #edf7f8;
+  color: #075d68;
+}
+
+.live-event-node-role.role-gateway {
+  border-color: #adb5bd;
+  background: #f1f3f5;
+  color: #343a40;
+}
+
+.live-event-node-role.role-ruta {
+  border-color: #b9ace8;
+  background: #f4f1ff;
+  color: #4c36a5;
+}
