@@ -36,6 +36,7 @@ const state = {
   live: null,
   refreshTimer: null,
   selectedEventId: null,
+  eventCardCollapsed: false,
   selectionLayer: null,
   selectedNodeId: null,
   nodeEventFilterId: null,
@@ -128,6 +129,9 @@ const elements = {
   ),
   selectedEventCard: document.querySelector(
     "#selected-event-card"
+  ),
+  selectedEventCardCollapse: document.querySelector(
+    "#selected-event-card-collapse"
   ),
   selectedEventCardClose: document.querySelector(
     "#selected-event-card-close"
@@ -2099,6 +2103,55 @@ function tracerouteHopSummary(event) {
 }
 
 
+function renderEventCardCollapsedState() {
+  const collapsed = Boolean(
+    state.eventCardCollapsed
+  );
+
+  elements.selectedEventCard.classList.toggle(
+    "is-collapsed",
+    collapsed
+  );
+
+  elements.selectedEventCardCollapse.textContent = (
+    collapsed
+      ? "□"
+      : "−"
+  );
+
+  elements.selectedEventCardCollapse.setAttribute(
+    "aria-pressed",
+    String(collapsed)
+  );
+
+  elements.selectedEventCardCollapse.setAttribute(
+    "aria-label",
+    collapsed
+      ? "Restaurar detalle do evento"
+      : "Minimizar detalle do evento"
+  );
+
+  elements.selectedEventCardCollapse.title = (
+    collapsed
+      ? "Restaurar"
+      : "Minimizar"
+  );
+}
+
+
+function toggleEventCardCollapsed() {
+  if (!selectedEvent()) {
+    return;
+  }
+
+  state.eventCardCollapsed = (
+    !state.eventCardCollapsed
+  );
+
+  renderEventCardCollapsedState();
+}
+
+
 function renderSelectedEventCard() {
   const event = selectedEvent();
 
@@ -2236,6 +2289,7 @@ function renderSelectedEventCard() {
   renderSelectedEventObservations(event);
 
   elements.selectedEventCard.hidden = false;
+  renderEventCardCollapsedState();
 }
 
 
@@ -4083,6 +4137,8 @@ async function refreshLive() {
 }
 
 function clearSelectedEvent() {
+  state.eventCardCollapsed = false;
+
   if (state.playbackActive) {
     stopTraceroutePlayback({
       clearSelection: true,
@@ -4176,6 +4232,11 @@ function bindControls() {
   elements.selectedNodeActivity.addEventListener(
     "click",
     toggleSelectedNodeActivity
+  );
+
+  elements.selectedEventCardCollapse.addEventListener(
+    "click",
+    toggleEventCardCollapsed
   );
 
   elements.selectedEventCardClose.addEventListener(

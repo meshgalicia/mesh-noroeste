@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260818-live26",
-            "./live.js?v=20260818-live26",
+            "./live.css?v=20260818-live27",
+            "./live.js?v=20260818-live27",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -712,6 +712,30 @@ class LiveFrontendTests(unittest.TestCase):
                 expected,
                 self.javascript,
             )
+
+
+
+    def test_selected_event_card_can_be_collapsed(
+        self,
+    ) -> None:
+        for expected in (
+            'id="selected-event-card-collapse"',
+            "eventCardCollapsed: false",
+            "selectedEventCardCollapse:",
+            "function renderEventCardCollapsedState()",
+            "function toggleEventCardCollapsed()",
+            '"is-collapsed"',
+            '"Restaurar detalle do evento"',
+            '"Minimizar detalle do evento"',
+            "state.eventCardCollapsed = false",
+            ".live-selected-event-card-collapse",
+            ".live-selected-event-card.is-collapsed",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript + self.css,
+            )
+
 
 
     def test_selected_event_card_exists(self) -> None:
