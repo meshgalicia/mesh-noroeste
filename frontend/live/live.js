@@ -114,6 +114,12 @@ const elements = {
   selectedEventCardObservations: document.querySelector(
     "#selected-event-card-observations"
   ),
+  selectedEventCardObservationsSummary: document.querySelector(
+    "#selected-event-card-observations-summary"
+  ),
+  selectedEventCardObservationsContent: document.querySelector(
+    "#selected-event-card-observations-content"
+  ),
   refresh: document.querySelector("#refresh-live"),
   eventList: document.querySelector("#event-list"),
   nodeSearch: document.querySelector("#live-node-search"),
@@ -1352,33 +1358,27 @@ function gatewayRadioSummary(gateway) {
 
 
 function observationStageLabel(stage) {
-  const hopsUsed = Number(stage?.hops_used);
   const hopStart = Number(stage?.hop_start);
   const hopLimit = Number(stage?.hop_limit);
 
-  const parts = [];
-
-  if (Number.isFinite(hopsUsed)) {
-    parts.push(
-      `${hopsUsed} `
-      + (hopsUsed === 1 ? "salto consumido" : "saltos consumidos")
-    );
-  }
-
   if (
-    Number.isFinite(hopStart)
-    && Number.isFinite(hopLimit)
+    !Number.isFinite(hopStart)
+    || !Number.isFinite(hopLimit)
   ) {
-    parts.push(`hop ${hopStart} → ${hopLimit}`);
+    return "";
   }
 
-  return parts.join(" · ");
+  return `Hop limit: ${hopStart} → ${hopLimit}`;
 }
 
 
 function renderSelectedEventObservations(event) {
-  const container = (
+  const details = (
     elements.selectedEventCardObservations
+  );
+
+  const container = (
+    elements.selectedEventCardObservationsContent
   );
 
   container.replaceChildren();
@@ -1386,9 +1386,22 @@ function renderSelectedEventObservations(event) {
   const stages = event?.observed?.stages || [];
 
   if (stages.length === 0) {
-    container.hidden = true;
+    details.hidden = true;
+    details.open = false;
     return;
   }
+
+  const gatewayCount = gatewayIds(event).length;
+  const stageCount = stages.length;
+
+  elements.selectedEventCardObservationsSummary.textContent = (
+    "Observacións · "
+    + `${gatewayCount} `
+    + (gatewayCount === 1 ? "gateway" : "gateways")
+    + " · "
+    + `${stageCount} `
+    + (stageCount === 1 ? "etapa" : "etapas")
+  );
 
   const fragment = document.createDocumentFragment();
 
@@ -1430,7 +1443,13 @@ function renderSelectedEventObservations(event) {
   }
 
   container.append(fragment);
-  container.hidden = false;
+
+  /*
+   * Cada novo evento empeza co detalle técnico pechado.
+   * A información principal da ruta segue visible na ficha.
+   */
+  details.open = false;
+  details.hidden = false;
 }
 
 
@@ -1497,7 +1516,8 @@ function renderSelectedEventCard() {
     elements.selectedEventCardTowards.hidden = true;
     elements.selectedEventCardBack.hidden = true;
     elements.selectedEventCardObservations.hidden = true;
-    elements.selectedEventCardObservations.replaceChildren();
+    elements.selectedEventCardObservations.open = false;
+    elements.selectedEventCardObservationsContent.replaceChildren();
     return;
   }
 

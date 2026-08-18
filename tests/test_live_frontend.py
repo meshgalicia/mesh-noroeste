@@ -263,6 +263,30 @@ class LiveFrontendTests(unittest.TestCase):
 
 
 
+
+    def test_selected_event_observations_are_collapsible(
+        self,
+    ) -> None:
+        for expected in (
+            '<details',
+            'id="selected-event-card-observations"',
+            'id="selected-event-card-observations-summary"',
+            'id="selected-event-card-observations-content"',
+            "selectedEventCardObservationsSummary",
+            "selectedEventCardObservationsContent",
+            '"Observacións · "',
+            '"gateway" : "gateways"',
+            '"etapa" : "etapas"',
+            "details.open = false;",
+            ".live-selected-event-card-observations-summary",
+            ".live-selected-event-card-observations-content",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript + self.css,
+            )
+
+
     def test_selected_event_card_shows_observation_metrics(
         self,
     ) -> None:
@@ -274,9 +298,7 @@ class LiveFrontendTests(unittest.TestCase):
             "function observationStageLabel(",
             "function renderSelectedEventObservations(",
             '"RSSI — · SNR —"',
-            '"salto consumido"',
-            '"saltos consumidos"',
-            '`hop ${hopStart} → ${hopLimit}`',
+            '`Hop limit: ${hopStart} → ${hopLimit}`',
             "event.channel ||",
             ".live-selected-event-card-observations",
             ".live-selected-event-gateway-radio",
