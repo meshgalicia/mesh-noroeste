@@ -32,7 +32,7 @@
 
   <link
     rel="stylesheet"
-    href="./live.css?v=20260818-live27"
+    href="./live.css?v=20260818-live28"
   >
 
   <script
@@ -43,7 +43,7 @@
   ></script>
 
   <script
-    src="./live.js?v=20260818-live27"
+    src="./live.js?v=20260818-live28"
     defer
   ></script>
 </head>
@@ -60,6 +60,114 @@
       id="live-sidebar"
       class="live-sidebar"
     >
+
+      <div
+        class="live-desktop-sidebar-controls"
+        aria-label="Controis da barra lateral"
+      >
+        <button
+          id="live-desktop-sidebar-toggle"
+          class="live-desktop-sidebar-toggle"
+          type="button"
+          aria-controls="live-sidebar"
+          aria-expanded="true"
+          aria-label="Contraer barra lateral"
+          title="Contraer barra lateral"
+        >
+          <span aria-hidden="true">‹</span>
+        </button>
+      </div>
+
+      <nav
+        id="live-desktop-rail"
+        class="live-desktop-rail"
+        aria-label="Seccións do mapa en directo"
+      >
+        <button
+          class="live-desktop-rail-button"
+          type="button"
+          data-live-desktop-target="search"
+          aria-label="Buscar nodo"
+          title="Buscar nodo"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle cx="10.5" cy="10.5" r="6.5"></circle>
+            <path d="m15.5 15.5 5 5"></path>
+          </svg>
+        </button>
+
+        <button
+          class="live-desktop-rail-button"
+          type="button"
+          data-live-desktop-target="activity"
+          aria-label="Actividade"
+          title="Actividade"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d="M4 18V9"></path>
+            <path d="M10 18V5"></path>
+            <path d="M16 18v-7"></path>
+            <path d="M22 18V3"></path>
+          </svg>
+        </button>
+
+        <button
+          class="live-desktop-rail-button"
+          type="button"
+          data-live-desktop-target="display"
+          aria-label="Visualización"
+          title="Visualización"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d="M4 6h16"></path>
+            <path d="M7 12h10"></path>
+            <path d="M10 18h4"></path>
+            <circle cx="9" cy="6" r="1.5"></circle>
+            <circle cx="15" cy="12" r="1.5"></circle>
+            <circle cx="12" cy="18" r="1.5"></circle>
+          </svg>
+        </button>
+
+        <button
+          class="live-desktop-rail-button"
+          type="button"
+          data-live-desktop-target="events"
+          aria-label="Eventos"
+          title="Eventos"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d="M6 5h14"></path>
+            <path d="M6 12h14"></path>
+            <path d="M6 19h14"></path>
+            <circle cx="3" cy="5" r="1"></circle>
+            <circle cx="3" cy="12" r="1"></circle>
+            <circle cx="3" cy="19" r="1"></circle>
+          </svg>
+        </button>
+
+        <button
+          class="live-desktop-rail-button live-desktop-rail-help"
+          type="button"
+          data-live-desktop-target="help"
+          aria-label="Axuda"
+          title="Axuda"
+        >
+          <span aria-hidden="true">?</span>
+        </button>
+      </nav>
+
       <header class="live-brand">
         <p class="eyebrow">Mesh Noroeste</p>
         <h1>Tráfico en directo</h1>

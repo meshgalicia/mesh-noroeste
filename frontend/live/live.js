@@ -52,6 +52,7 @@ const state = {
   timelineRange: null,
   mobilePanel: null,
   lastMobileTrigger: null,
+  desktopSidebarCollapsed: false,
 };
 
 const elements = {
@@ -216,7 +217,154 @@ const elements = {
   mobilePanels: Array.from(
     document.querySelectorAll("[data-mobile-panel]")
   ),
+  desktopSidebarToggle: document.querySelector(
+    "#live-desktop-sidebar-toggle"
+  ),
+  desktopRailButtons: Array.from(
+    document.querySelectorAll(
+      ".live-desktop-rail-button"
+    )
+  ),
 };
+
+function isLiveDesktopLayout() {
+  return !isLiveMobileLayout();
+}
+
+
+function renderDesktopSidebar() {
+  const collapsed = (
+    isLiveDesktopLayout()
+    && state.desktopSidebarCollapsed
+  );
+
+  elements.app.classList.toggle(
+    "live-desktop-sidebar-collapsed",
+    collapsed
+  );
+
+  elements.desktopSidebarToggle.setAttribute(
+    "aria-expanded",
+    String(!collapsed)
+  );
+
+  elements.desktopSidebarToggle.setAttribute(
+    "aria-label",
+    collapsed
+      ? "Expandir barra lateral"
+      : "Contraer barra lateral"
+  );
+
+  elements.desktopSidebarToggle.title = (
+    collapsed
+      ? "Expandir barra lateral"
+      : "Contraer barra lateral"
+  );
+
+  elements.desktopSidebarToggle
+    .querySelector("span")
+    .textContent = collapsed ? "›" : "‹";
+
+  window.requestAnimationFrame(() => {
+    state.map?.invalidateSize();
+  });
+}
+
+
+function setDesktopSidebarCollapsed(collapsed) {
+  state.desktopSidebarCollapsed = Boolean(
+    collapsed
+  );
+
+  try {
+    window.localStorage.setItem(
+      "mesh-noroeste-live-sidebar-collapsed",
+      state.desktopSidebarCollapsed
+        ? "1"
+        : "0"
+    );
+  } catch {
+    /* localStorage pode non estar dispoñible. */
+  }
+
+  renderDesktopSidebar();
+}
+
+
+function openDesktopSidebarSection(target) {
+  if (!target) {
+    return;
+  }
+
+  setDesktopSidebarCollapsed(false);
+
+  const section = elements.sidebar.querySelector(
+    `[data-mobile-panel="${target}"]`
+  );
+
+  if (!section) {
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    section.scrollIntoView({
+      block: "start",
+      behavior: (
+        prefersReducedMotion()
+          ? "auto"
+          : "smooth"
+      ),
+    });
+
+    const focusTarget = (
+      target === "search"
+        ? elements.nodeSearch
+        : section.querySelector(
+            "button, select, input, summary, a"
+          )
+    );
+
+    focusTarget?.focus({
+      preventScroll: true,
+    });
+  });
+}
+
+
+function initializeDesktopSidebar() {
+  try {
+    state.desktopSidebarCollapsed = (
+      window.localStorage.getItem(
+        "mesh-noroeste-live-sidebar-collapsed"
+      ) === "1"
+    );
+  } catch {
+    state.desktopSidebarCollapsed = false;
+  }
+
+  elements.desktopSidebarToggle.addEventListener(
+    "click",
+    () => {
+      setDesktopSidebarCollapsed(
+        !state.desktopSidebarCollapsed
+      );
+    }
+  );
+
+  for (const button of elements.desktopRailButtons) {
+    button.addEventListener(
+      "click",
+      () => {
+        openDesktopSidebarSection(
+          button.dataset.liveDesktopTarget
+        );
+      }
+    );
+  }
+
+  renderDesktopSidebar();
+}
+
 
 function isLiveMobileLayout() {
   return window.matchMedia(
@@ -406,6 +554,7 @@ function initializeLiveMobileNavigation() {
       }
 
       syncLiveMobilePanel();
+      renderDesktopSidebar();
       state.map?.invalidateSize();
     }
   );
@@ -4330,6 +4479,7 @@ async function initialize() {
     createMap();
     bindControls();
     initializeLiveMobileNavigation();
+    initializeDesktopSidebar();
     initializeRouteMapSelection();
 
     await loadBaseData();

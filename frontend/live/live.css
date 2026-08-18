@@ -1903,3 +1903,142 @@ input:focus-visible {
     bottom: 5.65rem;
   }
 }
+
+/* Barra lateral contraíble do live en escritorio. */
+.live-desktop-sidebar-controls,
+.live-desktop-rail {
+  display: none;
+}
+
+@media (min-width: 761px) {
+  .live-app {
+    transition:
+      grid-template-columns 180ms ease;
+  }
+
+  .live-desktop-sidebar-controls {
+    position: sticky;
+    z-index: 10;
+    top: 0;
+    display: flex;
+    justify-content: flex-end;
+    height: 0;
+    pointer-events: none;
+  }
+
+  .live-desktop-sidebar-toggle {
+    position: relative;
+    top: 0.65rem;
+    right: 0.65rem;
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 0.55rem;
+    background: rgb(255 255 255 / 0.96);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.13);
+    color: var(--accent-dark);
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  .live-desktop-sidebar-toggle:hover {
+    background: #edf7f8;
+  }
+
+  .live-desktop-rail {
+    display: none;
+  }
+
+  .live-app.live-desktop-sidebar-collapsed {
+    grid-template-columns: 3.75rem 1fr;
+  }
+
+  .live-app.live-desktop-sidebar-collapsed
+    .live-sidebar {
+    overflow: hidden;
+  }
+
+  .live-app.live-desktop-sidebar-collapsed
+    .live-sidebar
+    > :not(
+      .live-desktop-sidebar-controls,
+      .live-desktop-rail
+    ) {
+    display: none !important;
+  }
+
+  .live-app.live-desktop-sidebar-collapsed
+    .live-desktop-sidebar-controls {
+    height: auto;
+  }
+
+  .live-app.live-desktop-sidebar-collapsed
+    .live-desktop-sidebar-toggle {
+    position: absolute;
+    top: 0.65rem;
+    right: 50%;
+    transform: translateX(50%);
+  }
+
+  .live-app.live-desktop-sidebar-collapsed
+    .live-desktop-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    align-items: center;
+    height: 100%;
+    padding:
+      3.55rem
+      0.45rem
+      0.65rem;
+  }
+
+  .live-desktop-rail-button {
+    display: grid;
+    width: 2.7rem;
+    height: 2.7rem;
+    flex: 0 0 auto;
+    place-items: center;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 0.65rem;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .live-desktop-rail-button:hover {
+    border-color: var(--border);
+    background: #edf7f8;
+    color: var(--accent-dark);
+  }
+
+  .live-desktop-rail-button svg {
+    width: 1.35rem;
+    height: 1.35rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .live-desktop-rail-help {
+    margin-top: auto;
+    font-size: 1.1rem;
+    font-weight: 850;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-app {
+    transition: none !important;
+  }
+}
+

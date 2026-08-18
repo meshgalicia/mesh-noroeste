@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260818-live27",
-            "./live.js?v=20260818-live27",
+            "./live.css?v=20260818-live28",
+            "./live.js?v=20260818-live28",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -927,6 +927,35 @@ class LiveFrontendTests(unittest.TestCase):
                 expected,
                 self.javascript + self.css,
             )
+
+
+
+    def test_desktop_sidebar_can_be_collapsed(
+        self,
+    ) -> None:
+        for expected in (
+            'id="live-desktop-sidebar-toggle"',
+            'id="live-desktop-rail"',
+            'data-live-desktop-target="search"',
+            'data-live-desktop-target="activity"',
+            'data-live-desktop-target="display"',
+            'data-live-desktop-target="events"',
+            'data-live-desktop-target="help"',
+            "desktopSidebarCollapsed: false",
+            "function renderDesktopSidebar()",
+            "function setDesktopSidebarCollapsed(",
+            "function openDesktopSidebarSection(",
+            "function initializeDesktopSidebar()",
+            "initializeDesktopSidebar();",
+            "live-desktop-sidebar-collapsed",
+            ".live-desktop-rail-button",
+            "@media (min-width: 761px)",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript + self.css,
+            )
+
 
 
     def test_mobile_layout_exists(self) -> None:
