@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260818-live21",
-            "./live.js?v=20260818-live21",
+            "./live.css?v=20260818-live22",
+            "./live.js?v=20260818-live22",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -148,6 +148,27 @@ class LiveFrontendTests(unittest.TestCase):
                 expected,
                 self.html + self.javascript,
             )
+
+
+
+    def test_nodes_have_larger_mobile_hit_area(
+        self,
+    ) -> None:
+        for expected in (
+            "const hitMarker = L.circleMarker(",
+            "isLiveMobileLayout()",
+            "? 5.5",
+            "? 12",
+            "fillOpacity: 0",
+            "const selectThisNode = () => selectNode(node)",
+            "hitMarker.on(",
+            "hitMarker.addTo(state.nodeLayer)",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
 
 
     def test_nodes_can_be_selected_from_map(

@@ -1137,19 +1137,41 @@ function renderNodes() {
       continue;
     }
 
+    const point = [
+      Number(node.latitude),
+      Number(node.longitude),
+    ];
+
     const marker = L.circleMarker(
-      [
-        Number(node.latitude),
-        Number(node.longitude),
-      ],
+      point,
       {
         pane: "live-nodes",
-        radius: 4,
+        radius: (
+          isLiveMobileLayout()
+            ? 5.5
+            : 4.5
+        ),
         color: "#175632",
         weight: 1.3,
         opacity: 0.72,
         fillColor: "#267a4d",
         fillOpacity: 0.55,
+        bubblingMouseEvents: false,
+      }
+    );
+
+    const hitMarker = L.circleMarker(
+      point,
+      {
+        pane: "live-nodes",
+        radius: (
+          isLiveMobileLayout()
+            ? 12
+            : 8
+        ),
+        stroke: false,
+        fillColor: "#ffffff",
+        fillOpacity: 0,
         bubblingMouseEvents: false,
       }
     );
@@ -1170,12 +1192,20 @@ function renderNodes() {
       }
     );
 
+    const selectThisNode = () => selectNode(node);
+
     marker.on(
       "click",
-      () => selectNode(node)
+      selectThisNode
+    );
+
+    hitMarker.on(
+      "click",
+      selectThisNode
     );
 
     marker.addTo(state.nodeLayer);
+    hitMarker.addTo(state.nodeLayer);
   }
 }
 
