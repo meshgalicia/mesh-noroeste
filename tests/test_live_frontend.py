@@ -306,6 +306,25 @@ class LiveFrontendTests(unittest.TestCase):
             )
 
 
+
+    def test_selected_reception_can_be_animated(
+        self,
+    ) -> None:
+        for expected in (
+            "function receptionAnimationSegments(event)",
+            "function animateSelectedReception(event)",
+            "!elements.showReceptions.checked",
+            'color: "#075d68"',
+            'fillColor: "#bfe8ee"',
+            "completedCycles % segments.length",
+            "animateSelectedReception(event);",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+
     def test_mobile_tabs_remain_available_with_sheet_open(
         self,
     ) -> None:

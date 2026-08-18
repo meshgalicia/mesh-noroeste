@@ -974,14 +974,14 @@ function addGatewayObservations(
       {
         pane: "live-routes",
         color: selected
-          ? "#a61e4d"
+          ? "#087f8c"
           : "#495057",
-        weight: selected ? 2.8 : 1.8,
+        weight: selected ? 3.2 : 1.8,
         opacity: (
           dimmed
             ? 0.1
             : selected
-              ? 0.92
+              ? 0.95
               : 0.52
         ),
         dashArray: selected ? "5 5" : "4 6",
@@ -1366,6 +1366,12 @@ function renderEventSelection() {
     return;
   }
 
+  const selectionColor = (
+    event.traceroute
+      ? "#a61e4d"
+      : "#087f8c"
+  );
+
   for (const nodeId of eventNodeIds(event)) {
     const point = nodePoint(nodeId);
 
@@ -1378,7 +1384,7 @@ function renderEventSelection() {
       {
         pane: "live-selection",
         radius: 8,
-        color: "#a61e4d",
+        color: selectionColor,
         weight: 3,
         opacity: 1,
         fillColor: "#ffffff",
@@ -1477,6 +1483,155 @@ function animationPointAtDistance(
 
   return segments.at(-1)?.to || null;
 }
+
+function receptionAnimationSegments(event) {
+  const origin = nodePoint(event.from_id);
+
+  if (!origin) {
+    return [];
+  }
+
+  const segments = [];
+
+  for (const gatewayId of gatewayIds(event)) {
+    if (gatewayId === event.from_id) {
+      continue;
+    }
+
+    const gateway = nodePoint(gatewayId);
+
+    if (!gateway) {
+      continue;
+    }
+
+    const length = state.map.distance(
+      origin,
+      gateway
+    );
+
+    if (
+      !Number.isFinite(length)
+      || length <= 0
+    ) {
+      continue;
+    }
+
+    segments.push({
+      from: origin,
+      to: gateway,
+      length,
+    });
+  }
+
+  return segments;
+}
+
+
+function animateSelectedReception(event) {
+  cancelSelectedEventAnimation();
+
+  if (
+    !event
+    || event.traceroute
+    || !elements.showReceptions.checked
+    || prefersReducedMotion()
+  ) {
+    return;
+  }
+
+  const segments = receptionAnimationSegments(
+    event
+  );
+
+  if (segments.length === 0) {
+    return;
+  }
+
+  const movementDuration = 1_600;
+  const pauseDuration = 450;
+  const cycleDuration = (
+    movementDuration + pauseDuration
+  );
+
+  const marker = L.circleMarker(
+    segments[0].from,
+    {
+      pane: "live-animation",
+      radius: 6.5,
+      color: "#075d68",
+      weight: 3,
+      opacity: 1,
+      fillColor: "#bfe8ee",
+      fillOpacity: 1,
+      interactive: false,
+    }
+  ).addTo(state.eventAnimationLayer);
+
+  const token = state.eventAnimationToken;
+  let startedAt = null;
+  let previousSegmentIndex = -1;
+
+  const frame = (timestamp) => {
+    if (
+      token !== state.eventAnimationToken
+      || state.selectedEventId !== event.id
+    ) {
+      return;
+    }
+
+    if (startedAt === null) {
+      startedAt = timestamp;
+    }
+
+    const elapsed = timestamp - startedAt;
+
+    const completedCycles = Math.floor(
+      elapsed / cycleDuration
+    );
+
+    const segmentIndex = (
+      completedCycles % segments.length
+    );
+
+    const cycleElapsed = (
+      elapsed % cycleDuration
+    );
+
+    const segment = segments[segmentIndex];
+
+    if (segmentIndex !== previousSegmentIndex) {
+      previousSegmentIndex = segmentIndex;
+
+      marker.setLatLng(
+        segment.from
+      );
+    }
+
+    const progress = (
+      cycleElapsed >= movementDuration
+        ? 1
+        : cycleElapsed / movementDuration
+    );
+
+    const point = animationPointAtDistance(
+      [segment],
+      segment.length * progress
+    );
+
+    if (point) {
+      marker.setLatLng(point);
+    }
+
+    state.eventAnimationFrame = (
+      window.requestAnimationFrame(frame)
+    );
+  };
+
+  state.eventAnimationFrame = (
+    window.requestAnimationFrame(frame)
+  );
+}
+
 
 function animateSelectedEvent(event) {
   cancelSelectedEventAnimation();
@@ -1854,7 +2009,12 @@ function syncSelectedEventAnimation() {
     return;
   }
 
-  animateSelectedEvent(event);
+  if (event.traceroute) {
+    animateSelectedEvent(event);
+    return;
+  }
+
+  animateSelectedReception(event);
 }
 
 function selectEvent(event) {
