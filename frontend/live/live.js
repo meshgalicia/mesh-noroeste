@@ -1760,6 +1760,7 @@ function playbackTracerouteEvents() {
     );
 }
 
+
 function updatePlaybackControls() {
   const playable = (
     playbackTracerouteEvents().length > 0
@@ -1778,6 +1779,21 @@ function updatePlaybackControls() {
   elements.toggleTraceroutePlayback.setAttribute(
     "aria-pressed",
     String(state.playbackActive)
+  );
+
+  if (state.playbackActive) {
+    return;
+  }
+
+  if (playable) {
+    elements.playbackStatus.textContent = "Detido";
+    return;
+  }
+
+  elements.playbackStatus.textContent = (
+    state.timelineRange
+      ? "Non hai RouteDiscovery neste intervalo"
+      : "Non hai RouteDiscovery cos filtros actuais"
   );
 }
 
@@ -1939,13 +1955,18 @@ function runTraceroutePlayback(
     + `${eventOriginName(event)} → ${eventDestinationName(event)}`
   );
 
+  let started = false;
+
   const start = () => {
     if (
-      !state.playbackActive
+      started
+      || !state.playbackActive
       || playbackToken !== state.playbackToken
     ) {
       return;
     }
+
+    started = true;
 
     animateEventOnce(
       event,
@@ -1985,7 +2006,9 @@ function startTraceroutePlayback() {
 
   if (events.length === 0) {
     elements.playbackStatus.textContent = (
-      "Non hai RouteDiscovery reproducibles cos filtros actuais"
+      state.timelineRange
+        ? "Non hai RouteDiscovery neste intervalo"
+        : "Non hai RouteDiscovery cos filtros actuais"
     );
     updatePlaybackControls();
     return;
@@ -3013,6 +3036,7 @@ function refreshEventView() {
   updateVisibleEventSummary();
   renderTimeline();
   syncSelectedEventAnimation();
+  updatePlaybackControls();
 }
 
 

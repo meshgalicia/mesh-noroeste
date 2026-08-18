@@ -367,7 +367,7 @@ class LiveFrontendTests(unittest.TestCase):
     def test_traceroute_playback_controls_exist(self) -> None:
         for expected in (
             'id="toggle-traceroute-playback"',
-                        'id="playback-status"',
+            'id="playback-status"',
             "live-map-playback",
             "aria-pressed",
             "playbackActive: false",
@@ -375,13 +375,13 @@ class LiveFrontendTests(unittest.TestCase):
             "playbackTimer: null",
             "function playbackTracerouteEvents()",
             "return filteredEventsByAge()",
-            "function stopTraceroutePlayback(",
+                        "function stopTraceroutePlayback(",
             "function animateEventOnce(",
-            "function runTraceroutePlayback(",
+                                    "function runTraceroutePlayback(",
             "function startTraceroutePlayback()",
             "if (state.playbackActive) {",
             "elements.toggleTraceroutePlayback.addEventListener(",
-                    ):
+        ):
             self.assertIn(
                 expected,
                 self.html + self.javascript,
@@ -429,6 +429,7 @@ class LiveFrontendTests(unittest.TestCase):
                 expected,
                 self.html + self.javascript + self.css,
             )
+
 
 
     def test_mobile_layout_exists(self) -> None:
