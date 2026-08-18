@@ -1182,3 +1182,16 @@ input:focus-visible {
   width: 0.58rem;
   height: 0.58rem;
 }
+
+.live-selected-event-card-path {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.live-selected-event-card-path[hidden] {
+  display: none;
+}

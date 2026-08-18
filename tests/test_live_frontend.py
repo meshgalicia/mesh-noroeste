@@ -261,6 +261,27 @@ class LiveFrontendTests(unittest.TestCase):
             )
 
 
+
+    def test_selected_event_card_shows_traceroute_paths(
+        self,
+    ) -> None:
+        for expected in (
+            'id="selected-event-card-towards"',
+            'id="selected-event-card-back"',
+            "function traceroutePathLabel(",
+            'names.join(" → ")',
+            '"Ida"',
+            '"Volta"',
+            "selectedEventCardTowards",
+            "selectedEventCardBack",
+            ".live-selected-event-card-path",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript + self.css,
+            )
+
+
     def test_selected_event_card_shows_traceroute_hops(
         self,
     ) -> None:

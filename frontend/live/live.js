@@ -105,6 +105,12 @@ const elements = {
   selectedEventCardEvidence: document.querySelector(
     "#selected-event-card-evidence"
   ),
+  selectedEventCardTowards: document.querySelector(
+    "#selected-event-card-towards"
+  ),
+  selectedEventCardBack: document.querySelector(
+    "#selected-event-card-back"
+  ),
   refresh: document.querySelector("#refresh-live"),
   eventList: document.querySelector("#event-list"),
   nodeSearch: document.querySelector("#live-node-search"),
@@ -1290,6 +1296,22 @@ function selectedEventGatewaySummary(event) {
 }
 
 
+function traceroutePathLabel(
+  nodeIds,
+  label
+) {
+  if (!Array.isArray(nodeIds) || nodeIds.length < 2) {
+    return null;
+  }
+
+  const names = nodeIds.map(
+    (nodeId) => nodeNameById(nodeId)
+  );
+
+  return `${label}: ${names.join(" → ")}`;
+}
+
+
 function tracerouteHopSummary(event) {
   const traceroute = event?.traceroute;
 
@@ -1334,6 +1356,8 @@ function renderSelectedEventCard() {
 
   if (!event) {
     elements.selectedEventCard.hidden = true;
+    elements.selectedEventCardTowards.hidden = true;
+    elements.selectedEventCardBack.hidden = true;
     return;
   }
 
@@ -1365,6 +1389,38 @@ function renderSelectedEventCard() {
           "Paquete observado · "
           + selectedEventGatewaySummary(event)
         )
+  );
+
+  const towardsLabel = (
+    hasTraceroute
+      ? traceroutePathLabel(
+          event.traceroute?.towards,
+          "Ida"
+        )
+      : null
+  );
+
+  const backLabel = (
+    hasTraceroute
+      ? traceroutePathLabel(
+          event.traceroute?.back,
+          "Volta"
+        )
+      : null
+  );
+
+  elements.selectedEventCardTowards.hidden = (
+    !towardsLabel
+  );
+  elements.selectedEventCardTowards.textContent = (
+    towardsLabel || ""
+  );
+
+  elements.selectedEventCardBack.hidden = (
+    !backLabel
+  );
+  elements.selectedEventCardBack.textContent = (
+    backLabel || ""
   );
 
   elements.selectedEventCard.hidden = false;
