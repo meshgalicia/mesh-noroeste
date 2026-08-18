@@ -147,6 +147,12 @@ const elements = {
   selectedEventCardBack: document.querySelector(
     "#selected-event-card-back"
   ),
+  selectedEventCardRouteDetails: document.querySelector(
+    "#selected-event-card-route-details"
+  ),
+  selectedEventCardRouteSummary: document.querySelector(
+    "#selected-event-card-route-summary"
+  ),
   selectedEventCardTechnical: document.querySelector(
     "#selected-event-card-technical"
   ),
@@ -2100,6 +2106,8 @@ function renderSelectedEventCard() {
     elements.selectedEventCard.hidden = true;
     elements.selectedEventCardTowards.hidden = true;
     elements.selectedEventCardBack.hidden = true;
+    elements.selectedEventCardRouteDetails.hidden = true;
+    elements.selectedEventCardRouteDetails.open = false;
     elements.selectedEventCardTechnical.open = false;
     elements.selectedEventCardTechnicalContent.replaceChildren();
     elements.selectedEventCardObservations.hidden = true;
@@ -2177,6 +2185,51 @@ function renderSelectedEventCard() {
     elements.selectedEventCardBack.append(
       backContent
     );
+  }
+
+  const hasRouteContent = Boolean(
+    towardsContent || backContent
+  );
+
+  elements.selectedEventCardRouteDetails.hidden = (
+    !hasRouteContent
+  );
+
+  if (hasRouteContent) {
+    const traceroute = event.traceroute || {};
+
+    const towardsHops = Math.max(
+      0,
+      (traceroute.towards?.length || 0) - 1
+    );
+
+    const backHops = Math.max(
+      0,
+      (traceroute.back?.length || 0) - 1
+    );
+
+    const parts = [];
+
+    if (towardsContent) {
+      parts.push(
+        `ida ${towardsHops} `
+        + (towardsHops === 1 ? "salto" : "saltos")
+      );
+    }
+
+    if (backContent) {
+      parts.push(
+        `volta ${backHops} `
+        + (backHops === 1 ? "salto" : "saltos")
+      );
+    }
+
+    elements.selectedEventCardRouteSummary.textContent = (
+      "Percorrido da ruta"
+      + (parts.length ? ` · ${parts.join(" · ")}` : "")
+    );
+  } else {
+    elements.selectedEventCardRouteDetails.open = false;
   }
 
   renderSelectedEventTechnical(event);
@@ -2916,6 +2969,7 @@ function syncSelectedEventAnimation() {
 
 function selectEvent(event) {
   elements.selectedEventCardTechnical.open = false;
+  elements.selectedEventCardRouteDetails.open = false;
 
   clearNodeSelection({
     clearSearch: true,

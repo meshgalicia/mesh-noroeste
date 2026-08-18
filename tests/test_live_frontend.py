@@ -681,8 +681,9 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             'id="selected-event-card-towards"',
             'id="selected-event-card-back"',
-            "function traceroutePathLabel(",
-            'names.join(" → ")',
+            "function traceroutePathContent(",
+            "eventNodeButton(nodeId)",
+            'arrow.textContent = " → "',
             '"Ida"',
             '"Volta"',
             "selectedEventCardTowards",

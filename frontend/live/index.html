@@ -643,17 +643,32 @@
           class="live-selected-event-card-evidence"
         ></span>
 
-        <span
-          id="selected-event-card-towards"
-          class="live-selected-event-card-path"
+        <details
+          id="selected-event-card-route-details"
+          class="live-selected-event-card-route-details"
           hidden
-        ></span>
+        >
+          <summary
+            id="selected-event-card-route-summary"
+            class="live-selected-event-card-route-summary"
+          >
+            Percorrido da ruta
+          </summary>
 
-        <span
-          id="selected-event-card-back"
-          class="live-selected-event-card-path"
-          hidden
-        ></span>
+          <div class="live-selected-event-card-route-content">
+            <span
+              id="selected-event-card-towards"
+              class="live-selected-event-card-path"
+              hidden
+            ></span>
+
+            <span
+              id="selected-event-card-back"
+              class="live-selected-event-card-path"
+              hidden
+            ></span>
+          </div>
+        </details>
 
         <details
           id="selected-event-card-technical"
