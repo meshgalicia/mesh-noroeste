@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260818-live22",
-            "./live.js?v=20260818-live22",
+            "./live.css?v=20260818-live24",
+            "./live.js?v=20260818-live24",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -395,6 +395,25 @@ class LiveFrontendTests(unittest.TestCase):
                 self.html + self.javascript,
             )
 
+
+
+
+    def test_mobile_playback_compacts_event_card(
+        self,
+    ) -> None:
+        for expected in (
+            '"live-playback-active"',
+            "state.playbackActive",
+            "elements.app.classList.toggle(",
+            "elements.selectedEventCardTechnical.open = false",
+            "elements.selectedEventCardObservations.open = false",
+            ".live-app.live-playback-active",
+            ".live-selected-event-card-path",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript + self.css,
+            )
 
 
     def test_contextual_help_explains_live_terms(

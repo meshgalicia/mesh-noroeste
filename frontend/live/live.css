@@ -1682,3 +1682,24 @@ input:focus-visible {
     font-size: 0.75rem;
   }
 }
+
+/*
+ * Durante a reprodución en móbil priorizamos o mapa,
+ * pero mantemos accesibles os detalles despregables.
+ */
+@media (max-width: 760px) {
+  .live-app.live-playback-active
+    .live-selected-event-card {
+    padding-bottom: 0.85rem;
+  }
+
+  .live-app.live-playback-active
+    .live-selected-event-card-path {
+    display: none;
+  }
+
+  .live-app.live-playback-active
+    .live-selected-event-card-evidence {
+    margin-bottom: 0;
+  }
+}

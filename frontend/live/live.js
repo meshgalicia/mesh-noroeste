@@ -2560,6 +2560,11 @@ function playbackTracerouteEvents() {
 
 
 function updatePlaybackControls() {
+  elements.app.classList.toggle(
+    "live-playback-active",
+    state.playbackActive
+  );
+
   const playable = (
     playbackTracerouteEvents().length > 0
   );
