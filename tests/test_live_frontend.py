@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260818-live28",
-            "./live.js?v=20260818-live28",
+            "./live.css?v=20260818-live29",
+            "./live.js?v=20260818-live29",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -96,6 +96,24 @@ class LiveFrontendTests(unittest.TestCase):
             "REFRESH_INTERVAL_MS",
         ):
             self.assertIn(expected, self.javascript)
+
+
+    def test_escape_closes_selected_event_on_desktop(
+        self,
+    ) -> None:
+        for expected in (
+            'event.key !== "Escape"',
+            "if (state.mobilePanel)",
+            "isLiveDesktopLayout()",
+            "state.selectedEventId",
+            "clearSelectedEvent();",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+
 
     def test_events_can_be_selected_and_highlighted(
         self,

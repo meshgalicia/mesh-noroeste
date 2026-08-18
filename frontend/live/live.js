@@ -530,16 +530,25 @@ function initializeLiveMobileNavigation() {
   document.addEventListener(
     "keydown",
     (event) => {
-      if (
-        event.key === "Escape"
-        && state.mobilePanel
-      ) {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (state.mobilePanel) {
         setLiveMobilePanel(
           null,
           {
             restoreFocus: true,
           }
         );
+        return;
+      }
+
+      if (
+        isLiveDesktopLayout()
+        && state.selectedEventId
+      ) {
+        clearSelectedEvent();
       }
     }
   );
