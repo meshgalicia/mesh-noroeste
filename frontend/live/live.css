@@ -1156,3 +1156,29 @@ input:focus-visible {
     transition: none;
   }
 }
+
+
+/* Indicador de RouteDiscovery reproducible na timeline. */
+.live-timeline-bar {
+  position: relative;
+}
+
+.live-timeline-bar.has-traceroute::after {
+  content: "";
+  position: absolute;
+  top: 0.28rem;
+  left: 50%;
+  width: 0.48rem;
+  height: 0.48rem;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #a61e4d;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.28);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.live-timeline-bar.has-traceroute.selected::after {
+  width: 0.58rem;
+  height: 0.58rem;
+}

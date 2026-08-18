@@ -1290,6 +1290,45 @@ function selectedEventGatewaySummary(event) {
 }
 
 
+function tracerouteHopSummary(event) {
+  const traceroute = event?.traceroute;
+
+  if (!traceroute) {
+    return "";
+  }
+
+  const towardsHops = Math.max(
+    0,
+    (traceroute.towards?.length || 0) - 1
+  );
+
+  const backHops = Math.max(
+    0,
+    (traceroute.back?.length || 0) - 1
+  );
+
+  const parts = [];
+
+  if (traceroute.towards?.length >= 2) {
+    parts.push(
+      `ida ${towardsHops} `
+      + (towardsHops === 1 ? "salto" : "saltos")
+    );
+  }
+
+  if (traceroute.back?.length >= 2) {
+    parts.push(
+      `volta ${backHops} `
+      + (backHops === 1 ? "salto" : "saltos")
+    );
+  } else {
+    parts.push("volta non dispoñible");
+  }
+
+  return parts.join(" · ");
+}
+
+
 function renderSelectedEventCard() {
   const event = selectedEvent();
 
@@ -1317,7 +1356,11 @@ function renderSelectedEventCard() {
 
   elements.selectedEventCardEvidence.textContent = (
     hasTraceroute
-      ? "RouteDiscovery · percorrido indicado polo paquete"
+      ? (
+          "RouteDiscovery · "
+          + tracerouteHopSummary(event)
+          + " · percorrido indicado polo paquete"
+        )
       : (
           "Paquete observado · "
           + selectedEventGatewaySummary(event)
@@ -1949,6 +1992,7 @@ function runTraceroutePlayback(
 
   renderEvents();
   renderEventList();
+  renderSelectedEventCard();
 
   elements.playbackStatus.textContent = (
     `Reproducindo ${index + 1} de ${events.length}: `
@@ -2343,6 +2387,7 @@ function timelineBuckets() {
         startUs,
         endUs,
         count: 0,
+        tracerouteCount: 0,
       };
     }
   );
@@ -2371,6 +2416,13 @@ function timelineBuckets() {
     );
 
     buckets[index].count += 1;
+
+    if (
+      event.traceroute
+      && selectedEventAnimationSegments(event).length > 0
+    ) {
+      buckets[index].tracerouteCount += 1;
+    }
   }
 
   return buckets;
@@ -2431,6 +2483,15 @@ function renderTimeline() {
       selected
     );
 
+    button.classList.toggle(
+      "has-traceroute",
+      bucket.tracerouteCount > 0
+    );
+
+    button.dataset.tracerouteCount = String(
+      bucket.tracerouteCount
+    );
+
     button.setAttribute(
       "aria-pressed",
       String(selected)
@@ -2460,19 +2521,34 @@ function renderTimeline() {
       bucket.endUs
     );
 
+    const eventLabel = (
+      `${formatNumber(bucket.count)} evento`
+      + (bucket.count === 1 ? "" : "s")
+    );
+
+    const tracerouteLabel = (
+      bucket.tracerouteCount > 0
+        ? (
+            ` · ${formatNumber(bucket.tracerouteCount)} `
+            + "RouteDiscovery reproducible"
+            + (bucket.tracerouteCount === 1 ? "" : "s")
+          )
+        : ""
+    );
+
     button.setAttribute(
       "aria-label",
       (
         `${startLabel}–${endLabel}: `
-        + `${formatNumber(bucket.count)} evento`
-        + (bucket.count === 1 ? "" : "s")
+        + eventLabel
+        + tracerouteLabel
       )
     );
 
     button.title = (
       `${startLabel}–${endLabel} · `
-      + `${formatNumber(bucket.count)} evento`
-      + (bucket.count === 1 ? "" : "s")
+      + eventLabel
+      + tracerouteLabel
     );
 
     button.addEventListener(

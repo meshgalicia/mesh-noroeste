@@ -260,6 +260,25 @@ class LiveFrontendTests(unittest.TestCase):
                 self.javascript,
             )
 
+
+    def test_selected_event_card_shows_traceroute_hops(
+        self,
+    ) -> None:
+        for expected in (
+            "function tracerouteHopSummary(event)",
+            "traceroute.towards?.length",
+            "traceroute.back?.length",
+            "`ida ${towardsHops} `",
+            "`volta ${backHops} `",
+            '"volta non dispoñible"',
+            "tracerouteHopSummary(event)",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+
     def test_selected_event_card_exists(self) -> None:
         for expected in (
             'id="selected-event-card"',
@@ -430,6 +449,25 @@ class LiveFrontendTests(unittest.TestCase):
                 self.html + self.javascript + self.css,
             )
 
+
+
+
+    def test_timeline_marks_reproducible_traceroutes(
+        self,
+    ) -> None:
+        for expected in (
+            "tracerouteCount: 0",
+            "buckets[index].tracerouteCount += 1",
+            '"has-traceroute"',
+            "bucket.tracerouteCount > 0",
+            "dataset.tracerouteCount",
+            "RouteDiscovery reproducible",
+            ".live-timeline-bar.has-traceroute::after",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript + self.css,
+            )
 
 
     def test_mobile_layout_exists(self) -> None:
