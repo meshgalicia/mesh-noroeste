@@ -1703,3 +1703,45 @@ input:focus-visible {
     margin-bottom: 0;
   }
 }
+
+/* Nodos seleccionables dentro das fichas do live. */
+.live-inline-node-button {
+  display: inline;
+  margin: 0;
+  padding: 0.08rem 0.18rem;
+  border: 0;
+  border-radius: 0.3rem;
+  background: transparent;
+  color: var(--accent-dark);
+  font: inherit;
+  font-weight: 750;
+  line-height: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.13em;
+  cursor: pointer;
+}
+
+.live-inline-node-button:hover {
+  background: #edf7f8;
+}
+
+.live-inline-node-name {
+  font: inherit;
+}
+
+.live-traceroute-path-label {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.live-traceroute-path-arrow {
+  color: var(--muted);
+}
+
+.live-selected-event-gateway-name.live-inline-node-button {
+  width: fit-content;
+  max-width: 100%;
+  padding-inline: 0;
+}

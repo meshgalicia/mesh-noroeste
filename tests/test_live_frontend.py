@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260818-live24",
-            "./live.js?v=20260818-live24",
+            "./live.css?v=20260818-live26",
+            "./live.js?v=20260818-live26",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -254,6 +254,24 @@ class LiveFrontendTests(unittest.TestCase):
                 expected,
                 self.javascript,
             )
+
+
+
+    def test_mobile_event_selection_returns_to_map(
+        self,
+    ) -> None:
+        for expected in (
+            'button.addEventListener(',
+            '"click"',
+            'selectEvent(event);',
+            'if (isLiveMobileLayout()) {',
+            'setLiveMobilePanel(null);',
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
 
 
     def test_event_list_has_quick_filters(
@@ -607,6 +625,30 @@ class LiveFrontendTests(unittest.TestCase):
             self.assertIn(
                 expected,
                 self.html + self.javascript + self.css,
+            )
+
+
+
+
+    def test_nodes_inside_event_detail_are_selectable(
+        self,
+    ) -> None:
+        for expected in (
+            "function eventNodeButton(",
+            '"live-inline-node-button"',
+            "selectNode(node);",
+            "eventNodeButton(",
+            "gateway.gateway_id",
+            "function traceroutePathContent(",
+            "nodeIds.forEach(",
+            '"live-traceroute-path-arrow"',
+            "selectedEventCardTowards.append(",
+            "selectedEventCardBack.append(",
+            ".live-inline-node-button",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript + self.css,
             )
 
 

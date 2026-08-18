@@ -876,6 +876,36 @@ function nodeNameById(nodeId, fallback = null) {
   return fallback || nodeId;
 }
 
+function eventNodeButton(nodeId) {
+  const node = state.nodeById.get(nodeId);
+
+  if (!node) {
+    const label = document.createElement("span");
+
+    label.className = "live-inline-node-name";
+    label.textContent = nodeNameById(nodeId);
+
+    return label;
+  }
+
+  const button = document.createElement("button");
+
+  button.type = "button";
+  button.className = "live-inline-node-button";
+  button.textContent = nodeNameById(nodeId);
+
+  button.addEventListener(
+    "click",
+    (event) => {
+      event.stopPropagation();
+      selectNode(node);
+    }
+  );
+
+  return button;
+}
+
+
 function eventPortnumLabel(portnum) {
   const value = Number(portnum);
 
@@ -1953,14 +1983,15 @@ function renderSelectedEventObservations(event) {
 
     for (const gateway of stage.gateways || []) {
       const row = document.createElement("div");
-      const name = document.createElement("span");
+      const name = eventNodeButton(
+        gateway.gateway_id
+      );
       const radio = document.createElement("span");
 
       row.className = "live-selected-event-gateway";
 
-      name.className = "live-selected-event-gateway-name";
-      name.textContent = nodeNameById(
-        gateway.gateway_id
+      name.classList.add(
+        "live-selected-event-gateway-name"
       );
 
       radio.className = "live-selected-event-gateway-radio";
@@ -1986,7 +2017,7 @@ function renderSelectedEventObservations(event) {
 }
 
 
-function traceroutePathLabel(
+function traceroutePathContent(
   nodeIds,
   label
 ) {
@@ -1994,11 +2025,32 @@ function traceroutePathLabel(
     return null;
   }
 
-  const names = nodeIds.map(
-    (nodeId) => nodeNameById(nodeId)
+  const fragment = document.createDocumentFragment();
+  const prefix = document.createElement("strong");
+
+  prefix.className = "live-traceroute-path-label";
+  prefix.textContent = `${label}: `;
+
+  fragment.append(prefix);
+
+  nodeIds.forEach(
+    (nodeId, index) => {
+      if (index > 0) {
+        const arrow = document.createElement("span");
+
+        arrow.className = "live-traceroute-path-arrow";
+        arrow.textContent = " → ";
+
+        fragment.append(arrow);
+      }
+
+      fragment.append(
+        eventNodeButton(nodeId)
+      );
+    }
   );
 
-  return `${label}: ${names.join(" → ")}`;
+  return fragment;
 }
 
 
@@ -2087,37 +2139,45 @@ function renderSelectedEventCard() {
         )
   );
 
-  const towardsLabel = (
+  const towardsContent = (
     hasTraceroute
-      ? traceroutePathLabel(
+      ? traceroutePathContent(
           event.traceroute?.towards,
           "Ida"
         )
       : null
   );
 
-  const backLabel = (
+  const backContent = (
     hasTraceroute
-      ? traceroutePathLabel(
+      ? traceroutePathContent(
           event.traceroute?.back,
           "Volta"
         )
       : null
   );
 
+  elements.selectedEventCardTowards.replaceChildren();
   elements.selectedEventCardTowards.hidden = (
-    !towardsLabel
-  );
-  elements.selectedEventCardTowards.textContent = (
-    towardsLabel || ""
+    !towardsContent
   );
 
+  if (towardsContent) {
+    elements.selectedEventCardTowards.append(
+      towardsContent
+    );
+  }
+
+  elements.selectedEventCardBack.replaceChildren();
   elements.selectedEventCardBack.hidden = (
-    !backLabel
+    !backContent
   );
-  elements.selectedEventCardBack.textContent = (
-    backLabel || ""
-  );
+
+  if (backContent) {
+    elements.selectedEventCardBack.append(
+      backContent
+    );
+  }
 
   renderSelectedEventTechnical(event);
   renderSelectedEventObservations(event);
@@ -3725,7 +3785,13 @@ function renderEventList() {
 
     button.addEventListener(
       "click",
-      () => selectEvent(event)
+      () => {
+        selectEvent(event);
+
+        if (isLiveMobileLayout()) {
+          setLiveMobilePanel(null);
+        }
+      }
     );
 
     item.append(button);
