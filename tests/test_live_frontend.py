@@ -244,6 +244,41 @@ class LiveFrontendTests(unittest.TestCase):
             )
 
 
+
+    def test_receptions_can_be_selected_from_map(self) -> None:
+        for expected in (
+            "function receptionDistanceFromMapPoint(",
+            "function nearestReceptionEvent(",
+            "function nearestMapEvent(",
+            "elements.showReceptions.checked",
+            "receptionDistanceFromMapPoint(",
+            "const event = nearestMapEvent(",
+            "selectEvent(event);",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+    def test_selected_event_card_exists(self) -> None:
+        for expected in (
+            'id="selected-event-card"',
+            'id="selected-event-card-close"',
+            'id="selected-event-card-route"',
+            'id="selected-event-card-meta"',
+            'id="selected-event-card-evidence"',
+            "function selectedEvent()",
+            "function renderSelectedEventCard()",
+            "function clearSelectedEvent()",
+            "renderSelectedEventCard();",
+            ".live-selected-event-card",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript + self.css,
+            )
+
+
     def test_selected_route_can_be_animated(self) -> None:
         for expected in (
             "eventAnimationLayer: null",

@@ -80,6 +80,21 @@ const elements = {
   playbackStatus: document.querySelector(
     "#playback-status"
   ),
+  selectedEventCard: document.querySelector(
+    "#selected-event-card"
+  ),
+  selectedEventCardClose: document.querySelector(
+    "#selected-event-card-close"
+  ),
+  selectedEventCardRoute: document.querySelector(
+    "#selected-event-card-route"
+  ),
+  selectedEventCardMeta: document.querySelector(
+    "#selected-event-card-meta"
+  ),
+  selectedEventCardEvidence: document.querySelector(
+    "#selected-event-card-evidence"
+  ),
   refresh: document.querySelector("#refresh-live"),
   eventList: document.querySelector("#event-list"),
   nodeSearch: document.querySelector("#live-node-search"),
@@ -1062,6 +1077,51 @@ function eventDistanceFromMapPoint(
   return minimum;
 }
 
+function receptionDistanceFromMapPoint(
+  event,
+  containerPoint
+) {
+  const origin = nodePoint(event.from_id);
+
+  if (!origin) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const originPoint = (
+    state.map.latLngToContainerPoint(origin)
+  );
+
+  let minimum = Number.POSITIVE_INFINITY;
+
+  for (const gatewayId of gatewayIds(event)) {
+    if (gatewayId === event.from_id) {
+      continue;
+    }
+
+    const gateway = nodePoint(gatewayId);
+
+    if (!gateway) {
+      continue;
+    }
+
+    const gatewayPoint = (
+      state.map.latLngToContainerPoint(gateway)
+    );
+
+    minimum = Math.min(
+      minimum,
+      pointToSegmentDistance(
+        containerPoint,
+        originPoint,
+        gatewayPoint
+      )
+    );
+  }
+
+  return minimum;
+}
+
+
 function nearestTracerouteEvent(
   containerPoint
 ) {
@@ -1095,6 +1155,78 @@ function nearestTracerouteEvent(
   return nearest;
 }
 
+function nearestReceptionEvent(
+  containerPoint
+) {
+  const threshold = (
+    isLiveMobileLayout()
+      ? 26
+      : 16
+  );
+
+  let nearest = null;
+  let nearestDistance = threshold;
+
+  for (const event of visibleEvents()) {
+    const distance = receptionDistanceFromMapPoint(
+      event,
+      containerPoint
+    );
+
+    if (distance > nearestDistance) {
+      continue;
+    }
+
+    nearest = event;
+    nearestDistance = distance;
+  }
+
+  return {
+    event: nearest,
+    distance: nearestDistance,
+  };
+}
+
+
+function nearestMapEvent(
+  containerPoint
+) {
+  let nearest = null;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+
+  if (elements.showTraceroutes.checked) {
+    const event = nearestTracerouteEvent(
+      containerPoint
+    );
+
+    if (event) {
+      const distance = eventDistanceFromMapPoint(
+        event,
+        containerPoint
+      );
+
+      nearest = event;
+      nearestDistance = distance;
+    }
+  }
+
+  if (elements.showReceptions.checked) {
+    const reception = nearestReceptionEvent(
+      containerPoint
+    );
+
+    if (
+      reception.event
+      && reception.distance < nearestDistance
+    ) {
+      nearest = reception.event;
+    }
+  }
+
+  return nearest;
+}
+
+
 function initializeRouteMapSelection() {
   state.map.on(
     "click",
@@ -1103,11 +1235,7 @@ function initializeRouteMapSelection() {
         clearSearch: true,
       });
 
-      if (!elements.showTraceroutes.checked) {
-        return;
-      }
-
-      const event = nearestTracerouteEvent(
+      const event = nearestMapEvent(
         mapEvent.containerPoint
       );
 
@@ -1119,6 +1247,76 @@ function initializeRouteMapSelection() {
     }
   );
 }
+
+function selectedEvent() {
+  if (!state.selectedEventId || !state.live) {
+    return null;
+  }
+
+  return state.live.events.find(
+    (event) => event.id === state.selectedEventId
+  ) || null;
+}
+
+
+function selectedEventGatewaySummary(event) {
+  const ids = gatewayIds(event);
+
+  if (ids.length === 0) {
+    return "Sen gateways observadores";
+  }
+
+  const names = ids
+    .slice(0, 3)
+    .map(
+      (gatewayId) => nodeNameById(gatewayId)
+    );
+
+  if (ids.length > 3) {
+    names.push(`+${ids.length - 3}`);
+  }
+
+  return names.join(" · ");
+}
+
+
+function renderSelectedEventCard() {
+  const event = selectedEvent();
+
+  if (!event) {
+    elements.selectedEventCard.hidden = true;
+    return;
+  }
+
+  const hasTraceroute = Boolean(
+    event.evidence?.includes("traceroute")
+    || event.traceroute
+  );
+
+  elements.selectedEventCardRoute.textContent = [
+    eventOriginName(event),
+    "→",
+    eventDestinationName(event),
+  ].join(" ");
+
+  elements.selectedEventCardMeta.textContent = [
+    formatEventTime(event),
+    `portnum ${event.portnum}`,
+    `${gatewayIds(event).length} gateway(s)`,
+  ].join(" · ");
+
+  elements.selectedEventCardEvidence.textContent = (
+    hasTraceroute
+      ? "RouteDiscovery · percorrido indicado polo paquete"
+      : (
+          "Recepción observada · "
+          + selectedEventGatewaySummary(event)
+        )
+  );
+
+  elements.selectedEventCard.hidden = false;
+}
+
 
 function selectedVisibleEvent() {
   if (!state.selectedEventId) {
@@ -1676,6 +1874,7 @@ function selectEvent(event) {
 
   renderEvents();
   renderEventList();
+  renderSelectedEventCard();
 
   if (alreadySelected) {
     syncSelectedEventAnimation();
@@ -2273,6 +2472,7 @@ async function refreshLive() {
     updateSummary();
     renderEvents();
     renderEventList();
+    renderSelectedEventCard();
     syncSelectedEventAnimation();
     updatePlaybackControls();
 
@@ -2302,7 +2502,28 @@ async function refreshLive() {
   }
 }
 
+function clearSelectedEvent() {
+  if (state.playbackActive) {
+    stopTraceroutePlayback({
+      clearSelection: true,
+    });
+  } else {
+    state.selectedEventId = null;
+    cancelSelectedEventAnimation();
+    renderEvents();
+    renderEventList();
+  }
+
+  renderSelectedEventCard();
+}
+
+
 function bindControls() {
+  elements.selectedEventCardClose.addEventListener(
+    "click",
+    clearSelectedEvent
+  );
+
   elements.nodeSearch.addEventListener(
     "input",
     renderNodeSearchResults
