@@ -45,6 +45,7 @@ const state = {
   playbackActive: false,
   playbackToken: 0,
   playbackTimer: null,
+  timelineRange: null,
   mobilePanel: null,
   lastMobileTrigger: null,
 };
@@ -61,6 +62,15 @@ const elements = {
   liveWindow: document.querySelector("#live-window"),
   visibleEventCount: document.querySelector(
     "#visible-event-count"
+  ),
+  timelineBars: document.querySelector(
+    "#live-timeline-bars"
+  ),
+  timelineStatus: document.querySelector(
+    "#live-timeline-status"
+  ),
+  clearTimelineRange: document.querySelector(
+    "#clear-timeline-range"
   ),
   eventGateway: document.querySelector(
     "#event-gateway"
@@ -990,7 +1000,7 @@ function addGatewayObservations(
       .bindTooltip(
         eventTooltip(
           event,
-          "Recepción observada por gateway"
+          "Paquete observado por gateway"
         ),
         {
           className: "live-event-tooltip live-reception-tooltip",
@@ -1309,7 +1319,7 @@ function renderSelectedEventCard() {
     hasTraceroute
       ? "RouteDiscovery · percorrido indicado polo paquete"
       : (
-          "Recepción observada · "
+          "Paquete observado · "
           + selectedEventGatewaySummary(event)
         )
   );
@@ -2252,6 +2262,271 @@ function updateGatewayOptions() {
   }
 }
 
+function timelineBaseEvents() {
+  return filteredEventsByGateway()
+    .sort(
+      (left, right) => (
+        Number(left.imported_at_us)
+        - Number(right.imported_at_us)
+      )
+    );
+}
+
+
+function timelineNewestTimestamp(events) {
+  return events.reduce(
+    (maximum, event) => Math.max(
+      maximum,
+      Number(event.imported_at_us) || 0
+    ),
+    0
+  );
+}
+
+
+function timelineBuckets() {
+  const events = timelineBaseEvents();
+  const newestTimestamp = timelineNewestTimestamp(
+    events
+  );
+
+  if (!newestTimestamp) {
+    return [];
+  }
+
+  const bucketDurationUs = (
+    5 * 60 * 1_000_000
+  );
+
+  const hourStart = (
+    newestTimestamp
+    - 60 * 60 * 1_000_000
+  );
+
+  const buckets = Array.from(
+    { length: 12 },
+    (_, index) => {
+      const startUs = (
+        hourStart
+        + index * bucketDurationUs
+      );
+
+      const endUs = (
+        startUs + bucketDurationUs
+      );
+
+      return {
+        index,
+        startUs,
+        endUs,
+        count: 0,
+      };
+    }
+  );
+
+  for (const event of events) {
+    const timestamp = Number(
+      event.imported_at_us
+    );
+
+    if (
+      !Number.isFinite(timestamp)
+      || timestamp < hourStart
+      || timestamp > newestTimestamp
+    ) {
+      continue;
+    }
+
+    const rawIndex = Math.floor(
+      (timestamp - hourStart)
+      / bucketDurationUs
+    );
+
+    const index = Math.min(
+      11,
+      Math.max(0, rawIndex)
+    );
+
+    buckets[index].count += 1;
+  }
+
+  return buckets;
+}
+
+
+function formatTimelineClock(timestampUs) {
+  return new Intl.DateTimeFormat(
+    "gl-ES",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  ).format(
+    new Date(timestampUs / 1000)
+  );
+}
+
+
+function renderTimeline() {
+  const buckets = timelineBuckets();
+
+  if (buckets.length === 0) {
+    elements.timelineBars.replaceChildren();
+    elements.timelineStatus.textContent = (
+      "Sen actividade dispoñible"
+    );
+    elements.clearTimelineRange.disabled = true;
+    return;
+  }
+
+  const maximum = Math.max(
+    1,
+    ...buckets.map(
+      (bucket) => bucket.count
+    )
+  );
+
+  const fragment = document.createDocumentFragment();
+
+  for (const bucket of buckets) {
+    const button = document.createElement("button");
+
+    button.type = "button";
+    button.className = "live-timeline-bar";
+    button.dataset.timelineIndex = String(
+      bucket.index
+    );
+
+    const selected = Boolean(
+      state.timelineRange
+      && state.timelineRange.startUs === bucket.startUs
+      && state.timelineRange.endUs === bucket.endUs
+    );
+
+    button.classList.toggle(
+      "selected",
+      selected
+    );
+
+    button.setAttribute(
+      "aria-pressed",
+      String(selected)
+    );
+
+    const percentage = (
+      bucket.count === 0
+        ? 4
+        : Math.max(
+            12,
+            Math.round(
+              bucket.count / maximum * 100
+            )
+          )
+    );
+
+    button.style.setProperty(
+      "--timeline-level",
+      `${percentage}%`
+    );
+
+    const startLabel = formatTimelineClock(
+      bucket.startUs
+    );
+
+    const endLabel = formatTimelineClock(
+      bucket.endUs
+    );
+
+    button.setAttribute(
+      "aria-label",
+      (
+        `${startLabel}–${endLabel}: `
+        + `${formatNumber(bucket.count)} evento`
+        + (bucket.count === 1 ? "" : "s")
+      )
+    );
+
+    button.title = (
+      `${startLabel}–${endLabel} · `
+      + `${formatNumber(bucket.count)} evento`
+      + (bucket.count === 1 ? "" : "s")
+    );
+
+    button.addEventListener(
+      "click",
+      () => {
+        state.timelineRange = {
+          startUs: bucket.startUs,
+          endUs: bucket.endUs,
+        };
+
+        /*
+         * Un tramo da timeline pertence sempre á última hora.
+         * Evitamos que un filtro previo de 5/15 minutos o oculte.
+         */
+        elements.eventAge.value = "60";
+
+        refreshEventView();
+        focusVisibleEvents();
+      }
+    );
+
+    fragment.append(button);
+  }
+
+  elements.timelineBars.replaceChildren(
+    fragment
+  );
+
+  elements.clearTimelineRange.disabled = (
+    state.timelineRange === null
+  );
+
+  if (!state.timelineRange) {
+    elements.timelineStatus.textContent = (
+      "Sen intervalo seleccionado"
+    );
+    return;
+  }
+
+  elements.timelineStatus.textContent = (
+    "Mostrando "
+    + formatTimelineClock(
+      state.timelineRange.startUs
+    )
+    + "–"
+    + formatTimelineClock(
+      state.timelineRange.endUs
+    )
+  );
+}
+
+
+function eventsInsideTimelineRange(events) {
+  if (!state.timelineRange) {
+    return events;
+  }
+
+  const {
+    startUs,
+    endUs,
+  } = state.timelineRange;
+
+  return events.filter(
+    (event) => {
+      const timestamp = Number(
+        event.imported_at_us
+      );
+
+      return (
+        timestamp >= startUs
+        && timestamp < endUs
+      );
+    }
+  );
+}
+
+
 function filteredEventsByAge() {
   const value = elements.eventAge.value;
 
@@ -2264,13 +2539,17 @@ function filteredEventsByAge() {
     );
 
   if (value === "all") {
-    return events;
+    return eventsInsideTimelineRange(
+      events
+    );
   }
 
   const minutes = Number(value);
 
   if (!Number.isFinite(minutes)) {
-    return events;
+    return eventsInsideTimelineRange(
+      events
+    );
   }
 
   const newestTimestamp = events.reduce(
@@ -2282,7 +2561,9 @@ function filteredEventsByAge() {
   );
 
   if (!newestTimestamp) {
-    return events;
+    return eventsInsideTimelineRange(
+      events
+    );
   }
 
   const cutoff = (
@@ -2290,9 +2571,11 @@ function filteredEventsByAge() {
     - minutes * 60 * 1_000_000
   );
 
-  return events.filter(
-    (event) => (
-      Number(event.imported_at_us) >= cutoff
+  return eventsInsideTimelineRange(
+    events.filter(
+      (event) => (
+        Number(event.imported_at_us) >= cutoff
+      )
     )
   );
 }
@@ -2457,7 +2740,7 @@ function renderEventList() {
     type.textContent = (
       hasRoute
         ? "RouteDiscovery"
-        : "Recepción observada"
+        : "Paquete observado"
     );
 
     button.append(name, metadata, type);
@@ -2503,6 +2786,41 @@ function eventPoints(event) {
 
   return points;
 }
+
+function focusVisibleEvents() {
+  const points = [];
+
+  for (const event of visibleEvents()) {
+    points.push(
+      ...eventPoints(event)
+    );
+  }
+
+  if (points.length === 0) {
+    return;
+  }
+
+  if (points.length === 1) {
+    state.map.setView(
+      points[0],
+      Math.max(
+        state.map.getZoom(),
+        11
+      )
+    );
+
+    return;
+  }
+
+  state.map.fitBounds(
+    points,
+    {
+      padding: [45, 45],
+      maxZoom: 12,
+    }
+  );
+}
+
 
 function focusEvent(event) {
   const points = eventPoints(event);
@@ -2633,6 +2951,7 @@ async function refreshLive() {
     renderEvents();
     renderEventList();
     renderSelectedEventCard();
+    renderTimeline();
     syncSelectedEventAnimation();
     updatePlaybackControls();
 
@@ -2678,10 +2997,38 @@ function clearSelectedEvent() {
 }
 
 
+function refreshEventView() {
+  if (
+    state.selectedEventId
+    && !visibleEvents().some(
+      (event) => event.id === state.selectedEventId
+    )
+  ) {
+    state.selectedEventId = null;
+  }
+
+  renderEvents();
+  renderEventList();
+  renderSelectedEventCard();
+  updateVisibleEventSummary();
+  renderTimeline();
+  syncSelectedEventAnimation();
+}
+
+
 function bindControls() {
   elements.selectedEventCardClose.addEventListener(
     "click",
     clearSelectedEvent
+  );
+
+  elements.clearTimelineRange.addEventListener(
+    "click",
+    () => {
+      state.timelineRange = null;
+      elements.eventAge.value = "60";
+      refreshEventView();
+    }
   );
 
   elements.nodeSearch.addEventListener(
@@ -2690,19 +3037,8 @@ function bindControls() {
   );
 
   const refreshEventFilters = () => {
-    if (
-      state.selectedEventId
-      && !visibleEvents().some(
-        (event) => event.id === state.selectedEventId
-      )
-    ) {
-      state.selectedEventId = null;
-    }
-
-    renderEvents();
-    renderEventList();
-    updateVisibleEventSummary();
-    syncSelectedEventAnimation();
+    state.timelineRange = null;
+    refreshEventView();
   };
 
   elements.eventType.addEventListener(

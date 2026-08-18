@@ -166,6 +166,41 @@
             <dd id="visible-event-count">—</dd>
           </div>
         </dl>
+
+        <div
+          class="live-timeline"
+          aria-labelledby="live-timeline-title"
+        >
+          <div class="live-timeline-heading">
+            <strong id="live-timeline-title">
+              Última hora
+            </strong>
+
+            <button
+              id="clear-timeline-range"
+              class="live-timeline-clear"
+              type="button"
+              disabled
+            >
+              Toda a hora
+            </button>
+          </div>
+
+          <div
+            id="live-timeline-bars"
+            class="live-timeline-bars"
+            aria-label="Actividade en intervalos de cinco minutos"
+          ></div>
+
+          <p
+            id="live-timeline-status"
+            class="live-timeline-status"
+            role="status"
+            aria-live="polite"
+          >
+            Sen intervalo seleccionado
+          </p>
+        </div>
       </section>
 
       <section
@@ -261,7 +296,7 @@
           </div>
 
           <div class="live-line-legend-group">
-            <strong>Recepción observada</strong>
+            <strong>Paquete observado</strong>
 
             <div class="live-line-legend-item">
               <span
@@ -312,7 +347,7 @@
       <footer class="live-footer">
         <p>
           As liñas grises moi discontinuas indican unha
-          <strong>recepción observada por un gateway</strong>.
+          <strong>paquete observado por un gateway</strong>.
           Relacionan un paquete co gateway que o recibiu, pero
           <strong>non demostran unha ligazón radio directa</strong>.
         </p>

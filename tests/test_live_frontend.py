@@ -66,7 +66,7 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "function addGatewayObservations(",
             'selected ? "5 5" : "4 6"',
-            '"Recepción observada por gateway"',
+            '"Paquete observado por gateway"',
             "non demostran unha ligazón radio directa",
         ):
             self.assertIn(
@@ -402,6 +402,32 @@ class LiveFrontendTests(unittest.TestCase):
             self.assertIn(
                 expected,
                 self.javascript,
+            )
+
+
+
+    def test_live_activity_timeline_exists(self) -> None:
+        for expected in (
+            'id="live-timeline-bars"',
+            'id="live-timeline-status"',
+            'id="clear-timeline-range"',
+            "timelineRange: null",
+            "function timelineBaseEvents()",
+            "function timelineBuckets()",
+            "function renderTimeline()",
+            "function eventsInsideTimelineRange(events)",
+            "5 * 60 * 1_000_000",
+            "{ length: 12 }",
+            "state.timelineRange = {",
+            'elements.eventAge.value = "60"',
+            "function refreshEventView()",
+            "renderTimeline();",
+            ".live-timeline-bars",
+            ".live-timeline-bar.selected",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript + self.css,
             )
 
 
