@@ -38,6 +38,7 @@ const state = {
   selectedEventId: null,
   selectionLayer: null,
   selectedNodeId: null,
+  nodeEventFilterId: null,
   nodeSearchSelectionLayer: null,
   gatewaySelectionLayer: null,
   eventAnimationLayer: null,
@@ -91,6 +92,39 @@ const elements = {
   playbackStatus: document.querySelector(
     "#playback-status"
   ),
+  selectedNodeCard: document.querySelector(
+    "#selected-node-card"
+  ),
+  selectedNodeCardClose: document.querySelector(
+    "#selected-node-card-close"
+  ),
+  selectedNodeCardName: document.querySelector(
+    "#selected-node-card-name"
+  ),
+  selectedNodeCardId: document.querySelector(
+    "#selected-node-card-id"
+  ),
+  selectedNodeEventCount: document.querySelector(
+    "#selected-node-event-count"
+  ),
+  selectedNodeRouteCount: document.querySelector(
+    "#selected-node-route-count"
+  ),
+  selectedNodeOriginCount: document.querySelector(
+    "#selected-node-origin-count"
+  ),
+  selectedNodeDestinationCount: document.querySelector(
+    "#selected-node-destination-count"
+  ),
+  selectedNodeGatewayCount: document.querySelector(
+    "#selected-node-gateway-count"
+  ),
+  selectedNodeLastSeen: document.querySelector(
+    "#selected-node-last-seen"
+  ),
+  selectedNodeActivity: document.querySelector(
+    "#selected-node-activity"
+  ),
   selectedEventCard: document.querySelector(
     "#selected-event-card"
   ),
@@ -122,6 +156,15 @@ const elements = {
     "#selected-event-card-observations-content"
   ),
   refresh: document.querySelector("#refresh-live"),
+  nodeEventFilterBanner: document.querySelector(
+    "#node-event-filter-banner"
+  ),
+  nodeEventFilterLabel: document.querySelector(
+    "#node-event-filter-label"
+  ),
+  clearNodeEventFilter: document.querySelector(
+    "#clear-node-event-filter"
+  ),
   eventList: document.querySelector("#event-list"),
   nodeSearch: document.querySelector("#live-node-search"),
   nodeSearchStatus: document.querySelector(
@@ -453,9 +496,16 @@ function searchableNodeText(node) {
 
 function clearNodeSelection({
   clearSearch = false,
+  clearActivityFilter = false,
 } = {}) {
   state.selectedNodeId = null;
   state.nodeSearchSelectionLayer?.clearLayers();
+
+  if (clearActivityFilter) {
+    state.nodeEventFilterId = null;
+  }
+
+  renderSelectedNodeCard();
 
   if (!clearSearch) {
     return;
@@ -467,6 +517,218 @@ function clearNodeSelection({
   elements.nodeSearchStatus.textContent = "";
 }
 
+function selectedNode() {
+  if (!state.selectedNodeId) {
+    return null;
+  }
+
+  return state.nodeById.get(
+    state.selectedNodeId
+  ) || null;
+}
+
+
+function eventInvolvesNode(
+  event,
+  nodeId
+) {
+  if (!nodeId) {
+    return false;
+  }
+
+  return eventNodeIds(event).includes(nodeId);
+}
+
+
+function nodeRelatedEvents(nodeId) {
+  if (!state.live || !nodeId) {
+    return [];
+  }
+
+  return state.live.events
+    .filter(
+      (event) => eventInvolvesNode(event, nodeId)
+    )
+    .sort(
+      (left, right) => (
+        Number(right.imported_at_us)
+        - Number(left.imported_at_us)
+      )
+    );
+}
+
+
+function nodeActivitySummary(nodeId) {
+  const events = nodeRelatedEvents(nodeId);
+
+  let originCount = 0;
+  let destinationCount = 0;
+  let gatewayCount = 0;
+  let routeCount = 0;
+
+  for (const event of events) {
+    if (event.from_id === nodeId) {
+      originCount += 1;
+    }
+
+    if (event.to_id === nodeId) {
+      destinationCount += 1;
+    }
+
+    if (gatewayIds(event).includes(nodeId)) {
+      gatewayCount += 1;
+    }
+
+    if (
+      event.traceroute
+      && (
+        event.traceroute.towards?.length >= 2
+        || event.traceroute.back?.length >= 2
+      )
+    ) {
+      routeCount += 1;
+    }
+  }
+
+  return {
+    events,
+    originCount,
+    destinationCount,
+    gatewayCount,
+    routeCount,
+  };
+}
+
+
+function renderSelectedNodeCard() {
+  const node = selectedNode();
+
+  if (!node) {
+    elements.selectedNodeCard.hidden = true;
+    return;
+  }
+
+  const summary = nodeActivitySummary(node.id);
+
+  elements.selectedNodeCardName.textContent = (
+    node.long_name
+    || node.short_name
+    || node.id
+  );
+
+  elements.selectedNodeCardId.textContent = node.id;
+
+  elements.selectedNodeEventCount.textContent = (
+    formatNumber(summary.events.length)
+  );
+
+  elements.selectedNodeRouteCount.textContent = (
+    formatNumber(summary.routeCount)
+  );
+
+  elements.selectedNodeOriginCount.textContent = (
+    formatNumber(summary.originCount)
+  );
+
+  elements.selectedNodeDestinationCount.textContent = (
+    formatNumber(summary.destinationCount)
+  );
+
+  elements.selectedNodeGatewayCount.textContent = (
+    formatNumber(summary.gatewayCount)
+  );
+
+  const newest = summary.events[0] || null;
+
+  elements.selectedNodeLastSeen.textContent = (
+    newest
+      ? `Última actividade: ${formatEventTime(newest)}`
+      : "Sen actividade no período dispoñible"
+  );
+
+  const filtering = (
+    state.nodeEventFilterId === node.id
+  );
+
+  elements.selectedNodeActivity.textContent = (
+    filtering
+      ? "Mostrar toda a actividade"
+      : "Ver actividade deste nodo"
+  );
+
+  elements.selectedNodeActivity.setAttribute(
+    "aria-pressed",
+    String(filtering)
+  );
+
+  elements.selectedNodeCard.hidden = false;
+}
+
+
+function selectNode(node) {
+  if (!node) {
+    return;
+  }
+
+  if (state.playbackActive) {
+    stopTraceroutePlayback();
+  }
+
+  state.selectedEventId = null;
+  cancelSelectedEventAnimation();
+  renderSelectedEventCard();
+
+  state.selectedNodeId = node.id;
+
+  renderNodeSearchSelection();
+  renderSelectedNodeCard();
+
+  const point = nodePoint(node.id);
+
+  if (point) {
+    state.map.setView(
+      point,
+      Math.max(state.map.getZoom(), 13)
+    );
+  }
+}
+
+
+function toggleSelectedNodeActivity() {
+  const node = selectedNode();
+
+  if (!node) {
+    return;
+  }
+
+  state.nodeEventFilterId = (
+    state.nodeEventFilterId === node.id
+      ? null
+      : node.id
+  );
+
+  state.timelineRange = null;
+
+  refreshEventView();
+  renderSelectedNodeCard();
+
+  if (
+    state.nodeEventFilterId
+    && isLiveMobileLayout()
+  ) {
+    state.lastMobileTrigger = (
+      elements.mobileTabs.find(
+        (button) => (
+          button.dataset.liveMobileTarget === "events"
+        )
+      ) || null
+    );
+
+    setLiveMobilePanel("events");
+  }
+}
+
+
 function focusNode(node) {
   const point = nodePoint(node.id);
 
@@ -474,8 +736,7 @@ function focusNode(node) {
     return;
   }
 
-  state.selectedNodeId = node.id;
-  renderNodeSearchSelection();
+  selectNode(node);
 
   state.map.setView(
     point,
@@ -813,6 +1074,7 @@ function renderNodes() {
         opacity: 0.72,
         fillColor: "#267a4d",
         fillOpacity: 0.55,
+        bubblingMouseEvents: false,
       }
     );
 
@@ -830,6 +1092,11 @@ function renderNodes() {
       {
         direction: "top",
       }
+    );
+
+    marker.on(
+      "click",
+      () => selectNode(node)
     );
 
     marker.addTo(state.nodeLayer);
@@ -2317,6 +2584,7 @@ function syncSelectedEventAnimation() {
 function selectEvent(event) {
   clearNodeSelection({
     clearSearch: true,
+    clearActivityFilter: false,
   });
 
   const alreadySelected = (
@@ -2460,9 +2728,58 @@ function eventMatchesType(event) {
   return true;
 }
 
+function renderNodeEventFilterBanner() {
+  const nodeId = state.nodeEventFilterId;
+
+  if (!nodeId) {
+    elements.nodeEventFilterBanner.hidden = true;
+    elements.nodeEventFilterLabel.textContent = "";
+    return;
+  }
+
+  const node = state.nodeById.get(nodeId);
+
+  const name = (
+    node?.long_name
+    || node?.short_name
+    || nodeId
+  );
+
+  elements.nodeEventFilterLabel.textContent = (
+    `Filtrando por ${name}`
+  );
+
+  elements.nodeEventFilterBanner.hidden = false;
+}
+
+
+function clearNodeEventFilter() {
+  if (!state.nodeEventFilterId) {
+    return;
+  }
+
+  state.nodeEventFilterId = null;
+  state.timelineRange = null;
+
+  refreshEventView();
+  renderSelectedNodeCard();
+}
+
+
 function filteredEventsByType() {
-  return state.live.events.filter(
+  const events = state.live.events.filter(
     eventMatchesType
+  );
+
+  if (!state.nodeEventFilterId) {
+    return events;
+  }
+
+  return events.filter(
+    (event) => eventInvolvesNode(
+      event,
+      state.nodeEventFilterId
+    )
   );
 }
 
@@ -3270,6 +3587,8 @@ async function refreshLive() {
     renderEvents();
     renderEventList();
     renderSelectedEventCard();
+    renderSelectedNodeCard();
+    renderNodeEventFilterBanner();
     renderTimeline();
     syncSelectedEventAnimation();
     updatePlaybackControls();
@@ -3329,6 +3648,8 @@ function refreshEventView() {
   renderEvents();
   renderEventList();
   renderSelectedEventCard();
+  renderSelectedNodeCard();
+  renderNodeEventFilterBanner();
   updateVisibleEventSummary();
   renderTimeline();
   syncSelectedEventAnimation();
@@ -3336,7 +3657,39 @@ function refreshEventView() {
 }
 
 
+function clearSelectedNode() {
+  const hadFilter = Boolean(
+    state.nodeEventFilterId
+  );
+
+  clearNodeSelection({
+    clearSearch: true,
+    clearActivityFilter: true,
+  });
+
+  if (hadFilter) {
+    state.timelineRange = null;
+    refreshEventView();
+  }
+}
+
+
 function bindControls() {
+  elements.clearNodeEventFilter.addEventListener(
+    "click",
+    clearNodeEventFilter
+  );
+
+  elements.selectedNodeCardClose.addEventListener(
+    "click",
+    clearSelectedNode
+  );
+
+  elements.selectedNodeActivity.addEventListener(
+    "click",
+    toggleSelectedNodeActivity
+  );
+
   elements.selectedEventCardClose.addEventListener(
     "click",
     clearSelectedEvent

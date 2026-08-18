@@ -32,7 +32,7 @@
 
   <link
     rel="stylesheet"
-    href="./live.css?v=20260818-live16"
+    href="./live.css?v=20260818-live18"
   >
 
   <script
@@ -43,7 +43,7 @@
   ></script>
 
   <script
-    src="./live.js?v=20260818-live16"
+    src="./live.js?v=20260818-live18"
     defer
   ></script>
 </head>
@@ -409,6 +409,25 @@
           Últimos eventos
         </h2>
 
+        <div
+          id="node-event-filter-banner"
+          class="live-node-filter-banner"
+          hidden
+        >
+          <span
+            id="node-event-filter-label"
+            class="live-node-filter-label"
+          ></span>
+
+          <button
+            id="clear-node-event-filter"
+            class="live-node-filter-clear"
+            type="button"
+          >
+            Mostrar todos
+          </button>
+        </div>
+
         <ol
           id="event-list"
           class="live-event-list"
@@ -480,6 +499,79 @@
           Detido
         </span>
       </div>
+
+      <aside
+        id="selected-node-card"
+        class="live-selected-node-card"
+        aria-labelledby="selected-node-card-title"
+        hidden
+      >
+        <button
+          id="selected-node-card-close"
+          class="live-selected-node-card-close"
+          type="button"
+          aria-label="Pechar detalle do nodo"
+        >
+          ×
+        </button>
+
+        <strong
+          id="selected-node-card-title"
+          class="live-selected-node-card-title"
+        >
+          Nodo seleccionado
+        </strong>
+
+        <span
+          id="selected-node-card-name"
+          class="live-selected-node-card-name"
+        ></span>
+
+        <span
+          id="selected-node-card-id"
+          class="live-selected-node-card-id"
+        ></span>
+
+        <dl class="live-selected-node-stats">
+          <div>
+            <dt>Eventos</dt>
+            <dd id="selected-node-event-count">—</dd>
+          </div>
+
+          <div>
+            <dt>RouteDiscovery</dt>
+            <dd id="selected-node-route-count">—</dd>
+          </div>
+
+          <div>
+            <dt>Orixe</dt>
+            <dd id="selected-node-origin-count">—</dd>
+          </div>
+
+          <div>
+            <dt>Destino</dt>
+            <dd id="selected-node-destination-count">—</dd>
+          </div>
+
+          <div>
+            <dt>Gateway</dt>
+            <dd id="selected-node-gateway-count">—</dd>
+          </div>
+        </dl>
+
+        <span
+          id="selected-node-last-seen"
+          class="live-selected-node-last-seen"
+        ></span>
+
+        <button
+          id="selected-node-activity"
+          class="live-selected-node-activity"
+          type="button"
+        >
+          Ver actividade deste nodo
+        </button>
+      </aside>
 
       <aside
         id="selected-event-card"

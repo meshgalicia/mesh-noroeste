@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260818-live16",
-            "./live.js?v=20260818-live16",
+            "./live.css?v=20260818-live18",
+            "./live.js?v=20260818-live18",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -148,6 +148,87 @@ class LiveFrontendTests(unittest.TestCase):
                 expected,
                 self.html + self.javascript,
             )
+
+
+    def test_nodes_can_be_selected_from_map(
+        self,
+    ) -> None:
+        for expected in (
+            'id="selected-node-card"',
+            'id="selected-node-card-close"',
+            'id="selected-node-card-name"',
+            'id="selected-node-card-id"',
+            'id="selected-node-event-count"',
+            'id="selected-node-route-count"',
+            'id="selected-node-origin-count"',
+            'id="selected-node-destination-count"',
+            'id="selected-node-gateway-count"',
+            'id="selected-node-last-seen"',
+            'id="selected-node-activity"',
+            "nodeEventFilterId: null",
+            "function selectedNode()",
+            "function eventInvolvesNode(",
+            "function nodeRelatedEvents(",
+            "function nodeActivitySummary(",
+            "function renderSelectedNodeCard()",
+            "function selectNode(node)",
+            "function toggleSelectedNodeActivity()",
+            "function clearSelectedNode()",
+            "bubblingMouseEvents: false",
+            'marker.on(',
+            '() => selectNode(node)',
+            ".live-selected-node-card",
+            ".live-selected-node-stats",
+            ".live-selected-node-activity",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript + self.css,
+            )
+
+
+
+    def test_node_event_filter_banner_exists(
+        self,
+    ) -> None:
+        for expected in (
+            'id="node-event-filter-banner"',
+            'id="node-event-filter-label"',
+            'id="clear-node-event-filter"',
+            "nodeEventFilterBanner",
+            "nodeEventFilterLabel",
+            "clearNodeEventFilter",
+            "function renderNodeEventFilterBanner()",
+            "function clearNodeEventFilter()",
+            "`Filtrando por ${name}`",
+            "Mostrar todos",
+            "renderNodeEventFilterBanner();",
+            ".live-node-filter-banner",
+            ".live-node-filter-clear",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript + self.css,
+            )
+
+
+    def test_node_activity_can_filter_events(
+        self,
+    ) -> None:
+        for expected in (
+            "state.nodeEventFilterId",
+            "eventNodeIds(event).includes(nodeId)",
+            "eventInvolvesNode(",
+            "state.nodeEventFilterId === node.id",
+            '"Ver actividade deste nodo"',
+            '"Mostrar toda a actividade"',
+            "refreshEventView();",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
 
     def test_node_search_selection_is_highlighted(
         self,
