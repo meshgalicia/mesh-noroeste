@@ -32,7 +32,7 @@
 
   <link
     rel="stylesheet"
-    href="./live.css?v=20260817-live15"
+    href="./live.css?v=20260818-live16"
   >
 
   <script
@@ -43,7 +43,7 @@
   ></script>
 
   <script
-    src="./live.js?v=20260817-live15"
+    src="./live.js?v=20260818-live16"
     defer
   ></script>
 </head>
@@ -330,6 +330,77 @@
       </section>
 
       <section
+        class="live-section live-help-section"
+        data-mobile-panel="help"
+        aria-labelledby="live-help-title"
+      >
+        <h2 id="live-help-title">
+          Como ler este mapa?
+        </h2>
+
+        <dl class="live-help-list">
+          <div>
+            <dt>RouteDiscovery</dt>
+            <dd>
+              Mostra o percorrido indicado polo propio
+              paquete cando esa información está dispoñible.
+              A ida e a volta poden seguir camiños distintos.
+            </dd>
+          </div>
+
+          <div>
+            <dt>Paquete observado</dt>
+            <dd>
+              Indica que un gateway observou ese paquete.
+              A liña ata o gateway non demostra por si soa
+              unha ligazón radio directa.
+            </dd>
+          </div>
+
+          <div>
+            <dt>Hop Limit</dt>
+            <dd>
+              É o contador de retransmisións do paquete.
+              Por exemplo, 7 → 2 indica que saíu cun límite
+              de 7 e foi observado cando lle quedaban 2.
+            </dd>
+          </div>
+
+          <div>
+            <dt>RSSI</dt>
+            <dd>
+              Indica a intensidade coa que o gateway recibiu
+              o sinal. En xeral, un valor menos negativo
+              representa un sinal máis forte.
+            </dd>
+          </div>
+
+          <div>
+            <dt>SNR</dt>
+            <dd>
+              Compara o sinal co ruído. Canto maior sexa o
+              valor, mellor; LoRa pode funcionar tamén con
+              valores negativos.
+            </dd>
+          </div>
+
+          <div>
+            <dt>Gateway</dt>
+            <dd>
+              É o nodo que observou e achegou información
+              sobre ese paquete ao sistema.
+            </dd>
+          </div>
+        </dl>
+
+        <p class="live-help-note">
+          Estes datos permiten interpretar o observado,
+          pero non sempre permiten saber con certeza por que
+          un paquete chegou ou deixou de chegar a un punto.
+        </p>
+      </section>
+
+      <section
         class="live-section"
         data-mobile-panel="events"
         aria-labelledby="live-events-title"
@@ -571,6 +642,20 @@
             </svg>
           </span>
           <span>Eventos</span>
+        </button>
+        <button
+          class="live-mobile-tab"
+          type="button"
+          data-live-mobile-target="help"
+          aria-controls="live-sidebar"
+          aria-expanded="false"
+          aria-pressed="false"
+        >
+          <span
+            class="live-mobile-tab-icon live-mobile-tab-help-icon"
+            aria-hidden="true"
+          >?</span>
+          <span>Axuda</span>
         </button>
       </nav>
 

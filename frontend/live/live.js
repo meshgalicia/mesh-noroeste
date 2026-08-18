@@ -24,6 +24,7 @@ const LIVE_MOBILE_PANEL_TITLES = Object.freeze({
   activity: "Actividade",
   display: "Visualización",
   events: "Últimos eventos",
+  help: "Axuda",
 });
 
 const state = {

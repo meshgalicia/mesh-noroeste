@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260817-live15",
-            "./live.js?v=20260817-live15",
+            "./live.css?v=20260818-live16",
+            "./live.js?v=20260818-live16",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -201,6 +201,42 @@ class LiveFrontendTests(unittest.TestCase):
             self.assertIn(
                 expected,
                 self.html + self.javascript,
+            )
+
+
+
+    def test_contextual_help_explains_live_terms(
+        self,
+    ) -> None:
+        for expected in (
+            'data-mobile-panel="help"',
+            'id="live-help-title"',
+            "Como ler este mapa?",
+            "<dt>RouteDiscovery</dt>",
+            "<dt>Paquete observado</dt>",
+            "<dt>Hop Limit</dt>",
+            "<dt>RSSI</dt>",
+            "<dt>SNR</dt>",
+            "<dt>Gateway</dt>",
+            "non demostra por si soa",
+            "7 → 2",
+            ".live-help-section",
+            ".live-help-note",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.css,
+            )
+
+        for expected in (
+            'data-live-mobile-target="help"',
+            "<span>Axuda</span>",
+            'help: "Axuda"',
+            ".live-mobile-tab-help-icon",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript + self.css,
             )
 
 
