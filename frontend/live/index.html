@@ -32,7 +32,7 @@
 
   <link
     rel="stylesheet"
-    href="./live.css?v=20260818-live19"
+    href="./live.css?v=20260818-live21"
   >
 
   <script
@@ -43,7 +43,7 @@
   ></script>
 
   <script
-    src="./live.js?v=20260818-live19"
+    src="./live.js?v=20260818-live21"
     defer
   ></script>
 </head>
@@ -428,6 +428,39 @@
           </button>
         </div>
 
+        <div
+          id="event-list-mode"
+          class="live-event-list-mode"
+          aria-label="Filtrar a lista de eventos"
+        >
+          <button
+            class="live-event-list-mode-button"
+            type="button"
+            data-event-list-mode="all"
+            aria-pressed="true"
+          >
+            Todos
+          </button>
+
+          <button
+            class="live-event-list-mode-button"
+            type="button"
+            data-event-list-mode="traceroute"
+            aria-pressed="false"
+          >
+            Rutas
+          </button>
+
+          <button
+            class="live-event-list-mode-button"
+            type="button"
+            data-event-list-mode="packet"
+            aria-pressed="false"
+          >
+            Paquetes
+          </button>
+        </div>
+
         <ol
           id="event-list"
           class="live-event-list"
@@ -621,6 +654,22 @@
           class="live-selected-event-card-path"
           hidden
         ></span>
+
+        <details
+          id="selected-event-card-technical"
+          class="live-selected-event-card-technical"
+        >
+          <summary
+            class="live-selected-event-card-technical-summary"
+          >
+            Detalle técnico
+          </summary>
+
+          <dl
+            id="selected-event-card-technical-content"
+            class="live-selected-event-card-technical-content"
+          ></dl>
+        </details>
 
         <details
           id="selected-event-card-observations"

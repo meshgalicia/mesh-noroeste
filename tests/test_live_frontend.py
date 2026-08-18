@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260818-live19",
-            "./live.js?v=20260818-live19",
+            "./live.css?v=20260818-live21",
+            "./live.js?v=20260818-live21",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -215,6 +215,69 @@ class LiveFrontendTests(unittest.TestCase):
 
 
 
+
+    def test_event_list_uses_human_packet_labels(
+        self,
+    ) -> None:
+        for expected in (
+            "function eventPortnumLabel(",
+            '[3, "Posición"]',
+            '[4, "Información do nodo"]',
+            '[67, "Telemetría"]',
+            '[70, "RouteDiscovery"]',
+            "eventPortnumLabel(event.portnum)",
+            '? "gateway"',
+            ': "gateways"',
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+
+    def test_event_list_has_quick_filters(
+        self,
+    ) -> None:
+        for expected in (
+            'id="event-list-mode"',
+            'data-event-list-mode="all"',
+            'data-event-list-mode="traceroute"',
+            'data-event-list-mode="packet"',
+            "Todos",
+            "Rutas",
+            "Paquetes",
+            'eventListMode: "all"',
+            "function eventListEvents()",
+            "function renderEventListMode()",
+            "function bindEventListModeControls()",
+            'state.eventListMode === "traceroute"',
+            'state.eventListMode === "packet"',
+            ".live-event-list-mode",
+            ".live-event-list-mode-button",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript + self.css,
+            )
+
+
+    def test_traceroute_events_are_visually_distinct(
+        self,
+    ) -> None:
+        for expected in (
+            "function eventHasTraceroute(event)",
+            '"has-traceroute"',
+            ".live-event-button.has-traceroute",
+            ".live-event-type.traceroute",
+            "var(--traceroute)",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript + self.css,
+            )
+
+
+
     def test_node_event_filter_banner_exists(
         self,
     ) -> None:
@@ -367,6 +430,49 @@ class LiveFrontendTests(unittest.TestCase):
             )
 
 
+
+    def test_event_list_quick_filter_is_local_to_event_list(
+        self,
+    ) -> None:
+        event_list_start = self.javascript.index(
+            "function renderEventList()"
+        )
+        event_list_end = self.javascript.index(
+            "function eventPoints(",
+            event_list_start,
+        )
+        event_list_code = self.javascript[
+            event_list_start:event_list_end
+        ]
+
+        traceroute_start = self.javascript.index(
+            "function nearestTracerouteEvent("
+        )
+        traceroute_end = self.javascript.index(
+            "function nearestReceptionEvent(",
+            traceroute_start,
+        )
+        traceroute_code = self.javascript[
+            traceroute_start:traceroute_end
+        ]
+
+        self.assertIn(
+            "for (const event of eventListEvents())",
+            event_list_code,
+        )
+
+        self.assertIn(
+            "for (const event of visibleEvents())",
+            traceroute_code,
+        )
+
+        self.assertNotIn(
+            "eventListEvents()",
+            traceroute_code,
+        )
+
+
+
     def test_traceroute_can_be_selected_from_map(self) -> None:
         for expected in (
             "function pointToSegmentDistance(",
@@ -429,6 +535,40 @@ class LiveFrontendTests(unittest.TestCase):
                 expected,
                 self.html + self.javascript + self.css,
             )
+
+
+
+    def test_selected_event_card_has_technical_details(
+        self,
+    ) -> None:
+        for expected in (
+            'id="selected-event-card-technical"',
+            'id="selected-event-card-technical-content"',
+            "Detalle técnico",
+            "selectedEventCardTechnical",
+            "selectedEventCardTechnicalContent",
+            "function meshtasticPortnumLabel(",
+            '"TELEMETRY_APP"',
+            '"TRACEROUTE_APP"',
+            "function eventTechnicalHopLabel(",
+            "function eventTechnicalIdentifier(",
+            "function renderSelectedEventTechnical(",
+            '"Identificador"',
+            '"Tipo"',
+            '"Canal"',
+            '"Hop Limit"',
+            '"Orixe"',
+            '"Destino"',
+            '"Evidencia"',
+            "renderSelectedEventTechnical(event);",
+            ".live-selected-event-card-technical",
+            ".live-selected-event-card-technical-content",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript + self.css,
+            )
+
 
 
     def test_selected_event_card_shows_observation_metrics(

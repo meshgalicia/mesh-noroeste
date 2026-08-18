@@ -39,6 +39,7 @@ const state = {
   selectionLayer: null,
   selectedNodeId: null,
   nodeEventFilterId: null,
+  eventListMode: "all",
   nodeSearchSelectionLayer: null,
   gatewaySelectionLayer: null,
   eventAnimationLayer: null,
@@ -146,6 +147,12 @@ const elements = {
   selectedEventCardBack: document.querySelector(
     "#selected-event-card-back"
   ),
+  selectedEventCardTechnical: document.querySelector(
+    "#selected-event-card-technical"
+  ),
+  selectedEventCardTechnicalContent: document.querySelector(
+    "#selected-event-card-technical-content"
+  ),
   selectedEventCardObservations: document.querySelector(
     "#selected-event-card-observations"
   ),
@@ -164,6 +171,11 @@ const elements = {
   ),
   clearNodeEventFilter: document.querySelector(
     "#clear-node-event-filter"
+  ),
+  eventListModeButtons: Array.from(
+    document.querySelectorAll(
+      ".live-event-list-mode-button"
+    )
   ),
   eventList: document.querySelector("#event-list"),
   nodeSearch: document.querySelector("#live-node-search"),
@@ -863,6 +875,36 @@ function nodeNameById(nodeId, fallback = null) {
 
   return fallback || nodeId;
 }
+
+function eventPortnumLabel(portnum) {
+  const value = Number(portnum);
+
+  const labels = new Map([
+    [1, "Mensaxe"],
+    [2, "Hardware remoto"],
+    [3, "Posición"],
+    [4, "Información do nodo"],
+    [5, "Routing"],
+    [8, "Waypoint"],
+    [67, "Telemetría"],
+    [70, "RouteDiscovery"],
+    [71, "Veciñanza"],
+  ]);
+
+  return (
+    labels.get(value)
+    || `portnum ${portnum}`
+  );
+}
+
+
+function eventHasTraceroute(event) {
+  return Boolean(
+    event?.evidence?.includes("traceroute")
+    || event?.traceroute
+  );
+}
+
 
 function eventOriginName(event) {
   return (
@@ -1586,6 +1628,165 @@ function selectedEvent() {
 }
 
 
+function meshtasticPortnumLabel(portnum) {
+  const value = Number(portnum);
+
+  const labels = new Map([
+    [0, "UNKNOWN_APP"],
+    [1, "TEXT_MESSAGE_APP"],
+    [2, "REMOTE_HARDWARE_APP"],
+    [3, "POSITION_APP"],
+    [4, "NODEINFO_APP"],
+    [5, "ROUTING_APP"],
+    [6, "DETECTION_SENSOR_APP"],
+    [7, "AUDIO_APP"],
+    [8, "WAYPOINT_APP"],
+    [64, "SERIAL_APP"],
+    [65, "STORE_FORWARD_APP"],
+    [66, "RANGE_TEST_APP"],
+    [67, "TELEMETRY_APP"],
+    [68, "ZPS_APP"],
+    [69, "SIMULATOR_APP"],
+    [70, "TRACEROUTE_APP"],
+    [71, "NEIGHBORINFO_APP"],
+    [72, "ATAK_PLUGIN"],
+    [73, "MAP_REPORT_APP"],
+  ]);
+
+  if (!Number.isFinite(value)) {
+    return "Descoñecido";
+  }
+
+  const label = labels.get(value);
+
+  return label
+    ? `${label} · ${value}`
+    : `Portnum ${value}`;
+}
+
+
+function eventTechnicalHopLabel(event) {
+  const stages = event?.observed?.stages || [];
+
+  const values = [];
+
+  for (const stage of stages) {
+    const hopStart = Number(stage?.hop_start);
+    const hopLimit = Number(stage?.hop_limit);
+
+    if (
+      !Number.isFinite(hopStart)
+      || !Number.isFinite(hopLimit)
+    ) {
+      continue;
+    }
+
+    const label = `${hopStart} → ${hopLimit}`;
+
+    if (!values.includes(label)) {
+      values.push(label);
+    }
+  }
+
+  return values.length > 0
+    ? values.join(" · ")
+    : "Non dispoñible";
+}
+
+
+function eventTechnicalIdentifier(event) {
+  return (
+    event?.packet_id
+    ?? event?.packetId
+    ?? event?.id
+    ?? "Non dispoñible"
+  );
+}
+
+
+function renderSelectedEventTechnical(event) {
+  const details = elements.selectedEventCardTechnical;
+  const container = (
+    elements.selectedEventCardTechnicalContent
+  );
+
+  container.replaceChildren();
+
+  if (!event) {
+    details.open = false;
+    return;
+  }
+
+  const rows = [
+    [
+      "Identificador",
+      eventTechnicalIdentifier(event),
+    ],
+    [
+      "Tipo",
+      meshtasticPortnumLabel(event.portnum),
+    ],
+    [
+      "Canal",
+      event.channel || "Descoñecido",
+    ],
+    [
+      "Hop Limit",
+      eventTechnicalHopLabel(event),
+    ],
+    [
+      "Orixe",
+      (
+        `${eventOriginName(event)}`
+        + ` · ${event.from_id || "ID descoñecido"}`
+      ),
+    ],
+    [
+      "Destino",
+      (
+        `${eventDestinationName(event)}`
+        + (
+          event.to_id
+            ? ` · ${event.to_id}`
+            : ""
+        )
+      ),
+    ],
+    [
+      "Evidencia",
+      (
+        Array.isArray(event.evidence)
+          && event.evidence.length > 0
+          ? event.evidence.join(" · ")
+          : "Sen evidencia adicional"
+      ),
+    ],
+  ];
+
+  const fragment = document.createDocumentFragment();
+
+  for (const [label, value] of rows) {
+    const row = document.createElement("div");
+    const term = document.createElement("dt");
+    const description = document.createElement("dd");
+
+    term.textContent = label;
+    description.textContent = String(value);
+
+    row.append(term, description);
+    fragment.append(row);
+  }
+
+  container.append(fragment);
+
+  /*
+   * Non obrigamos a pechalo en cada refresco se o usuario
+   * xa está mirando o mesmo evento. Ao cambiar de evento,
+   * selectEvent() volverá deixalo pechado.
+   */
+}
+
+
 function selectedEventGatewaySummary(event) {
   const ids = gatewayIds(event);
 
@@ -1817,6 +2018,8 @@ function renderSelectedEventCard() {
     elements.selectedEventCard.hidden = true;
     elements.selectedEventCardTowards.hidden = true;
     elements.selectedEventCardBack.hidden = true;
+    elements.selectedEventCardTechnical.open = false;
+    elements.selectedEventCardTechnicalContent.replaceChildren();
     elements.selectedEventCardObservations.hidden = true;
     elements.selectedEventCardObservations.open = false;
     elements.selectedEventCardObservationsContent.replaceChildren();
@@ -1886,6 +2089,7 @@ function renderSelectedEventCard() {
     backLabel || ""
   );
 
+  renderSelectedEventTechnical(event);
   renderSelectedEventObservations(event);
 
   elements.selectedEventCard.hidden = false;
@@ -2616,6 +2820,8 @@ function syncSelectedEventAnimation() {
 }
 
 function selectEvent(event) {
+  elements.selectedEventCardTechnical.open = false;
+
   clearNodeSelection({
     clearSearch: true,
     clearActivityFilter: false,
@@ -3360,10 +3566,42 @@ function renderEvents() {
   renderEventSelection();
 }
 
+function eventListEvents() {
+  const events = visibleEvents();
+
+  if (state.eventListMode === "traceroute") {
+    return events.filter(eventHasTraceroute);
+  }
+
+  if (state.eventListMode === "packet") {
+    return events.filter(
+      (event) => !eventHasTraceroute(event)
+    );
+  }
+
+  return events;
+}
+
+
+function renderEventListMode() {
+  for (const button of elements.eventListModeButtons) {
+    const active = (
+      button.dataset.eventListMode
+      === state.eventListMode
+    );
+
+    button.setAttribute(
+      "aria-pressed",
+      String(active)
+    );
+  }
+}
+
+
 function renderEventList() {
   const fragment = document.createDocumentFragment();
 
-  for (const event of visibleEvents()) {
+  for (const event of eventListEvents()) {
     const item = document.createElement("li");
     const button = document.createElement("button");
     const name = document.createElement("span");
@@ -3395,12 +3633,20 @@ function renderEventList() {
     metadata.className = "live-event-meta";
     metadata.textContent = [
       formatEventTime(event),
-      `portnum ${event.portnum}`,
-      `${event.observed?.gateway_count || 0} gateway(s)`,
+      eventPortnumLabel(event.portnum),
+      `${event.observed?.gateway_count || 0} `
+        + (
+          (event.observed?.gateway_count || 0) === 1
+            ? "gateway"
+            : "gateways"
+        ),
     ].join(" · ");
 
-    const hasRoute = (
-      event.evidence?.includes("traceroute")
+    const hasRoute = eventHasTraceroute(event);
+
+    button.classList.toggle(
+      "has-traceroute",
+      hasRoute
     );
 
     type.className = (
@@ -3452,6 +3698,7 @@ function renderEventList() {
   }
 
   elements.eventList.replaceChildren(fragment);
+  renderEventListMode();
 }
 
 function eventPoints(event) {
@@ -3735,7 +3982,32 @@ function clearSelectedNode() {
 }
 
 
+function bindEventListModeControls() {
+  for (const button of elements.eventListModeButtons) {
+    button.addEventListener(
+      "click",
+      () => {
+        const mode = button.dataset.eventListMode;
+
+        if (
+          mode !== "all"
+          && mode !== "traceroute"
+          && mode !== "packet"
+        ) {
+          return;
+        }
+
+        state.eventListMode = mode;
+        renderEventList();
+      }
+    );
+  }
+}
+
+
 function bindControls() {
+  bindEventListModeControls();
+
   elements.clearNodeEventFilter.addEventListener(
     "click",
     clearNodeEventFilter
