@@ -111,6 +111,9 @@ const elements = {
   selectedEventCardBack: document.querySelector(
     "#selected-event-card-back"
   ),
+  selectedEventCardObservations: document.querySelector(
+    "#selected-event-card-observations"
+  ),
   refresh: document.querySelector("#refresh-live"),
   eventList: document.querySelector("#event-list"),
   nodeSearch: document.querySelector("#live-node-search"),
@@ -1296,6 +1299,141 @@ function selectedEventGatewaySummary(event) {
 }
 
 
+function formatRadioMetric(
+  value,
+  {
+    suffix,
+    signed = false,
+  }
+) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    return "—";
+  }
+
+  const formatted = new Intl.NumberFormat(
+    "gl-ES",
+    {
+      maximumFractionDigits: 1,
+      minimumFractionDigits: Number.isInteger(number) ? 0 : 1,
+      signDisplay: signed ? "exceptZero" : "auto",
+    }
+  ).format(number);
+
+  return `${formatted} ${suffix}`;
+}
+
+
+function gatewayRadioSummary(gateway) {
+  const rssi = Number(gateway?.rssi_dbm);
+  const snr = Number(gateway?.snr_db);
+
+  /*
+   * Algúns rexistros propios/orixe chegan como 0/0.
+   * Non os presentamos como unha medida radio real.
+   */
+  if (rssi === 0 && snr === 0) {
+    return "RSSI — · SNR —";
+  }
+
+  return (
+    `RSSI ${formatRadioMetric(rssi, { suffix: "dBm" })}`
+    + " · "
+    + `SNR ${formatRadioMetric(
+      snr,
+      {
+        suffix: "dB",
+        signed: true,
+      }
+    )}`
+  );
+}
+
+
+function observationStageLabel(stage) {
+  const hopsUsed = Number(stage?.hops_used);
+  const hopStart = Number(stage?.hop_start);
+  const hopLimit = Number(stage?.hop_limit);
+
+  const parts = [];
+
+  if (Number.isFinite(hopsUsed)) {
+    parts.push(
+      `${hopsUsed} `
+      + (hopsUsed === 1 ? "salto consumido" : "saltos consumidos")
+    );
+  }
+
+  if (
+    Number.isFinite(hopStart)
+    && Number.isFinite(hopLimit)
+  ) {
+    parts.push(`hop ${hopStart} → ${hopLimit}`);
+  }
+
+  return parts.join(" · ");
+}
+
+
+function renderSelectedEventObservations(event) {
+  const container = (
+    elements.selectedEventCardObservations
+  );
+
+  container.replaceChildren();
+
+  const stages = event?.observed?.stages || [];
+
+  if (stages.length === 0) {
+    container.hidden = true;
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  for (const stage of stages) {
+    const block = document.createElement("div");
+    const stageMeta = document.createElement("strong");
+
+    block.className = "live-selected-event-stage";
+    stageMeta.className = "live-selected-event-stage-meta";
+    stageMeta.textContent = (
+      observationStageLabel(stage)
+      || "Observación"
+    );
+
+    block.append(stageMeta);
+
+    for (const gateway of stage.gateways || []) {
+      const row = document.createElement("div");
+      const name = document.createElement("span");
+      const radio = document.createElement("span");
+
+      row.className = "live-selected-event-gateway";
+
+      name.className = "live-selected-event-gateway-name";
+      name.textContent = nodeNameById(
+        gateway.gateway_id
+      );
+
+      radio.className = "live-selected-event-gateway-radio";
+      radio.textContent = gatewayRadioSummary(
+        gateway
+      );
+
+      row.append(name, radio);
+      block.append(row);
+    }
+
+    fragment.append(block);
+  }
+
+  container.append(fragment);
+  container.hidden = false;
+}
+
+
 function traceroutePathLabel(
   nodeIds,
   label
@@ -1358,6 +1496,8 @@ function renderSelectedEventCard() {
     elements.selectedEventCard.hidden = true;
     elements.selectedEventCardTowards.hidden = true;
     elements.selectedEventCardBack.hidden = true;
+    elements.selectedEventCardObservations.hidden = true;
+    elements.selectedEventCardObservations.replaceChildren();
     return;
   }
 
@@ -1374,6 +1514,7 @@ function renderSelectedEventCard() {
 
   elements.selectedEventCardMeta.textContent = [
     formatEventTime(event),
+    event.channel || "Canal descoñecido",
     `portnum ${event.portnum}`,
     `${gatewayIds(event).length} gateway(s)`,
   ].join(" · ");
@@ -1422,6 +1563,8 @@ function renderSelectedEventCard() {
   elements.selectedEventCardBack.textContent = (
     backLabel || ""
   );
+
+  renderSelectedEventObservations(event);
 
   elements.selectedEventCard.hidden = false;
 }

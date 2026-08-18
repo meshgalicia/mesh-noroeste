@@ -262,6 +262,31 @@ class LiveFrontendTests(unittest.TestCase):
 
 
 
+
+    def test_selected_event_card_shows_observation_metrics(
+        self,
+    ) -> None:
+        for expected in (
+            'id="selected-event-card-observations"',
+            "selectedEventCardObservations",
+            "function formatRadioMetric(",
+            "function gatewayRadioSummary(",
+            "function observationStageLabel(",
+            "function renderSelectedEventObservations(",
+            '"RSSI — · SNR —"',
+            '"salto consumido"',
+            '"saltos consumidos"',
+            '`hop ${hopStart} → ${hopLimit}`',
+            "event.channel ||",
+            ".live-selected-event-card-observations",
+            ".live-selected-event-gateway-radio",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript + self.css,
+            )
+
+
     def test_selected_event_card_shows_traceroute_paths(
         self,
     ) -> None:
