@@ -30,8 +30,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260818-live29",
-            "./live.js?v=20260818-live29",
+            "./live.css?v=20260819-live30",
+            "./live.js?v=20260819-live30",
             "../",
         ):
             self.assertIn(expected, self.html)
@@ -698,7 +698,12 @@ class LiveFrontendTests(unittest.TestCase):
         ]
 
         self.assertIn(
-            "for (const event of eventListEvents())",
+            "const events = eventListEvents();",
+            event_list_code,
+        )
+
+        self.assertIn(
+            "for (const event of events)",
             event_list_code,
         )
 
