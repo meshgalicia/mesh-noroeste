@@ -390,6 +390,56 @@ class LivePipelineTests(unittest.TestCase):
             "2026-08-16T20:30:00Z",
         )
 
+    def test_read_old_v1_event_adds_null_telemetry(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+
+            path = root / "live.json"
+
+            path.write_text(
+                json.dumps(
+                    {
+                        "schema": "mesh-noroeste.live/v1",
+                        "generated_at": GENERATED_AT,
+                        "sources": {},
+                        "events": [
+                            {
+                                "id": "old-event",
+                                "imported_at_us": 100,
+                                "packet_id": 1,
+                                "from_id": "meshtastic:!00000001",
+                                "traceroute": None,
+                            }
+                        ],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            document = read_live_document(
+                root
+            )
+
+            self.assertIsNotNone(
+                document
+            )
+
+            assert document is not None
+
+            self.assertIn(
+                "telemetry",
+                document["events"][0],
+            )
+
+            self.assertIsNone(
+                document["events"][0]["telemetry"]
+            )
+
+
+
     def test_written_live_document_can_be_read_back(
         self,
     ) -> None:

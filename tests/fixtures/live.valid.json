@@ -77,7 +77,8 @@
           -12
         ],
         "snr_back": []
-      }
+      },
+      "telemetry": null
     }
   ]
 }

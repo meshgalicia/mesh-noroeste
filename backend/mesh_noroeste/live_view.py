@@ -12,6 +12,11 @@ from mesh_noroeste.live_path import (
     LiveObservedPath,
     build_observed_path,
 )
+from mesh_noroeste.live_telemetry import (
+    TELEMETRY_PORTNUM,
+    LiveTelemetry,
+    parse_live_telemetry_payload,
+)
 from mesh_noroeste.live_traceroute import (
     LiveTraceroutePath,
     build_live_traceroute_path,
@@ -37,6 +42,7 @@ class LivePacketView:
 
     packet: MeshtasticLivePacket
     observed_path: LiveObservedPath
+    telemetry: LiveTelemetry | None
     traceroute: LiveTraceroutePath | None
 
     @property
@@ -84,6 +90,13 @@ def build_live_packet_view(
         receptions,
     )
 
+    telemetry: LiveTelemetry | None = None
+
+    if packet.portnum == TELEMETRY_PORTNUM:
+        telemetry = parse_live_telemetry_payload(
+            packet.payload
+        )
+
     traceroute: LiveTraceroutePath | None = None
 
     if packet.portnum == TRACEROUTE_PORTNUM:
@@ -100,5 +113,6 @@ def build_live_packet_view(
     return LivePacketView(
         packet=packet,
         observed_path=observed_path,
+        telemetry=telemetry,
         traceroute=traceroute,
     )

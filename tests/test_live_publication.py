@@ -123,6 +123,7 @@ class LivePublicationTests(unittest.TestCase):
                         }
                     ],
                 },
+                "telemetry": None,
                 "traceroute": None,
             },
         )
@@ -298,3 +299,172 @@ class LivePublicationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LiveTelemetryPublicationTests(unittest.TestCase):
+    def test_telemetry_is_published_structurally_without_raw_payload(
+        self,
+    ) -> None:
+        raw_payload = (
+            "time: 1787134073\n"
+            "device_metrics {\n"
+            "  battery_level: 88\n"
+            "  voltage: 4.039\n"
+            "  channel_utilization: 13.341667\n"
+            "  air_util_tx: 2.1988335\n"
+            "  uptime_seconds: 1726483\n"
+            "}\n"
+        )
+
+        view = build_live_packet_view(
+            packet(
+                portnum=67,
+                payload=raw_payload,
+            ),
+            (),
+        )
+
+        event = live_event_document(
+            view
+        )
+
+        self.assertNotIn(
+            "payload",
+            event,
+        )
+
+        self.assertEqual(
+            event["telemetry"],
+            {
+                "time": 1787134073,
+                "device_metrics": {
+                    "battery_level": 88,
+                    "voltage": 4.039,
+                    "channel_utilization": 13.341667,
+                    "air_util_tx": 2.1988335,
+                    "uptime_seconds": 1726483,
+                },
+                "environment_metrics": None,
+                "power_metrics": None,
+            },
+        )
+
+
+    def test_environment_telemetry_is_public_structurally(
+        self,
+    ) -> None:
+        view = build_live_packet_view(
+            packet(
+                portnum=67,
+                payload=(
+                    "time: 1787133718\n"
+                    "environment_metrics {\n"
+                    "  temperature: 24.552584\n"
+                    "  relative_humidity: 65.47269\n"
+                    "  barometric_pressure: 990.1126\n"
+                    "}\n"
+                ),
+            ),
+            (),
+        )
+
+        event = live_event_document(
+            view
+        )
+
+        self.assertEqual(
+            event["telemetry"],
+            {
+                "time": 1787133718,
+                "device_metrics": None,
+                "environment_metrics": {
+                    "temperature": 24.552584,
+                    "relative_humidity": 65.47269,
+                    "barometric_pressure": 990.1126,
+                },
+                "power_metrics": None,
+            },
+        )
+
+
+    def test_regular_packet_has_null_telemetry(
+        self,
+    ) -> None:
+        view = build_live_packet_view(
+            packet(
+                portnum=3,
+                payload="segredo bruto",
+            ),
+            (),
+        )
+
+        event = live_event_document(
+            view
+        )
+
+        self.assertIsNone(
+            event["telemetry"]
+        )
+        self.assertNotIn(
+            "payload",
+            event,
+        )
+
+
+    def test_device_telemetry_contract_shape(
+        self,
+    ) -> None:
+        view = build_live_packet_view(
+            packet(
+                portnum=67,
+                payload=(
+                    "time: 1787134073\n"
+                    "device_metrics {\n"
+                    "  battery_level: 88\n"
+                    "  voltage: 4.039\n"
+                    "  channel_utilization: 13.341667\n"
+                    "  air_util_tx: 2.1988335\n"
+                    "  uptime_seconds: 1726483\n"
+                    "}\n"
+                ),
+            ),
+            (),
+        )
+
+        event = live_event_document(view)
+
+        telemetry = event["telemetry"]
+
+        self.assertIsInstance(
+            telemetry,
+            dict,
+        )
+
+        assert isinstance(
+            telemetry,
+            dict,
+        )
+
+        self.assertEqual(
+            set(telemetry),
+            {
+                "time",
+                "device_metrics",
+                "environment_metrics",
+                "power_metrics",
+            },
+        )
+
+        self.assertEqual(
+            telemetry["device_metrics"][
+                "channel_utilization"
+            ],
+            13.341667,
+        )
+
+        self.assertEqual(
+            telemetry["device_metrics"][
+                "air_util_tx"
+            ],
+            2.1988335,
+        )

@@ -226,6 +226,7 @@
         "to_long_name",
         "evidence",
         "observed",
+        "telemetry",
         "traceroute"
       ],
       "properties": {
@@ -296,6 +297,136 @@
         },
         "traceroute": {
           "$ref": "#/$defs/traceroute"
+        },
+        "telemetry": {
+          "$ref": "#/$defs/telemetry"
+        }
+      },
+      "additionalProperties": false
+    },
+    "telemetry_device_metrics": {
+      "type": "object",
+      "properties": {
+        "battery_level": {
+          "type": "number"
+        },
+        "voltage": {
+          "type": "number"
+        },
+        "channel_utilization": {
+          "type": "number"
+        },
+        "air_util_tx": {
+          "type": "number"
+        },
+        "uptime_seconds": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "telemetry_environment_metrics": {
+      "type": "object",
+      "properties": {
+        "temperature": {
+          "type": "number"
+        },
+        "relative_humidity": {
+          "type": "number"
+        },
+        "barometric_pressure": {
+          "type": "number"
+        },
+        "gas_resistance": {
+          "type": "number"
+        },
+        "iaq": {
+          "type": "number"
+        },
+        "lux": {
+          "type": "number"
+        },
+        "voltage": {
+          "type": "number"
+        },
+        "current": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "telemetry_power_metrics": {
+      "type": "object",
+      "properties": {
+        "ch1_voltage": {
+          "type": "number"
+        },
+        "ch1_current": {
+          "type": "number"
+        },
+        "ch2_voltage": {
+          "type": "number"
+        },
+        "ch2_current": {
+          "type": "number"
+        },
+        "ch3_voltage": {
+          "type": "number"
+        },
+        "ch3_current": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "telemetry": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": [
+        "time",
+        "device_metrics",
+        "environment_metrics",
+        "power_metrics"
+      ],
+      "properties": {
+        "time": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "device_metrics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/telemetry_device_metrics"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "environment_metrics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/telemetry_environment_metrics"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "power_metrics": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/telemetry_power_metrics"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false

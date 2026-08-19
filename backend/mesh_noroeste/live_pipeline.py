@@ -110,7 +110,40 @@ def read_live_document(
             "O documento live anterior non contén events válidos"
         )
 
-    return document
+    # Compatibilidade dentro de live/v1:
+    # eventos escritos antes de incorporar Telemetry estruturada
+    # non incluían a propiedade ``telemetry``.
+    #
+    # Normalizámolos a ``null`` ao lelos para que poidan convivir
+    # durante a xanela deslizante dunha hora cos eventos novos.
+    normalized_events = []
+
+    for event in events:
+        if not isinstance(event, dict):
+            raise ValueError(
+                "Un evento live anterior non é un obxecto"
+            )
+
+        normalized_event = dict(event)
+
+        normalized_event.setdefault(
+            "telemetry",
+            None,
+        )
+
+        normalized_events.append(
+            normalized_event
+        )
+
+    normalized_document = dict(
+        document
+    )
+
+    normalized_document["events"] = (
+        normalized_events
+    )
+
+    return normalized_document
 
 
 def _timestamp_to_microseconds(

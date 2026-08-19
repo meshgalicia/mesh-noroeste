@@ -110,6 +110,36 @@ def _stage_document(
     }
 
 
+def _telemetry_document(
+    view: LivePacketView,
+) -> dict[str, Any] | None:
+    """Publica Telemetry estruturada sen conservar o payload bruto."""
+
+    telemetry = view.telemetry
+
+    if telemetry is None:
+        return None
+
+    return {
+        "time": telemetry.time,
+        "device_metrics": (
+            dict(telemetry.device_metrics)
+            if telemetry.device_metrics is not None
+            else None
+        ),
+        "environment_metrics": (
+            dict(telemetry.environment_metrics)
+            if telemetry.environment_metrics is not None
+            else None
+        ),
+        "power_metrics": (
+            dict(telemetry.power_metrics)
+            if telemetry.power_metrics is not None
+            else None
+        ),
+    }
+
+
 def _traceroute_document(
     view: LivePacketView,
 ) -> dict[str, Any] | None:
@@ -173,6 +203,7 @@ def live_event_document(
                 for stage in view.observed_path.stages
             ],
         },
+        "telemetry": _telemetry_document(view),
         "traceroute": _traceroute_document(view),
     }
 

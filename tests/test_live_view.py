@@ -225,3 +225,96 @@ class LivePacketViewTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LivePacketTelemetryViewTests(unittest.TestCase):
+    def test_telemetry_packet_is_parsed_structurally(
+        self,
+    ) -> None:
+        result = build_live_packet_view(
+            packet(
+                portnum=67,
+                payload=(
+                    "time: 1787134073\n"
+                    "device_metrics {\n"
+                    "  battery_level: 88\n"
+                    "  voltage: 4.039\n"
+                    "  channel_utilization: 13.341667\n"
+                    "  air_util_tx: 2.1988335\n"
+                    "  uptime_seconds: 1726483\n"
+                    "}\n"
+                ),
+            ),
+            (),
+        )
+
+        self.assertIsNotNone(
+            result.telemetry
+        )
+
+        assert result.telemetry is not None
+
+        self.assertEqual(
+            result.telemetry.time,
+            1787134073,
+        )
+
+        self.assertEqual(
+            result.telemetry.device_metrics,
+            {
+                "battery_level": 88,
+                "voltage": 4.039,
+                "channel_utilization": 13.341667,
+                "air_util_tx": 2.1988335,
+                "uptime_seconds": 1726483,
+            },
+        )
+
+        self.assertIsNone(
+            result.traceroute
+        )
+
+
+    def test_non_telemetry_packet_does_not_parse_payload(
+        self,
+    ) -> None:
+        result = build_live_packet_view(
+            packet(
+                portnum=3,
+                payload=(
+                    "device_metrics {\n"
+                    "  channel_utilization: 99\n"
+                    "}\n"
+                ),
+            ),
+            (),
+        )
+
+        self.assertIsNone(
+            result.telemetry
+        )
+
+
+    def test_empty_telemetry_packet_is_explicit(
+        self,
+    ) -> None:
+        result = build_live_packet_view(
+            packet(
+                portnum=67,
+                payload="",
+            ),
+            (),
+        )
+
+        self.assertIsNotNone(
+            result.telemetry
+        )
+
+        assert result.telemetry is not None
+
+        self.assertIsNone(
+            result.telemetry.time
+        )
+        self.assertFalse(
+            result.telemetry.has_metrics
+        )
