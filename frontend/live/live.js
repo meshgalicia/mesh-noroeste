@@ -3981,8 +3981,23 @@ function renderEventListMode() {
 
 function renderEventList() {
   const fragment = document.createDocumentFragment();
+  const events = eventListEvents();
 
-  for (const event of eventListEvents()) {
+  if (
+    state.nodeEventFilterId
+    && events.length === 0
+  ) {
+    const empty = document.createElement("li");
+
+    empty.className = "live-event-empty";
+    empty.textContent = (
+      "Non hai eventos deste nodo cos filtros actuais."
+    );
+
+    fragment.append(empty);
+  }
+
+  for (const event of events) {
     const item = document.createElement("li");
     const button = document.createElement("button");
     const name = document.createElement("span");
