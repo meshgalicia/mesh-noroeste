@@ -434,6 +434,87 @@ class LiveFrontendTests(unittest.TestCase):
 
 
 
+    def test_live_time_filter_uses_document_clock(
+        self,
+    ) -> None:
+        for expected in (
+            "function liveReferenceTimestampUs()",
+            "state.live?.generated_at",
+            "Date.parse(generatedAt)",
+            "const referenceTimestamp = (",
+            "liveReferenceTimestampUs()",
+            "referenceTimestamp",
+            "- minutes * 60 * 1_000_000",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+        self.assertNotIn(
+            "const newestTimestamp = events.reduce(",
+            self.javascript,
+        )
+
+
+    def test_live_timeline_uses_document_clock(
+        self,
+    ) -> None:
+        timeline_start = self.javascript.index(
+            "function timelineBuckets()"
+        )
+        timeline_end = self.javascript.index(
+            "function formatTimelineClock(",
+            timeline_start,
+        )
+        timeline = self.javascript[
+            timeline_start:timeline_end
+        ]
+
+        for expected in (
+            "const referenceTimestamp = (",
+            "liveReferenceTimestampUs()",
+            "referenceTimestamp",
+            "- 60 * 60 * 1_000_000",
+            "Math.min(",
+            "11,",
+            "Math.max(0, rawIndex)",
+        ):
+            self.assertIn(
+                expected,
+                timeline,
+            )
+
+        self.assertNotIn(
+            "timestamp > referenceTimestamp",
+            timeline,
+        )
+
+
+    def test_future_clock_skew_is_not_filtered_out(
+        self,
+    ) -> None:
+        age_start = self.javascript.index(
+            "function filteredEventsByAge()"
+        )
+        age_end = self.javascript.index(
+            "function visibleEvents()",
+            age_start,
+        )
+        age_filter = self.javascript[
+            age_start:age_end
+        ]
+
+        self.assertIn(
+            "Number(event.imported_at_us) >= cutoff",
+            age_filter,
+        )
+        self.assertNotIn(
+            "Number(event.imported_at_us) <=",
+            age_filter,
+        )
+
+
     def test_mobile_playback_compacts_event_card(
         self,
     ) -> None:

@@ -3478,24 +3478,33 @@ function timelineBaseEvents() {
 }
 
 
-function timelineNewestTimestamp(events) {
-  return events.reduce(
-    (maximum, event) => Math.max(
-      maximum,
-      Number(event.imported_at_us) || 0
-    ),
-    0
-  );
+function liveReferenceTimestampUs() {
+  const generatedAt = state.live?.generated_at;
+
+  if (
+    typeof generatedAt !== "string"
+    || !generatedAt
+  ) {
+    return 0;
+  }
+
+  const timestampMs = Date.parse(generatedAt);
+
+  if (!Number.isFinite(timestampMs)) {
+    return 0;
+  }
+
+  return timestampMs * 1000;
 }
 
 
 function timelineBuckets() {
   const events = timelineBaseEvents();
-  const newestTimestamp = timelineNewestTimestamp(
-    events
+  const referenceTimestamp = (
+    liveReferenceTimestampUs()
   );
 
-  if (!newestTimestamp) {
+  if (!referenceTimestamp) {
     return [];
   }
 
@@ -3504,7 +3513,7 @@ function timelineBuckets() {
   );
 
   const hourStart = (
-    newestTimestamp
+    referenceTimestamp
     - 60 * 60 * 1_000_000
   );
 
@@ -3538,7 +3547,6 @@ function timelineBuckets() {
     if (
       !Number.isFinite(timestamp)
       || timestamp < hourStart
-      || timestamp > newestTimestamp
     ) {
       continue;
     }
@@ -3789,22 +3797,18 @@ function filteredEventsByAge() {
     );
   }
 
-  const newestTimestamp = events.reduce(
-    (maximum, event) => Math.max(
-      maximum,
-      Number(event.imported_at_us) || 0
-    ),
-    0
+  const referenceTimestamp = (
+    liveReferenceTimestampUs()
   );
 
-  if (!newestTimestamp) {
+  if (!referenceTimestamp) {
     return eventsInsideTimelineRange(
       events
     );
   }
 
   const cutoff = (
-    newestTimestamp
+    referenceTimestamp
     - minutes * 60 * 1_000_000
   );
 
