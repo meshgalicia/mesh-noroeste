@@ -318,6 +318,90 @@ class LiveFrontendTests(unittest.TestCase):
             )
 
 
+    def test_event_list_filters_before_applying_limit(
+        self,
+    ) -> None:
+        start = self.javascript.index(
+            "function eventListEvents()"
+        )
+
+        end = self.javascript.index(
+            "\nfunction renderEventListMode()",
+            start,
+        )
+
+        block = self.javascript[
+            start:end
+        ]
+
+        self.assertIn(
+            "let events = filteredEventsByAge();",
+            block,
+        )
+
+        self.assertIn(
+            'state.eventListMode === "traceroute"',
+            block,
+        )
+
+        self.assertIn(
+            "eventHasRenderableTraceroute",
+            block,
+        )
+
+        self.assertIn(
+            "const value = elements.eventLimit.value;",
+            block,
+        )
+
+        self.assertIn(
+            "return events.slice(",
+            block,
+        )
+
+        self.assertNotIn(
+            "const events = visibleEvents();",
+            block,
+        )
+
+
+    def test_route_list_uses_playable_traceroutes(
+        self,
+    ) -> None:
+        event_list_start = self.javascript.index(
+            "function eventListEvents()"
+        )
+
+        event_list_end = self.javascript.index(
+            "\nfunction renderEventListMode()",
+            event_list_start,
+        )
+
+        block = self.javascript[
+            event_list_start:event_list_end
+        ]
+
+        self.assertIn(
+            "eventHasRenderableTraceroute",
+            block,
+        )
+
+        self.assertNotIn(
+            "events.filter(eventHasTraceroute)",
+            block,
+        )
+
+        for expected in (
+            "function eventHasRenderableTraceroute(event)",
+            "selectedEventAnimationSegments(event).length > 0",
+            "eventHasRenderableTraceroute(event)",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+
     def test_traceroute_events_are_visually_distinct(
         self,
     ) -> None:
@@ -854,6 +938,38 @@ class LiveFrontendTests(unittest.TestCase):
                 expected,
                 self.html + self.javascript + self.css,
             )
+
+
+    def test_selected_event_animation_is_not_limited_by_visible_events(
+        self,
+    ) -> None:
+        start = self.javascript.index(
+            "function selectedVisibleEvent()"
+        )
+
+        end = self.javascript.index(
+            "\nfunction eventNodeIds(",
+            start,
+        )
+
+        block = self.javascript[
+            start:end
+        ]
+
+        self.assertIn(
+            "state.live.events.find(",
+            block,
+        )
+
+        self.assertIn(
+            "event.id === state.selectedEventId",
+            block,
+        )
+
+        self.assertNotIn(
+            "visibleEvents().find(",
+            block,
+        )
 
 
     def test_selected_route_can_be_animated(self) -> None:

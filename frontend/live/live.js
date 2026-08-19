@@ -1104,6 +1104,14 @@ function eventHasTraceroute(event) {
 }
 
 
+function eventHasRenderableTraceroute(event) {
+  return (
+    eventHasTraceroute(event)
+    && selectedEventAnimationSegments(event).length > 0
+  );
+}
+
+
 function eventOriginName(event) {
   return (
     event.long_name
@@ -2456,7 +2464,7 @@ function selectedVisibleEvent() {
     return null;
   }
 
-  return visibleEvents().find(
+  return state.live.events.find(
     (event) => event.id === state.selectedEventId
   ) || null;
 }
@@ -2870,10 +2878,7 @@ function animateSelectedEvent(event) {
 function playbackTracerouteEvents() {
   return filteredEventsByAge()
     .filter(
-      (event) => (
-        Boolean(event.traceroute)
-        && selectedEventAnimationSegments(event).length > 0
-      )
+      eventHasRenderableTraceroute
     )
     .sort(
       (left, right) => (
@@ -3932,19 +3937,30 @@ function renderEvents() {
 }
 
 function eventListEvents() {
-  const events = visibleEvents();
+  let events = filteredEventsByAge();
 
   if (state.eventListMode === "traceroute") {
-    return events.filter(eventHasTraceroute);
-  }
-
-  if (state.eventListMode === "packet") {
-    return events.filter(
+    events = events.filter(
+      eventHasRenderableTraceroute
+    );
+  } else if (state.eventListMode === "packet") {
+    events = events.filter(
       (event) => !eventHasTraceroute(event)
     );
   }
 
-  return events;
+  const value = elements.eventLimit.value;
+
+  if (value === "all") {
+    return events;
+  }
+
+  const limit = Number(value);
+
+  return events.slice(
+    0,
+    Number.isFinite(limit) ? limit : 50
+  );
 }
 
 
