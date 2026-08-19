@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from typing import Callable
 from urllib.parse import quote
 
@@ -13,6 +14,7 @@ from mesh_noroeste.domain import (
 from mesh_noroeste.http_client import (
     DEFAULT_MAX_BYTES,
     DEFAULT_TIMEOUT_SECONDS,
+    FetchError,
     fetch_json,
 )
 from mesh_noroeste.ozulo_live import (
@@ -30,6 +32,8 @@ OZULO_LIVE_PACKETS_SEEN_BASE_URL = (
     "https://meshview.mesh.comunidadeozulo.org/"
     "api/packets_seen"
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,12 +151,23 @@ def poll_ozulo_live_once(
     bytes_received = page.bytes_received
 
     for packet in page.packets:
-        receptions, reception_bytes = reception_fetcher(
-            packet,
-            base_url=packets_seen_base_url,
-            timeout=timeout,
-            max_bytes=max_bytes,
-        )
+        try:
+            receptions, reception_bytes = reception_fetcher(
+                packet,
+                base_url=packets_seen_base_url,
+                timeout=timeout,
+                max_bytes=max_bytes,
+            )
+        except FetchError as exc:
+            logger.warning(
+                "Non se puideron obter recepcións live "
+                "source=%s packet_id=%s: %s",
+                packet.source,
+                packet.packet_id,
+                exc,
+            )
+            receptions = ()
+            reception_bytes = 0
 
         bytes_received += reception_bytes
 

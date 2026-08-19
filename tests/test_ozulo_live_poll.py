@@ -8,6 +8,7 @@ from mesh_noroeste.domain import (
     MeshtasticLivePacket,
     MeshtasticLiveReception,
 )
+from mesh_noroeste.http_client import FetchError
 from mesh_noroeste.ozulo_live_http import OzuloLivePage
 from mesh_noroeste.ozulo_live_poll import (
     build_ozulo_packets_seen_url,
@@ -155,6 +156,94 @@ class OzuloLivePollTests(unittest.TestCase):
         self.assertEqual(batch.bytes_received, 140)
         self.assertEqual(len(page_calls), 1)
         self.assertEqual(len(reception_calls), 2)
+
+    def test_failed_packets_seen_does_not_abort_batch(
+        self,
+    ) -> None:
+        first = live_packet(
+            10,
+            "!00000001",
+            100,
+        )
+        second = live_packet(
+            20,
+            "!00000002",
+            200,
+        )
+
+        page = OzuloLivePage(
+            packets=(first, second),
+            next_cursor=200,
+            saturated=False,
+            requested_url="https://example.test/request",
+            final_url="https://example.test/final",
+            bytes_received=100,
+        )
+
+        def page_fetcher(**kwargs):
+            return page
+
+        calls = []
+
+        def reception_fetcher(packet, **kwargs):
+            calls.append(packet.packet_id)
+
+            if packet.packet_id == 10:
+                raise FetchError(
+                    "Error HTTP 502 de proba"
+                )
+
+            return (
+                (
+                    live_reception(
+                        packet,
+                        "!000000ff",
+                        packet.imported_at_us + 1,
+                    ),
+                ),
+                20,
+            )
+
+        with self.assertLogs(
+            "mesh_noroeste.ozulo_live_poll",
+            level="WARNING",
+        ) as captured:
+            batch = poll_ozulo_live_once(
+                cursor=50,
+                page_fetcher=page_fetcher,
+                reception_fetcher=reception_fetcher,
+            )
+
+        self.assertEqual(
+            calls,
+            [10, 20],
+        )
+        self.assertEqual(
+            len(batch.observations),
+            2,
+        )
+        self.assertEqual(
+            batch.observations[0].receptions,
+            (),
+        )
+        self.assertEqual(
+            len(batch.observations[1].receptions),
+            1,
+        )
+        self.assertEqual(
+            batch.next_cursor,
+            200,
+        )
+        self.assertEqual(
+            batch.bytes_received,
+            120,
+        )
+        self.assertTrue(
+            any(
+                "packet_id=10" in message
+                for message in captured.output
+            )
+        )
 
     def test_saturation_is_propagated_as_possible_gap(
         self,
