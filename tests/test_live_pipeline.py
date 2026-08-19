@@ -140,6 +140,186 @@ class LivePipelineTests(unittest.TestCase):
             event,
         )
 
+    def test_invalid_packet_does_not_abort_batch(
+        self,
+    ) -> None:
+        poisoned = OzuloLivePacketObservation(
+            packet=packet(
+                packet_id=101,
+                portnum=70,
+                payload=(
+                    "route: 4294967296\n"
+                    "snr_towards: 5\n"
+                ),
+            ),
+            receptions=(),
+        )
+
+        valid = OzuloLivePacketObservation(
+            packet=packet(
+                packet_id=102,
+                portnum=3,
+            ),
+            receptions=(),
+        )
+
+        source = OzuloLiveBatch(
+            observations=(
+                poisoned,
+                valid,
+            ),
+            previous_cursor=900,
+            next_cursor=1100,
+            saturated=False,
+            bytes_received=1234,
+        )
+
+        with self.assertLogs(
+            "mesh_noroeste.live_pipeline",
+            level="WARNING",
+        ) as captured:
+            document = (
+                build_live_document_from_ozulo_batch(
+                    source,
+                    generated_at=GENERATED_AT,
+                )
+            )
+
+        self.assertEqual(
+            len(document["events"]),
+            1,
+        )
+        self.assertEqual(
+            document["events"][0]["packet_id"],
+            102,
+        )
+        self.assertEqual(
+            document["sources"][
+                "ozulo_map"
+            ]["next_cursor"],
+            1100,
+        )
+        self.assertTrue(
+            any(
+                "packet_id=101" in message
+                for message in captured.output
+            )
+        )
+
+    def test_batch_with_only_invalid_packet_can_advance(
+        self,
+    ) -> None:
+        poisoned = OzuloLivePacketObservation(
+            packet=packet(
+                packet_id=101,
+                portnum=70,
+                payload=(
+                    "route: 4294967296\n"
+                    "snr_towards: 5\n"
+                ),
+            ),
+            receptions=(),
+        )
+
+        source = OzuloLiveBatch(
+            observations=(poisoned,),
+            previous_cursor=900,
+            next_cursor=1100,
+            saturated=False,
+            bytes_received=1234,
+        )
+
+        with self.assertLogs(
+            "mesh_noroeste.live_pipeline",
+            level="WARNING",
+        ):
+            document = (
+                build_live_document_from_ozulo_batch(
+                    source,
+                    generated_at=GENERATED_AT,
+                )
+            )
+
+        self.assertEqual(
+            document["events"],
+            [],
+        )
+        self.assertEqual(
+            document["sources"][
+                "ozulo_map"
+            ]["previous_cursor"],
+            900,
+        )
+        self.assertEqual(
+            document["sources"][
+                "ozulo_map"
+            ]["next_cursor"],
+            1100,
+        )
+
+    def test_duplicate_packet_does_not_abort_batch(
+        self,
+    ) -> None:
+        first = OzuloLivePacketObservation(
+            packet=packet(
+                packet_id=103,
+                portnum=3,
+            ),
+            receptions=(),
+        )
+
+        duplicate = OzuloLivePacketObservation(
+            packet=packet(
+                packet_id=103,
+                portnum=3,
+            ),
+            receptions=(),
+        )
+
+        source = OzuloLiveBatch(
+            observations=(
+                first,
+                duplicate,
+            ),
+            previous_cursor=900,
+            next_cursor=1100,
+            saturated=False,
+            bytes_received=1234,
+        )
+
+        with self.assertLogs(
+            "mesh_noroeste.live_pipeline",
+            level="WARNING",
+        ) as captured:
+            document = (
+                build_live_document_from_ozulo_batch(
+                    source,
+                    generated_at=GENERATED_AT,
+                )
+            )
+
+        self.assertEqual(
+            len(document["events"]),
+            1,
+        )
+        self.assertEqual(
+            document["events"][0]["packet_id"],
+            103,
+        )
+        self.assertEqual(
+            document["sources"][
+                "ozulo_map"
+            ]["next_cursor"],
+            1100,
+        )
+        self.assertTrue(
+            any(
+                "duplicado" in message
+                and "packet_id=103" in message
+                for message in captured.output
+            )
+        )
+
     def test_saturated_batch_marks_possible_gap(
         self,
     ) -> None:

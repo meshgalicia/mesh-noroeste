@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime, timezone
 import json
+import logging
 import os
 from pathlib import Path
 import tempfile
@@ -26,6 +27,8 @@ from mesh_noroeste.ozulo_live_poll import (
 LIVE_FILENAME = "live.json"
 LIVE_RETENTION_SECONDS = 60 * 60
 
+logger = logging.getLogger(__name__)
+
 
 def build_live_document_from_ozulo_batch(
     batch: OzuloLiveBatch,
@@ -39,13 +42,39 @@ def build_live_document_from_ozulo_batch(
             "batch debe ser OzuloLiveBatch"
         )
 
-    views = tuple(
-        build_live_packet_view(
-            observation.packet,
-            observation.receptions,
-        )
-        for observation in batch.observations
-    )
+    views = []
+    seen_event_ids: set[str] = set()
+
+    for observation in batch.observations:
+        event_id = observation.packet.id
+
+        if event_id in seen_event_ids:
+            logger.warning(
+                "Descartado paquete live duplicado "
+                "source=%s packet_id=%s event_id=%s",
+                observation.packet.source,
+                observation.packet.packet_id,
+                event_id,
+            )
+            continue
+
+        try:
+            view = build_live_packet_view(
+                observation.packet,
+                observation.receptions,
+            )
+        except ValueError as exc:
+            logger.warning(
+                "Descartado paquete live inválido "
+                "source=%s packet_id=%s: %s",
+                observation.packet.source,
+                observation.packet.packet_id,
+                exc,
+            )
+            continue
+
+        seen_event_ids.add(event_id)
+        views.append(view)
 
     return build_live_document(
         views,
