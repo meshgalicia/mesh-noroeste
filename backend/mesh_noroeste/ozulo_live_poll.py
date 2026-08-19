@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 import logging
 from typing import Callable
@@ -32,6 +33,8 @@ OZULO_LIVE_PACKETS_SEEN_BASE_URL = (
     "https://meshview.mesh.comunidadeozulo.org/"
     "api/packets_seen"
 )
+
+OZULO_LIVE_RECEPTION_WORKERS = 6
 
 logger = logging.getLogger(__name__)
 
@@ -150,9 +153,14 @@ def poll_ozulo_live_once(
     observations: list[OzuloLivePacketObservation] = []
     bytes_received = page.bytes_received
 
-    for packet in page.packets:
+    def fetch_receptions(
+        packet: MeshtasticLivePacket,
+    ) -> tuple[
+        tuple[MeshtasticLiveReception, ...],
+        int,
+    ]:
         try:
-            receptions, reception_bytes = reception_fetcher(
+            return reception_fetcher(
                 packet,
                 base_url=packets_seen_base_url,
                 timeout=timeout,
@@ -166,8 +174,34 @@ def poll_ozulo_live_once(
                 packet.packet_id,
                 exc,
             )
-            receptions = ()
-            reception_bytes = 0
+
+            return (), 0
+
+    if page.packets:
+        workers = min(
+            OZULO_LIVE_RECEPTION_WORKERS,
+            len(page.packets),
+        )
+
+        with ThreadPoolExecutor(
+            max_workers=workers,
+            thread_name_prefix="ozulo-live",
+        ) as executor:
+            reception_results = tuple(
+                executor.map(
+                    fetch_receptions,
+                    page.packets,
+                )
+            )
+    else:
+        reception_results = ()
+
+    for packet, result in zip(
+        page.packets,
+        reception_results,
+        strict=True,
+    ):
+        receptions, reception_bytes = result
 
         bytes_received += reception_bytes
 

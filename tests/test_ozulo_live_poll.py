@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from threading import Event, Lock
 import unittest
 
 from mesh_noroeste.domain import (
@@ -156,6 +157,88 @@ class OzuloLivePollTests(unittest.TestCase):
         self.assertEqual(batch.bytes_received, 140)
         self.assertEqual(len(page_calls), 1)
         self.assertEqual(len(reception_calls), 2)
+
+    def test_packets_seen_are_fetched_concurrently(
+        self,
+    ) -> None:
+        first = live_packet(
+            10,
+            "!00000001",
+            100,
+        )
+        second = live_packet(
+            20,
+            "!00000002",
+            200,
+        )
+
+        page = OzuloLivePage(
+            packets=(first, second),
+            next_cursor=200,
+            saturated=False,
+            requested_url="https://example.test/request",
+            final_url="https://example.test/final",
+            bytes_received=100,
+        )
+
+        def page_fetcher(**kwargs):
+            return page
+
+        second_started = Event()
+        lock = Lock()
+        started: list[int] = []
+
+        def reception_fetcher(packet, **kwargs):
+            with lock:
+                started.append(
+                    packet.packet_id
+                )
+
+            if packet.packet_id == 20:
+                second_started.set()
+
+            if packet.packet_id == 10:
+                if not second_started.wait(
+                    timeout=2,
+                ):
+                    raise AssertionError(
+                        "packets_seen executouse en serie"
+                    )
+
+            return (
+                (
+                    live_reception(
+                        packet,
+                        "!000000ff",
+                        packet.imported_at_us + 1,
+                    ),
+                ),
+                20,
+            )
+
+        batch = poll_ozulo_live_once(
+            cursor=50,
+            page_fetcher=page_fetcher,
+            reception_fetcher=reception_fetcher,
+        )
+
+        self.assertCountEqual(
+            started,
+            [10, 20],
+        )
+
+        self.assertEqual(
+            [
+                observation.packet.packet_id
+                for observation in batch.observations
+            ],
+            [10, 20],
+        )
+
+        self.assertEqual(
+            batch.bytes_received,
+            140,
+        )
 
     def test_failed_packets_seen_does_not_abort_batch(
         self,
