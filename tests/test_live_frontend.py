@@ -30,11 +30,31 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260819-live30",
-            "./live.js?v=20260819-live30",
+            "./live.css?v=20260819-live31",
+            "./live.js?v=20260819-live31",
             "../",
         ):
             self.assertIn(expected, self.html)
+
+    def test_possible_gap_is_exposed_to_user(
+        self,
+    ) -> None:
+        for expected in (
+            'id="live-gap-warning"',
+            'class="live-gap-warning"',
+            "Os datos deste período poden estar incompletos.",
+            'gapWarning: document.querySelector("#live-gap-warning")',
+            "function updatePossibleGapWarning()",
+            "state.live?.sources",
+            "?.ozulo_map",
+            "?.possible_gap === true",
+            "elements.gapWarning.hidden = !possibleGap",
+            "updatePossibleGapWarning();",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript,
+            )
 
     def test_live_page_uses_live_contract(
         self,

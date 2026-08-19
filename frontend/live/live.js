@@ -57,6 +57,7 @@ const state = {
 
 const elements = {
   status: document.querySelector("#live-status"),
+  gapWarning: document.querySelector("#live-gap-warning"),
   eventCount: document.querySelector("#event-count"),
   tracerouteCount: document.querySelector(
     "#traceroute-count"
@@ -1201,6 +1202,17 @@ function validateLive(document) {
     );
   }
 }
+
+function updatePossibleGapWarning() {
+  const possibleGap = (
+    state.live?.sources
+      ?.ozulo_map
+      ?.possible_gap === true
+  );
+
+  elements.gapWarning.hidden = !possibleGap;
+}
+
 
 function createMap() {
   state.map = L.map("live-map", {
@@ -4294,6 +4306,7 @@ async function refreshLive() {
     }
 
     updateSummary();
+    updatePossibleGapWarning();
     renderEvents();
     renderEventList();
     renderSelectedEventCard();
