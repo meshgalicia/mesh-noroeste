@@ -21,17 +21,12 @@ from mesh_noroeste.application import (
     MESHCORE_HUB_NODES_URL,
     MESHCORE_HUB_PACKET_GROUPS_URL,
     MESHCORE_MAP_URL,
-    MESHVIEW_ES_NEIGHBOR_EDGES_URL,
-    MESHVIEW_ES_POSITION_PACKETS_URL,
-    MESHVIEW_ES_TRACEROUTE_EDGES_URL,
-    MESHVIEW_ES_URL,
     OZULO_MAP_EDGES_URL,
     OZULO_MAP_NODES_URL,
     OZULO_NEIGHBOR_PACKETS_URL,
     collect_malha_pt,
     collect_meshcore_hub,
     collect_meshcore_map,
-    collect_meshview_es,
     collect_ozulo_map,
     publish_from_store,
 )
@@ -428,334 +423,6 @@ class ApplicationTests(unittest.TestCase):
             clear=True,
         ):
             return Settings.from_env(root)
-
-    def test_collect_meshview_es_saves_and_records_run(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            settings = self.settings(root)
-            documents = (
-                meshview_document(),
-                meshview_position_packets_document(),
-                meshview_edges_document("traceroute"),
-                meshview_edges_document("neighbor"),
-            )
-            urls = (
-                MESHVIEW_ES_URL,
-                MESHVIEW_ES_POSITION_PACKETS_URL,
-                MESHVIEW_ES_TRACEROUTE_EDGES_URL,
-                MESHVIEW_ES_NEIGHBOR_EDGES_URL,
-            )
-            encoded = tuple(
-                json.dumps(document).encode("utf-8")
-                for document in documents
-            )
-            fetched = tuple(
-                JsonFetchResult(
-                    document=document,
-                    requested_url=url,
-                    final_url=url,
-                    status=200,
-                    content_type="application/json",
-                    bytes_received=len(payload),
-                )
-                for document, url, payload in zip(
-                    documents,
-                    urls,
-                    encoded,
-                    strict=True,
-                )
-            )
-            timestamps = iter(
-                (
-                    "2026-07-25T11:59:00Z",
-                    "2026-07-25T12:00:00Z",
-                    "2026-07-25T12:01:00Z",
-                )
-            )
-
-            with patch(
-                "mesh_noroeste.application.fetch_json",
-                side_effect=fetched,
-            ) as mocked_fetch:
-                result = collect_meshview_es(
-                    settings=settings,
-                    clock=lambda: next(timestamps),
-                )
-
-            database_path = (
-                settings.state_dir / "mesh-noroeste.db"
-            ).resolve()
-            store = ObservationStore(database_path)
-
-            self.assertEqual(result.database_path, database_path)
-            self.assertEqual(result.source, "meshview_es")
-            self.assertEqual(result.records_received, 1)
-            self.assertEqual(result.records_inserted, 1)
-            self.assertEqual(
-                result.bytes_received,
-                sum(len(payload) for payload in encoded),
-            )
-            self.assertEqual(store.count(), 1)
-            self.assertEqual(
-                store.load_all()[0].position_precision_bits,
-                18,
-            )
-
-            with closing(
-                sqlite3.connect(database_path)
-            ) as connection:
-                edges = connection.execute(
-                    """
-                    SELECT
-                        from_source_id,
-                        to_source_id,
-                        edge_type,
-                        directed,
-                        observed_at
-                    FROM edge_observations
-                    ORDER BY edge_type
-                    """
-                ).fetchall()
-
-            self.assertEqual(
-                edges,
-                [
-                    (
-                        "!0123abcd",
-                        "!89abcdef",
-                        "neighbor",
-                        0,
-                        "2026-07-25T12:00:00Z",
-                    ),
-                    (
-                        "!0123abcd",
-                        "!89abcdef",
-                        "traceroute",
-                        1,
-                        "2026-07-25T12:00:00Z",
-                    ),
-                ],
-            )
-            self.assertEqual(
-                store.source_statistics()["meshview_es"],
-                {
-                    "last_success": "2026-07-25T12:01:00Z",
-                    "last_error_at": None,
-                    "last_error": None,
-                    "records_received": 1,
-                },
-            )
-            mocked_fetch.assert_has_calls(
-                [
-                    call(
-                        url,
-                        timeout=20.0,
-                        max_bytes=20 * 1024 * 1024,
-                    )
-                    for url in urls
-                ]
-            )
-            self.assertEqual(mocked_fetch.call_count, 4)
-
-    def test_collect_meshview_preserves_edges_omitted_by_later_snapshot(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            settings = self.settings(root)
-
-            documents = (
-                meshview_document(),
-                meshview_position_packets_document(),
-                meshview_edges_document("traceroute"),
-                meshview_edges_document("neighbor"),
-                meshview_document(),
-                meshview_position_packets_document(),
-                {"edges": []},
-                {"edges": []},
-            )
-            urls = (
-                MESHVIEW_ES_URL,
-                MESHVIEW_ES_POSITION_PACKETS_URL,
-                MESHVIEW_ES_TRACEROUTE_EDGES_URL,
-                MESHVIEW_ES_NEIGHBOR_EDGES_URL,
-            ) * 2
-
-            fetched = tuple(
-                JsonFetchResult(
-                    document=document,
-                    requested_url=url,
-                    final_url=url,
-                    status=200,
-                    content_type="application/json",
-                    bytes_received=len(
-                        json.dumps(document).encode("utf-8")
-                    ),
-                )
-                for document, url in zip(
-                    documents,
-                    urls,
-                    strict=True,
-                )
-            )
-            timestamps = iter(
-                (
-                    "2026-07-25T11:59:00Z",
-                    "2026-07-25T12:00:00Z",
-                    "2026-07-25T12:01:00Z",
-                    "2026-07-25T12:04:00Z",
-                    "2026-07-25T12:05:00Z",
-                    "2026-07-25T12:06:00Z",
-                )
-            )
-
-            with patch(
-                "mesh_noroeste.application.fetch_json",
-                side_effect=fetched,
-            ):
-                collect_meshview_es(
-                    settings=settings,
-                    clock=lambda: next(timestamps),
-                )
-                collect_meshview_es(
-                    settings=settings,
-                    clock=lambda: next(timestamps),
-                )
-
-            store = ObservationStore(
-                settings.state_dir / "mesh-noroeste.db"
-            )
-
-            self.assertEqual(store.count_edges(), 2)
-
-    def test_collect_meshview_es_records_failure(
-        self,
-    ) -> None:
-        documents = (
-            meshview_document(),
-            meshview_position_packets_document(),
-            meshview_edges_document("traceroute"),
-            meshview_edges_document("neighbor"),
-        )
-        urls = (
-            MESHVIEW_ES_URL,
-            MESHVIEW_ES_POSITION_PACKETS_URL,
-            MESHVIEW_ES_TRACEROUTE_EDGES_URL,
-            MESHVIEW_ES_NEIGHBOR_EDGES_URL,
-        )
-
-        for failed_index in range(4):
-            with self.subTest(failed_url=urls[failed_index]):
-                with tempfile.TemporaryDirectory() as temporary:
-                    root = Path(temporary)
-                    settings = self.settings(root)
-                    fetched = tuple(
-                        JsonFetchResult(
-                            document=document,
-                            requested_url=url,
-                            final_url=url,
-                            status=200,
-                            content_type="application/json",
-                            bytes_received=len(
-                                json.dumps(document).encode("utf-8")
-                            ),
-                        )
-                        for document, url in zip(
-                            documents,
-                            urls,
-                            strict=True,
-                        )
-                    )
-                    timestamps = iter(
-                        (
-                            "2026-07-25T11:59:00Z",
-                            "2026-07-25T12:00:00Z",
-                        )
-                    )
-                    sleep_delays: list[float] = []
-
-                    def fetch_side_effect(
-                        url: str,
-                        **kwargs: object,
-                    ) -> JsonFetchResult:
-                        if url == urls[failed_index]:
-                            raise FetchError(
-                                "Error HTTP 503 temporal"
-                            )
-
-                        return fetched[urls.index(url)]
-
-                    with patch(
-                        "mesh_noroeste.application.fetch_json",
-                        side_effect=fetch_side_effect,
-                    ) as mocked_fetch:
-                        with self.assertRaisesRegex(
-                            FetchError,
-                            "HTTP 503 temporal",
-                        ):
-                            collect_meshview_es(
-                                settings=settings,
-                                clock=lambda: next(timestamps),
-                                sleeper=sleep_delays.append,
-                            )
-
-                    database_path = (
-                        settings.state_dir / "mesh-noroeste.db"
-                    )
-                    store = ObservationStore(database_path)
-
-                    self.assertEqual(store.count(), 0)
-
-                    with closing(
-                sqlite3.connect(database_path)
-            ) as connection:
-                        edge_count = connection.execute(
-                            "SELECT COUNT(*) FROM edge_observations"
-                        ).fetchone()[0]
-
-                    self.assertEqual(edge_count, 0)
-                    self.assertEqual(
-                        store.source_statistics()["meshview_es"],
-                        {
-                            "last_success": None,
-                            "last_error_at": (
-                                "2026-07-25T12:00:00Z"
-                            ),
-                            "last_error": (
-                                "FetchError: Error HTTP 503 temporal"
-                            ),
-                            "records_received": 0,
-                        },
-                    )
-                    expected_calls = [
-                        call(
-                            url,
-                            timeout=20.0,
-                            max_bytes=20 * 1024 * 1024,
-                        )
-                        for url in urls[:failed_index]
-                    ]
-                    expected_calls.extend(
-                        [
-                            call(
-                                urls[failed_index],
-                                timeout=20.0,
-                                max_bytes=20 * 1024 * 1024,
-                            )
-                        ]
-                        * 3
-                    )
-
-                    self.assertEqual(
-                        mocked_fetch.call_args_list,
-                        expected_calls,
-                    )
-                    self.assertEqual(
-                        sleep_delays,
-                        [1.0, 3.0],
-                    )
 
     def test_collect_malha_saves_nodes_edges_and_run(
         self,
@@ -1848,107 +1515,6 @@ class ApplicationTests(unittest.TestCase):
         )
         return path
 
-    def test_collect_meshview_filters_excluded_data(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            exclusions_path = self.write_exclusions(
-                root,
-                "meshtastic:!a35b4144",
-            )
-            settings = self.settings(
-                root,
-                exclusions_path=exclusions_path,
-            )
-
-            excluded = make_observation(
-                source="meshview_es",
-                network="meshtastic",
-                source_id="a35b4144",
-                observed_at=NOW,
-            )
-            included = make_observation(
-                source="meshview_es",
-                network="meshtastic",
-                source_id="b1234567",
-                observed_at=NOW,
-            )
-            edge = make_edge_observation(
-                source="meshview_es",
-                network="meshtastic",
-                from_source_id="a35b4144",
-                to_source_id="b1234567",
-                edge_type="traceroute",
-                directed=True,
-                observed_at=NOW,
-            )
-            fetched = JsonFetchResult(
-                document={},
-                requested_url=MESHVIEW_ES_URL,
-                final_url=MESHVIEW_ES_URL,
-                status=200,
-                content_type="application/json",
-                bytes_received=1,
-            )
-
-            with (
-                patch(
-                    "mesh_noroeste.application.fetch_json",
-                    return_value=fetched,
-                ),
-                patch(
-                    "mesh_noroeste.application."
-                    "parse_meshview_es_position_precisions",
-                    return_value={},
-                ),
-                patch(
-                    "mesh_noroeste.application."
-                    "parse_meshview_es",
-                    return_value=[
-                        excluded,
-                        included,
-                    ],
-                ),
-                patch(
-                    "mesh_noroeste.application."
-                    "parse_meshview_es_edges",
-                    side_effect=[
-                        [edge],
-                        [],
-                    ],
-                ),
-            ):
-                result = collect_meshview_es(
-                    settings=settings,
-                    clock=lambda: NOW,
-                )
-
-            store = ObservationStore(
-                settings.state_dir
-                / "mesh-noroeste.db"
-            )
-
-            self.assertEqual(
-                result.records_received,
-                2,
-            )
-            self.assertEqual(
-                result.records_inserted,
-                1,
-            )
-            self.assertEqual(
-                [
-                    node.id
-                    for node in store.load_all()
-                ],
-                ["meshtastic:!b1234567"],
-            )
-            self.assertEqual(
-                store.load_all_edges(),
-                [],
-            )
-
     def test_collect_malha_filters_excluded_data(
         self,
     ) -> None:
@@ -2241,7 +1807,7 @@ class ApplicationTests(unittest.TestCase):
                     ExclusionsError,
                     "No se pudo leer",
                 ):
-                    collect_meshview_es(
+                    collect_ozulo_map(
                         settings=settings,
                         clock=lambda: NOW,
                     )
@@ -2268,7 +1834,7 @@ class ApplicationTests(unittest.TestCase):
             )
 
             older = make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at=(
@@ -2451,7 +2017,7 @@ class ApplicationTests(unittest.TestCase):
                 nodes_document["nodes"][0][
                     "sources"
                 ],
-                ["meshview_es", "malha_pt"],
+                ["malha_pt", "ozulo_map"],
             )
             self.assertEqual(
                 stats_document["totals"]["nodes"],
@@ -2472,7 +2038,7 @@ class ApplicationTests(unittest.TestCase):
             )
 
             older = make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at="2026-07-25T10:00:00Z",
@@ -2485,7 +2051,7 @@ class ApplicationTests(unittest.TestCase):
                 ),
             )
             newer = make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at="2026-07-25T11:00:00Z",
@@ -2883,7 +2449,7 @@ class ApplicationTests(unittest.TestCase):
             )
             store.save([
                 make_observation(
-                    source="meshview_es",
+                    source="ozulo_map",
                     network="meshtastic",
                     source_id="!a35b4144",
                     observed_at=NOW,

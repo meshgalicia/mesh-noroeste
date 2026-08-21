@@ -78,7 +78,6 @@
         },
         "source": {
           "enum": [
-            "meshview_es",
             "malha_pt",
             "ozulo_map",
             "meshcore_map",
@@ -146,7 +145,6 @@
               },
               "source": {
                 "enum": [
-                  "meshview_es",
                   "malha_pt",
                   "ozulo_map"
                 ]

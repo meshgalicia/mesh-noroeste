@@ -39,16 +39,12 @@
     "sources": {
       "type": "object",
       "required": [
-        "meshview_es",
         "malha_pt",
         "ozulo_map",
         "meshcore_map",
         "meshcore_hub"
       ],
       "properties": {
-        "meshview_es": {
-          "$ref": "#/$defs/source_stats"
-        },
         "malha_pt": {
           "$ref": "#/$defs/source_stats"
         },

@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
 from pathlib import Path
-import time
 from typing import Any, Mapping
 from urllib.parse import (
     parse_qsl,
@@ -31,8 +30,6 @@ from mesh_noroeste.exclusions import load_exclusions
 from mesh_noroeste.http_client import (
     DEFAULT_MAX_BYTES,
     DEFAULT_TIMEOUT_SECONDS,
-    FetchError,
-    JsonFetchResult,
     fetch_bytes,
     fetch_json,
 )
@@ -54,11 +51,6 @@ from mesh_noroeste.meshcore_hub import (
 from mesh_noroeste.meshcore_map import (
     parse_meshcore_map,
 )
-from mesh_noroeste.meshview_es import (
-    parse_meshview_es,
-    parse_meshview_es_edges,
-    parse_meshview_es_position_precisions,
-)
 from mesh_noroeste.ozulo_map import (
     parse_ozulo_map_edges,
     parse_ozulo_map_nodes,
@@ -71,20 +63,6 @@ from mesh_noroeste.publication import (
 from mesh_noroeste.region import DEFAULT_REGION_NAME
 from mesh_noroeste.storage import ObservationStore
 
-
-MESHVIEW_ES_URL = (
-    "https://meshview.meshtastic.es/api/nodes"
-)
-MESHVIEW_ES_POSITION_PACKETS_URL = (
-    "https://meshview.meshtastic.es/api/packets"
-    "?portnum=3&limit=1000"
-)
-MESHVIEW_ES_TRACEROUTE_EDGES_URL = (
-    "https://meshview.meshtastic.es/api/edges?type=traceroute"
-)
-MESHVIEW_ES_NEIGHBOR_EDGES_URL = (
-    "https://meshview.meshtastic.es/api/edges?type=neighbor"
-)
 
 OZULO_MAP_NODES_URL = (
     "https://mapa.mesh.comunidadeozulo.org/"
@@ -117,68 +95,6 @@ MESHCORE_HUB_PACKET_GROUPS_URL = (
     "&include_receptions=true"
 )
 MESHCORE_HUB_PAGE_SIZE = 100
-
-MESHVIEW_RETRY_DELAYS = (1.0, 3.0)
-MESHVIEW_TRANSIENT_HTTP_CODES = (
-    "500",
-    "502",
-    "503",
-    "504",
-)
-
-
-def _meshview_fetch_error_is_transient(
-    error: FetchError,
-) -> bool:
-    message = str(error)
-
-    if (
-        "Tiempo de espera agotado" in message
-        or "Error de red" in message
-    ):
-        return True
-
-    return any(
-        f"Error HTTP {code}" in message
-        for code in MESHVIEW_TRANSIENT_HTTP_CODES
-    )
-
-
-def _fetch_meshview_json(
-    url: str,
-    *,
-    timeout: float,
-    max_bytes: int,
-    sleeper: Callable[[float], Any],
-) -> JsonFetchResult:
-    delays: tuple[float | None, ...] = (
-        *MESHVIEW_RETRY_DELAYS,
-        None,
-    )
-
-    for delay in delays:
-        try:
-            return fetch_json(
-                url,
-                timeout=timeout,
-                max_bytes=max_bytes,
-            )
-        except FetchError as error:
-            if (
-                delay is None
-                or not _meshview_fetch_error_is_transient(
-                    error
-                )
-            ):
-                raise
-
-            sleeper(delay)
-
-    raise AssertionError(
-        "O bucle de reintentos de Meshview rematou "
-        "sen resultado."
-    )
-
 
 def _meshcore_hub_api_key(value: str) -> str:
     if not isinstance(value, str):
@@ -404,157 +320,6 @@ class PublicationResult:
     node_count: int
     edge_count: int
     written_files: tuple[Path, ...]
-
-
-def collect_meshview_es(
-    *,
-    settings: Settings,
-    database_path: Path | str | None = None,
-    url: str = MESHVIEW_ES_URL,
-    position_packets_url: str = (
-        MESHVIEW_ES_POSITION_PACKETS_URL
-    ),
-    traceroute_url: str = MESHVIEW_ES_TRACEROUTE_EDGES_URL,
-    neighbor_url: str = MESHVIEW_ES_NEIGHBOR_EDGES_URL,
-    timeout: float = DEFAULT_TIMEOUT_SECONDS,
-    max_bytes: int = DEFAULT_MAX_BYTES,
-    clock: Callable[[], Any] = _current_utc_timestamp,
-    sleeper: Callable[[float], Any] = time.sleep,
-) -> CollectionResult:
-    """Descarga, adapta y almacena Meshview España."""
-
-    if not callable(clock):
-        raise TypeError("clock debe ser invocable")
-
-    resolved_database_path = (
-        Path(database_path).expanduser().resolve()
-        if database_path is not None
-        else (
-            settings.state_dir
-            / "mesh-noroeste.db"
-        ).resolve()
-    )
-
-    excluded_node_ids = load_exclusions(
-        settings.exclusions_path
-    )
-
-    store = ObservationStore(
-        resolved_database_path
-    )
-
-    run_id = store.begin_source_run(
-        "meshview_es",
-        clock(),
-    )
-
-    try:
-        fetched_nodes = _fetch_meshview_json(
-            url,
-            timeout=timeout,
-            max_bytes=max_bytes,
-            sleeper=sleeper,
-        )
-        fetched_position_packets = _fetch_meshview_json(
-            position_packets_url,
-            timeout=timeout,
-            max_bytes=max_bytes,
-            sleeper=sleeper,
-        )
-        fetched_traceroutes = _fetch_meshview_json(
-            traceroute_url,
-            timeout=timeout,
-            max_bytes=max_bytes,
-            sleeper=sleeper,
-        )
-        fetched_neighbors = _fetch_meshview_json(
-            neighbor_url,
-            timeout=timeout,
-            max_bytes=max_bytes,
-            sleeper=sleeper,
-        )
-
-        collected_at = clock()
-
-        position_precisions = (
-            parse_meshview_es_position_precisions(
-                fetched_position_packets.document
-            )
-        )
-        observations = parse_meshview_es(
-            fetched_nodes.document,
-            position_precisions=position_precisions,
-        )
-        traceroute_edges = parse_meshview_es_edges(
-            fetched_traceroutes.document,
-            edge_type="traceroute",
-            observed_at=collected_at,
-        )
-        neighbor_edges = parse_meshview_es_edges(
-            fetched_neighbors.document,
-            edge_type="neighbor",
-            observed_at=collected_at,
-        )
-
-        allowed_observations = (
-            _allowed_node_observations(
-                observations,
-                excluded_node_ids,
-            )
-        )
-        allowed_edges = _allowed_edge_observations(
-            traceroute_edges + neighbor_edges,
-            excluded_node_ids,
-        )
-
-        inserted = store.save(
-            allowed_observations
-        )
-        store.replace_edges(
-            "meshview_es",
-            allowed_edges,
-        )
-
-    except Exception as exc:
-        description = str(exc).strip()
-
-        error_message = (
-            f"{type(exc).__name__}: {description}"
-            if description
-            else type(exc).__name__
-        )
-
-        store.finish_source_run(
-            run_id,
-            finished_at=clock(),
-            success=False,
-            records_received=0,
-            error_message=error_message[:1000],
-        )
-
-        raise
-
-    store.finish_source_run(
-        run_id,
-        finished_at=clock(),
-        success=True,
-        records_received=len(observations),
-    )
-
-    return CollectionResult(
-        database_path=resolved_database_path,
-        source="meshview_es",
-        requested_url=fetched_nodes.requested_url,
-        final_url=fetched_nodes.final_url,
-        bytes_received=(
-            fetched_nodes.bytes_received
-            + fetched_position_packets.bytes_received
-            + fetched_traceroutes.bytes_received
-            + fetched_neighbors.bytes_received
-        ),
-        records_received=len(observations),
-        records_inserted=inserted,
-    )
 
 
 def collect_malha_pt(

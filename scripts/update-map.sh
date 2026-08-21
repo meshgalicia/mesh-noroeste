@@ -10,10 +10,10 @@ lock_file="/run/lock/mesh-noroeste-update.lock"
 mode="${1:-}"
 
 case "$mode" in
-  meshview|malha|ozulo|meshcore|meshcore-hub)
+  malha|ozulo|meshcore|meshcore-hub)
     ;;
   *)
-    echo "Uso: $0 {meshview|malha|ozulo|meshcore|meshcore-hub}" >&2
+    echo "Uso: $0 {malha|ozulo|meshcore|meshcore-hub}" >&2
     exit 2
     ;;
 esac

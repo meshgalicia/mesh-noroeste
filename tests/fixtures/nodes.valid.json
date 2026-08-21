@@ -6,15 +6,15 @@
       "id": "meshtastic:!a35b4144",
       "network": "meshtastic",
       "source_ids": {
-        "meshview_es": "!a35b4144",
-        "malha_pt": "!a35b4144"
+        "malha_pt": "!a35b4144",
+        "ozulo_map": "!a35b4144"
       },
       "source_last_seen": {
-        "meshview_es": "2026-07-25T11:58:00Z",
-        "malha_pt": "2026-07-25T11:00:00Z"
+        "malha_pt": "2026-07-25T11:00:00Z",
+        "ozulo_map": "2026-07-25T11:58:00Z"
       },
       "sources": [
-        "meshview_es",
+        "ozulo_map",
         "malha_pt"
       ],
       "short_name": "BRUMA",

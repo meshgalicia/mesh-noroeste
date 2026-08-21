@@ -17,7 +17,6 @@ from mesh_noroeste.application import (
     MESHCORE_HUB_NODES_URL,
     MESHCORE_HUB_PAGE_SIZE,
     MESHCORE_MAP_URL,
-    MESHVIEW_ES_URL,
     OZULO_MAP_EDGES_URL,
     OZULO_MAP_NODES_URL,
 )
@@ -233,154 +232,6 @@ class CommandLineTests(unittest.TestCase):
             self.assertEqual(
                 response["observations"],
                 0,
-            )
-
-    def test_collect_meshview_reports_success(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            database_path = root / "custom.db"
-            standard_output = StringIO()
-            source_url = (
-                "https://example.test/meshview-nodes"
-            )
-
-            collection_result = CollectionResult(
-                database_path=database_path.resolve(),
-                source="meshview_es",
-                requested_url=source_url,
-                final_url=source_url,
-                bytes_received=929201,
-                records_received=2783,
-                records_inserted=2783,
-            )
-
-            with patch.dict(
-                os.environ,
-                self.environment(root),
-                clear=True,
-            ):
-                with patch(
-                    "mesh_noroeste.cli."
-                    "collect_meshview_es",
-                    return_value=collection_result,
-                ) as mocked_collect:
-                    with redirect_stdout(
-                        standard_output
-                    ):
-                        result = main(
-                            [
-                                "collect-meshview",
-                                "--database",
-                                str(database_path),
-                                "--url",
-                                source_url,
-                                "--timeout",
-                                "7.5",
-                                "--max-bytes",
-                                "8000000",
-                            ]
-                        )
-
-            response = json.loads(
-                standard_output.getvalue()
-            )
-
-            self.assertEqual(result, 0)
-            self.assertEqual(
-                response,
-                {
-                    "status": "ok",
-                    "source": "meshview_es",
-                    "database": str(
-                        database_path.resolve()
-                    ),
-                    "requested_url": source_url,
-                    "final_url": source_url,
-                    "bytes_received": 929201,
-                    "records_received": 2783,
-                    "records_inserted": 2783,
-                },
-            )
-
-            mocked_collect.assert_called_once_with(
-                settings=ANY,
-                database_path=database_path,
-                url=source_url,
-                timeout=7.5,
-                max_bytes=8000000,
-            )
-
-    def test_collect_meshview_failure_returns_error(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            standard_error = StringIO()
-
-            with patch.dict(
-                os.environ,
-                self.environment(root),
-                clear=True,
-            ):
-                with patch(
-                    "mesh_noroeste.cli."
-                    "collect_meshview_es",
-                    side_effect=FetchError(
-                        "HTTP 503 temporal"
-                    ),
-                ):
-                    with redirect_stderr(
-                        standard_error
-                    ):
-                        result = main(
-                            ["collect-meshview"]
-                        )
-
-            self.assertEqual(result, 2)
-            self.assertIn(
-                "ERROR: HTTP 503 temporal",
-                standard_error.getvalue(),
-            )
-
-    def test_collect_meshview_uses_public_url_by_default(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-
-            collection_result = CollectionResult(
-                database_path=(
-                    root / "state" / "mesh-noroeste.db"
-                ).resolve(),
-                source="meshview_es",
-                requested_url=MESHVIEW_ES_URL,
-                final_url=MESHVIEW_ES_URL,
-                bytes_received=1,
-                records_received=0,
-                records_inserted=0,
-            )
-
-            with patch.dict(
-                os.environ,
-                self.environment(root),
-                clear=True,
-            ):
-                with patch(
-                    "mesh_noroeste.cli."
-                    "collect_meshview_es",
-                    return_value=collection_result,
-                ) as mocked_collect:
-                    with redirect_stdout(StringIO()):
-                        result = main(
-                            ["collect-meshview"]
-                        )
-
-            self.assertEqual(result, 0)
-            self.assertEqual(
-                mocked_collect.call_args.kwargs["url"],
-                MESHVIEW_ES_URL,
             )
 
     def test_collect_malha_reports_success(
@@ -1207,7 +1058,7 @@ class CommandLineTests(unittest.TestCase):
             store = ObservationStore(database_path)
 
             target_a = make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at="2026-07-25T12:00:00Z",
@@ -1367,7 +1218,7 @@ class CommandLineTests(unittest.TestCase):
             )
             store = ObservationStore(database_path)
             target = make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at="2026-07-25T12:00:00Z",
@@ -1438,7 +1289,7 @@ class CommandLineTests(unittest.TestCase):
             )
             store = ObservationStore(database_path)
             target = make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at="2026-07-25T12:00:00Z",

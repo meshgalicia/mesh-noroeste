@@ -16,13 +16,11 @@ from mesh_noroeste.application import (
     MESHCORE_HUB_NODES_URL,
     MESHCORE_HUB_PAGE_SIZE,
     MESHCORE_MAP_URL,
-    MESHVIEW_ES_URL,
     OZULO_MAP_EDGES_URL,
     OZULO_MAP_NODES_URL,
     collect_malha_pt,
     collect_meshcore_hub,
     collect_meshcore_map,
-    collect_meshview_es,
     collect_ozulo_map,
     publish_from_store,
 )
@@ -144,50 +142,6 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Sustituye la región predeterminada por un "
             "rectángulo en grados decimales."
-        ),
-    )
-
-    meshview_parser = subparsers.add_parser(
-        "collect-meshview",
-        help=(
-            "Descarga y almacena los nodos publicados "
-            "por Meshview España."
-        ),
-    )
-
-    meshview_parser.add_argument(
-        "--database",
-        type=Path,
-        default=None,
-        help=(
-            "Ruta de la base SQLite. "
-            "Por defecto: MESH_STATE_DIR/mesh-noroeste.db"
-        ),
-    )
-
-    meshview_parser.add_argument(
-        "--url",
-        default=MESHVIEW_ES_URL,
-        help="URL HTTPS del documento JSON de nodos.",
-    )
-
-    meshview_parser.add_argument(
-        "--timeout",
-        type=float,
-        default=DEFAULT_TIMEOUT_SECONDS,
-        help=(
-            "Tiempo máximo de espera HTTP en segundos. "
-            f"Por defecto: {DEFAULT_TIMEOUT_SECONDS:g}"
-        ),
-    )
-
-    meshview_parser.add_argument(
-        "--max-bytes",
-        type=int,
-        default=DEFAULT_MAX_BYTES,
-        help=(
-            "Tamaño máximo permitido para la descarga. "
-            f"Por defecto: {DEFAULT_MAX_BYTES} bytes."
         ),
     )
 
@@ -574,34 +528,6 @@ def _bounds_document(
         "north": north,
         "east": east,
     }
-
-
-def _collect_meshview(
-    args: argparse.Namespace,
-    settings: Settings,
-) -> int:
-    result = collect_meshview_es(
-        settings=settings,
-        database_path=args.database,
-        url=args.url,
-        timeout=args.timeout,
-        max_bytes=args.max_bytes,
-    )
-
-    response = {
-        "status": "ok",
-        "source": result.source,
-        "database": str(result.database_path),
-        "requested_url": result.requested_url,
-        "final_url": result.final_url,
-        "bytes_received": result.bytes_received,
-        "records_received": result.records_received,
-        "records_inserted": result.records_inserted,
-    }
-
-    _print_response(response, compact=args.compact)
-
-    return 0
 
 
 def _collect_malha(
@@ -1003,9 +929,6 @@ def main(
 
     try:
         settings = Settings.from_env()
-
-        if args.command == "collect-meshview":
-            return _collect_meshview(args, settings)
 
         if args.command == "collect-malha":
             return _collect_malha(args, settings)

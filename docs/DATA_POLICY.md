@@ -27,7 +27,6 @@ El proyecto no debe:
 La primera versión estable utiliza exclusivamente las fuentes documentadas por
 el proyecto:
 
-- Meshview España;
 - Malha Portugal;
 - O Zulo;
 - MeshCore Map;
@@ -135,8 +134,8 @@ vuelva a insertarla.
 
 La primera poda real eliminó 17.767 observaciones completas de nodo y ninguna
 conexión caducada. El conjunto público permaneció idéntico durante esa
-operación. Una recolección posterior de Meshview España terminó correctamente
-y confirmó que no reaparecieron observaciones anteriores al límite aplicado.
+operación. Una recolección posterior terminó correctamente y confirmó que no
+reaparecieron observaciones anteriores al límite aplicado.
 
 
 ## Retirada voluntaria

@@ -120,15 +120,6 @@ Por tanto:
 
 ## 5. Capacidades comprobadas das fontes
 
-### Meshview España
-
-Mesh Noroeste consome:
-
-- `/api/nodes`;
-- `/api/packets?portnum=3&limit=1000`;
-- `/api/edges?type=traceroute`;
-- `/api/edges?type=neighbor`.
-
 ### Mapa consolidado de O Zulo
 
 Mesh Noroeste consome:

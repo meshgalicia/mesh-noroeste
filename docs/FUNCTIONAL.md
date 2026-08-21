@@ -279,7 +279,6 @@ Las cifras cambian al modificar los filtros o la red seleccionada.
 
 Se muestra la última actualización correcta conocida de:
 
-- Meshview España;
 - Malha Portugal;
 - Comunidade O Zulo;
 - MeshCore Map;
@@ -292,11 +291,11 @@ El detalle de los nodos Meshtastic puede mostrar una sección
 
 La integración mantiene estas reglas:
 
-- solo se analizan nodos Meshtastic presentes en Meshview España;
+- solo se analizan nodos Meshtastic presentes en Comunidade O Zulo;
 - los nodos que aparecen también en Malha Portugal se cruzan mediante su
   identificador canónico y no se duplican;
-- los nodos exclusivos de Malha o de Comunidade O Zulo muestran que el
-  análisis no está disponible cuando no existe una entrada del analizador;
+- los nodos Meshtastic que no incluyen `ozulo_map` muestran que el análisis
+  no está disponible;
 - los nodos MeshCore quedan fuera de este análisis;
 - un nodo analizado sin avisos se describe de forma prudente y no se presenta
   como configuración correcta;
@@ -310,8 +309,8 @@ texto explícito además del color y mantiene bordes visibles en modo de colores
 forzados.
 
 El documento de origen lo genera el analizador propio de Mesh Noroeste.
-Consulta la API pública de Meshview España, analiza la actividad reciente de
-cada nodo y escribe atómicamente
+Consulta la API pública de Meshview de Comunidade O Zulo, analiza la actividad
+reciente de cada nodo y escribe atómicamente
 `cache/configuration-analysis.json`. Un temporizador de systemd lo ejecuta cada
 seis horas de forma independiente de los colectores del mapa.
 
@@ -464,8 +463,8 @@ SQLite 5. La comprobación sobre la base operativa confirmó que:
   caducada;
 - SQLite mantuvo su integridad antes y después de la operación;
 - el conjunto público de nodos y conexiones no cambió durante la poda;
-- una recolección posterior de Meshview España terminó correctamente y no
-  restauró observaciones caducadas;
+- una recolección posterior terminó correctamente y no restauró observaciones
+  caducadas;
 - los avisos de configuración continuaron publicados.
 
 

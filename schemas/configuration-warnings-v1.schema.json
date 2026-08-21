@@ -32,7 +32,7 @@
       ],
       "properties": {
         "source": {
-          "const": "meshview_es"
+          "const": "ozulo_map"
         },
         "updated_at": {
           "type": [

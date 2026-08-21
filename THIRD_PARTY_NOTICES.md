@@ -34,13 +34,29 @@ Cada elemento conserva a súa propia licenza ou condicións de uso.
 - Licenza: MIT
 - Dependencia opcional utilizada na validación e nas probas.
 
+### XlsxWriter
+
+- Código: https://github.com/jmcnamara/XlsxWriter
+- Licenza: BSD-2-Clause
+- Dependencia de execución declarada en `pyproject.toml`.
+- Utilízase para xerar os informes experimentais en formato XLSX.
+
 ## Cartografía, datos e servizos
 
 O mapa consulta ou representa materiais procedentes de OpenStreetMap,
-Esri World Imagery, Meshview España, Malha Portugal, Comunidade O Zulo
-e MeshCore Map.
+CARTO, Esri World Imagery, Malha Portugal, Comunidade O Zulo e
+MeshCore Map.
+
+- OpenStreetMap: datos e teselas sometidos ás condicións publicadas pola
+  OpenStreetMap Foundation. A interface mostra a atribución correspondente.
+- CARTO: provedor dunha das capas base; a súa atribución móstrase xunto coa
+  de OpenStreetMap.
+- Esri World Imagery: capa de imaxe de Esri e os seus provedores; a interface
+  conserva a atribución indicada para a capa.
+- Malha Portugal, Comunidade O Zulo e MeshCore Map: fontes externas de
+  datos. Mesh Noroeste consulta as súas interfaces
+  públicas e normaliza os datos mediante adaptadores propios.
 
 Eses datos, teselas, marcas e servizos non se relicencian como parte de
-Mesh Noroeste. O seu uso continúa sometido ás condicións e políticas
-publicadas por cada provedor. A interface mantén as atribucións
-cartográficas correspondentes.
+Mesh Noroeste. O seu uso continúa sometido ás condicións, licenzas e
+políticas publicadas por cada provedor.

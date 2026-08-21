@@ -41,7 +41,6 @@ const NETWORK_LABELS = Object.freeze({
 });
 
 const SOURCE_LABELS = Object.freeze({
-  meshview_es: "Meshview España",
   malha_pt: "Malha Portugal",
   ozulo_map: "Comunidade O Zulo",
   meshcore_map: "MeshCore Map",
@@ -2889,16 +2888,6 @@ function meshtasticNodeLinks(node) {
   const links = [];
 
   if (
-    node.sources.includes("meshview_es")
-    && sourceLinkIsRecent(node, "meshview_es")
-  ) {
-    links.push({
-      label: "Abrir en Meshview España",
-      url: "https://meshview.meshtastic.es/node/" + nodeNumber,
-    });
-  }
-
-  if (
     node.sources.includes("malha_pt")
     && sourceLinkIsRecent(node, "malha_pt")
   ) {
@@ -3436,15 +3425,15 @@ function configurationWarningsSection(node) {
     );
   }
 
-  if (!node.sources.includes("meshview_es")) {
+  if (!node.sources.includes("ozulo_map")) {
     return detailSection(
       "Configuración",
       [
         [
           "Cobertura",
           "Análise non dispoñible para este nodo. "
-          + "As demais fontes non publican todos os "
-          + "parámetros de configuración necesarios.",
+          + "O analizador utiliza os datos publicados "
+          + "pola Comunidade O Zulo.",
         ],
       ]
     );
@@ -3796,7 +3785,6 @@ function renderSourceStatus() {
   const fragment = document.createDocumentFragment();
 
   for (const source of [
-    "meshview_es",
     "malha_pt",
     "ozulo_map",
     "meshcore_map",

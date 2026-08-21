@@ -1,166 +1,269 @@
 # Mesh Noroeste
 
-Mapa regional independiente para visualizar redes Meshtastic y MeshCore
-en el noroeste peninsular y Portugal.
+Mesh Noroeste é un proxecto independente para observar, explorar e
+conservar información pública das redes Meshtastic e MeshCore no
+noroeste peninsular e Portugal.
 
-Este repositorio es una implementación nueva escrita desde cero. No contiene
-código copiado de Meshtastic-es-map ni de otros mapas sin licencia compatible.
+A versión pública está dispoñible en:
 
-## Licenzas
+**https://mapa.mesh.gal/**
 
-Copyright © 2026 Elena Musk.
+O proxecto combina un mapa da situación actual con ferramentas para
+consultar actividade recente, explorar o histórico e analizar datos
+experimentais.
 
-O software propio deste repositorio distribúese baixo a licenza
-[GNU Affero General Public License v3.0 ou posterior](LICENSE)
-(`AGPL-3.0-or-later`).
+## Funcionalidades
 
-A documentación propia distribúese baixo
-[Creative Commons Atribución-CompartirIgual 4.0 Internacional](LICENSES/CC-BY-SA-4.0.txt)
-(`CC-BY-SA-4.0`).
+### Mapa
 
-Os compoñentes de terceiros conservan as súas respectivas licenzas.
-Os avisos e atribucións están recollidos en
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+A vista principal consolida nun único mapa información procedente de
+Meshtastic e MeshCore.
 
-Estas licenzas non se aplican aos datos, identificadores, posicións,
-observacións, teselas cartográficas nin outros materiais obtidos de
-fontes externas. Eses contidos permanecen sometidos ás condicións das
-súas fontes respectivas. A distribución de licenzas explícase con máis
-detalle en [LICENSES/README.md](LICENSES/README.md).
+Inclúe, entre outras funcións:
 
-## Objetivos iniciales
+- filtrado por rede, fonte, rol, tipo e antigüidade;
+- busca de nodos;
+- fichas detalladas;
+- traceroutes e outras relacións observadas;
+- información de recepción mediante observers MeshCore;
+- avisos de configuración Meshtastic cando existe análise dispoñible;
+- estatísticas da xeración publicada;
+- navegación adaptada a móbil;
+- soporte de teclado, alto contraste e outras melloras de accesibilidade.
 
-- Integrar Meshtastic y MeshCore.
-- Obtener datos de Meshview España, Malha Portugal, Comunidade O Zulo,
-  MeshCore Map y MeshCore Hub de Mesh Galicia.
-- Normalizar los datos en un formato común.
-- Mantener persistencia histórica regional.
-- Generar datos estáticos para un frontend Leaflet.
-- Ofrecer una interfaz accesible y adaptada a dispositivos móviles.
+As conexións só se publican cando os dous extremos sobreviven ao mesmo
+filtro rexional aplicado aos nodos, evitando relacións colgantes.
 
-## Estado actual
+### Live
 
-El backend clean-room ya dispone de:
+`/live/` ofrece unha vista da actividade Meshtastic recente observada a
+través da fonte de Comunidade O Zulo.
 
-- contrato público `mesh-noroeste.data/v1`;
-- persistencia de nodos, conexiones, recepcións atribuídas a observers
-  MeshCore y ejecuciones en SQLite;
-- clientes HTTPS con límites de tiempo y tamaño;
-- adaptadores y colectores para Meshview España, Malha Portugal,
-  Comunidade O Zulo, MeshCore Map y MeshCore Hub de Mesh Galicia;
-- normalización y persistencia de los traceroutes publicados por Malha;
-- generación de `manifest.json` y de `nodes.json`, `edges.json`,
-  `neighbor-info.json`, `observer-receptions.json`, `stats.json`,
-  `meta.json` y `configuration-warnings.json` dentro de generaciones
-  inmutables;
-- filtrado común de Meshtastic y MeshCore mediante nueve áreas regionales;
-- comandos de recolección, publicación, poda y comprobación;
-- actualización automatizada mediante temporizadores de systemd;
-- activación atómica de cada generación mediante un único manifiesto;
-- poda diaria con retención absoluta de 30 días para las observaciones
-  completas y cursores mínimos de deduplicación;
-- pruebas automatizadas y validación de contratos.
+Live está pensado para explorar eventos e tráfico recente, non como unha
+representación completa do estado de toda a malla.
 
-El acceso a Malha conserva en `cache/` un archivo de cookies y la última
-respuesta JSON válida. Ambos quedan fuera de Git. El cliente únicamente
-reutiliza las cookies entregadas por la propia fuente y no intenta eludir
-sus mecanismos de protección HTTP.
+Permite, entre outras cousas:
 
-Las conexiones persistidas se consolidan por identificador, conservando la
-observación más reciente. Solo se incluyen en `edges.json` cuando ambos
-extremos sobreviven al mismo filtro regional aplicado a `nodes.json`, por lo
-que no se generan conexiones colgantes.
+- consultar eventos recentes;
+- filtrar por tipo de evento e nodo;
+- abrir a actividade asociada a un nodo;
+- inspeccionar rutas cando están dispoñibles;
+- navegar desde un evento ao mapa;
+- continuar a análise no histórico.
 
-El frontend Leaflet ya dispone de filtros, búsqueda accesible, panel de
-detalle, estadísticas, traceroutes dirigidos, geolocalización local,
-agrupaciones diferenciadas por red, navegación móvil, controles táctiles y
-soporte para alto contraste. El detalle de los nodos Meshtastic incluye
-avisos automáticos de configuración cuando existe análisis disponible. En
-MeshCore muestra también cuántas recepcións do nodo foron atribuídas a
-observers, cantos observers distintos o escoitaron e o mellor SNR publicado.
-A primeira versión estable está publicada en `https://mapa.mesh.gal/`.
-O mapa anterior permanece separado en `https://mesh.tuiter.ovh/`.
+### Histórico
 
-El comportamiento implementado y los pendientes funcionales están
-documentados en [docs/FUNCTIONAL.md](docs/FUNCTIONAL.md).
+`/history/` permite consultar a actividade Meshtastic histórica
+preparada polo proxecto para a súa exploración temporal.
 
-Para instalar un observer MeshCore que publique no Hub de Mesh Galicia,
-consulta a [guía de observers](docs/OBSERVERS.md).
+Inclúe:
 
-La instalación operativa carga
-`/etc/mesh-noroeste/mesh-noroeste.env`. Este archivo define
-`MESH_EXCLUSIONS_PATH=/etc/mesh-noroeste/exclusions.json`, una lista privada
-fuera de Git que se aplica antes de almacenar y publicar datos.
-Para utilizar MeshCore Hub, el mismo archivo debe definir
-`MESHCORE_HUB_API_READ_KEY`; la clave se mantiene fuera de Git y no se
-incluye en la salida de los comandos.
+- busca e filtrado temporal;
+- consulta da actividade dun nodo;
+- timeline de eventos;
+- navegación entre períodos;
+- URLs reproducibles para compartir unha consulta;
+- integración coa vista Live.
 
-La lista inicial está vacía. Si el archivo configurado desaparece o contiene
-un JSON inválido, los colectores se detienen antes de descargar o modificar
-SQLite.
+O histórico e Live teñen finalidades distintas: Live mostra actividade
+recente, mentres que o histórico permite estudar a evolución dos datos
+conservados.
 
-Los comandos manuales que necesiten esta configuración deben cargar primero
-el mismo entorno:
+### Experimento LongFast / NarrowFast
 
-```console
+`/experiment/` presenta os datos preparados para o seguimento do
+experimento Meshtastic LongFast/NarrowFast.
+
+A interface permite examinar, cando existe mostra suficiente:
+
+- calidade e tamaño da mostra;
+- distribución por preset;
+- métricas comparativas;
+- clasificación territorial;
+- distribución por concello;
+- evolución temporal;
+- exportación dos datos territoriais.
+
+A presentación separa os datos observados das conclusións e explicita as
+limitacións da mostra para evitar interpretar como resultado definitivo
+o que aínda é evidencia parcial.
+
+## Redes e fontes
+
+Mesh Noroeste integra actualmente estas fontes:
+
+### Meshtastic
+
+- **Malha Portugal**
+- **Comunidade O Zulo**
+
+### MeshCore
+
+- **MeshCore Map**
+- **MeshCore Hub de Mesh Galicia**
+
+Cada fonte mantén a súa propia natureza e limitacións. Mesh Noroeste
+normaliza a información necesaria para poder representala mediante un
+modelo común, sen asumir que todas as fontes publican os mesmos datos.
+
+## Ámbito xeográfico
+
+A publicación principal aplica unha rexión formada por:
+
+- Galicia;
+- Asturias;
+- León;
+- Zamora;
+- Portugal.
+
+A implementación utiliza varias áreas xeográficas en lugar dun único
+rectángulo para reducir a inclusión accidental de territorios alleos á
+rexión de interese.
+
+O ámbito pode substituírse por un rectángulo explícito ao executar a
+publicación mediante `--bounds SOUTH WEST NORTH EAST`.
+
+## Arquitectura
+
+O fluxo principal é:
+
+```text
+fontes externas
+      │
+      ▼
+colectores e adaptadores
+      │
+      ▼
+     SQLite
+      │
+      ├── observacións de nodos
+      ├── relacións
+      ├── recepcións de observers
+      ├── cursores de deduplicación
+      └── execucións das fontes
+      │
+      ▼
+consolidación e publicación
+      │
+      ▼
+xeracións JSON inmutables
+      │
+      ▼
+ manifest.json
+      │
+      ▼
+frontend
+```
+
+Cada publicación crea unha xeración independente e actívaa de forma
+atómica mediante `manifest.json`.
+
+O contrato público principal é `mesh-noroeste.data/v1`.
+
+## Persistencia e retención
+
+SQLite conserva observacións históricas para poder consolidar os datos e
+alimentar as funcionalidades que requiren información temporal.
+
+A política operativa aplica unha retención absoluta de 30 días ás
+observacións completas de nodos e conexións.
+
+Cando unha observación caduca, poden permanecer cursores mínimos cos
+identificadores e marcas temporais necesarios para impedir que
+snapshots antigos sexan introducidos outra vez como datos novos.
+
+A política de datos está documentada en `docs/DATA_POLICY.md`.
+
+## Datos públicos xerados
+
+A publicación principal utiliza `manifest.json` para activar unha
+xeración que contén actualmente documentos como:
+
+- `nodes.json`
+- `edges.json`
+- `neighbor-info.json`
+- `observer-receptions.json`
+- `stats.json`
+- `meta.json`
+- `configuration-warnings.json`
+
+Os contratos correspondentes están documentados en
+`docs/DATA_CONTRACT.md`.
+
+## Análise de configuración Meshtastic
+
+Mesh Noroeste pode xerar avisos de configuración a partir da actividade
+publicada pola API de Comunidade O Zulo.
+
+O documento bruto de análise almacénase normalmente en
+`cache/configuration-analysis.json`.
+
+Na instalación operativa actualízase periodicamente e a publicación le
+a ruta indicada mediante `MESH_CONFIGURATION_WARNINGS_PATH`.
+
+Se o documento non existe ou non é válido, a actualización xeral do
+mapa non se bloquea: a análise publícase explicitamente como non
+dispoñible.
+
+## MeshCore Hub e observers
+
+Mesh Noroeste utiliza tamén o MeshCore Hub de Mesh Galicia para obter
+nodos, relacións observadas e recepcións atribuídas a observers.
+
+A clave de lectura configúrase fóra do repositorio mediante
+`MESHCORE_HUB_API_READ_KEY`.
+
+As coordenadas ausentes ou xeograficamente imposibles publicadas polo
+Hub non bloquean a actualización completa: descártase a posición
+afectada e consérvase o resto da información válida do nodo.
+
+Para instalar un observer que publique no Hub de Mesh Galicia, consulta
+`docs/OBSERVERS.md`.
+
+## Exclusións e privacidade operativa
+
+A instalación pode definir:
+
+```bash
+MESH_EXCLUSIONS_PATH=/etc/mesh-noroeste/exclusions.json
+```
+
+O ficheiro de exclusións é privado e queda fóra de Git.
+
+As exclusións aplícanse antes de almacenar e publicar os datos. Se o
+ficheiro configurado desaparece ou contén JSON inválido, os colectores
+detéñense antes de descargar ou modificar SQLite.
+
+Para executar manualmente comandos que dependan da configuración
+operativa:
+
+```bash
 set -a
 . /etc/mesh-noroeste/mesh-noroeste.env
 set +a
-.venv/bin/mesh-noroeste purge-node meshtastic:!identificador
 ```
 
-El identificador canónico completo debe añadirse previamente a
-exclusions.json.
+## Automatización
 
-## Estado da versión estable
+A instalación de produción utiliza unidades e temporizadores de
+systemd para executar de forma independente:
 
-La política de retención SQLite está cerrada, documentada, validada y
-desplegada sobre la base operativa. Las observaciones completas de nodos y
-conexiones se eliminan al superar 30 días, incluida la última fila de cada
-fuente. Unos cursores mínimos conservan únicamente los identificadores y
-marcas temporales necesarios para impedir la reinserción de snapshots antiguos.
-La primera poda real no alteró el conjunto público y una recolección posterior
-confirmó que los datos caducados no reaparecen.
+- actualización desde Malha Portugal;
+- actualización desde Comunidade O Zulo;
+- actualización desde MeshCore Map;
+- actualización desde MeshCore Hub;
+- actualización do tráfico Live;
+- poda da base histórica;
+- copias de seguridade.
 
-El sistema de símbolos de los nodos está terminado y comprobado a tamaño real
-en móvil. Las formas exteriores identifican familias funcionales y las marcas
-interiores diferencian los principales roles Meshtastic sin depender solo del
-color.
-
-En móvil, el panel de leyenda y filtros muestra primero los filtros por rol y
-tipo, después la antigüedad y finalmente la leyenda informativa. Los filtros se
-abren directamente y el comportamiento de escritorio permanece sin cambios.
-
-Mesh Noroeste genera ya su propio documento bruto de análisis en
-`cache/configuration-analysis.json`. El analizador consulta exclusivamente la
-API pública de Meshview España, escribe el resultado de forma atómica y se
-ejecuta mediante un temporizador de systemd cada seis horas. Las actualizaciones
-del mapa leen esa ruta mediante `MESH_CONFIGURATION_WARNINGS_PATH`; no existe
-dependencia operativa del contenedor, almacenamiento ni código del mapa
-anterior.
-
-A primeira versión estable está publicada e mantén separado o mapa
-anterior. As melloras posteriores desenvolveranse sen alterar o contrato
-público nin presentar como activas funcións que aínda non estean
-implementadas e verificadas.
-
-El mapa de alcance observado mediante RF o MQTT y una futura versión completa
-de España se desarrollarán posteriormente como proyectos separados.
-
-## Validación
-
-La comprobación completa del proyecto se ejecuta con:
-
-    ./scripts/check-project.sh
-
-El script valida la sintaxis, ejecuta todas las pruebas automatizadas,
-comprueba los contratos públicos y revisa la integridad del diff de Git.
-Para JavaScript utiliza Node.js o, si no está instalado, Docker.
+Un fallo temporal dunha fonte non debe impedir que as demais continúen
+actualizándose.
 
 ## Uso local
 
-```console
-.venv/bin/mesh-noroeste collect-meshview
+Os principais comandos do backend son:
+
+```bash
 .venv/bin/mesh-noroeste collect-malha
 .venv/bin/mesh-noroeste collect-ozulo
 .venv/bin/mesh-noroeste collect-meshcore
@@ -170,27 +273,12 @@ Para JavaScript utiliza Node.js o, si no está instalado, Docker.
 .venv/bin/mesh-noroeste prune
 ```
 
-Por defecto, SQLite se guarda en `MESH_STATE_DIR/mesh-noroeste.db` y los
-documentos públicos se escriben en `MESH_DATA_DIR`. El análisis opcional
-de configuración se lee desde `MESH_CONFIGURATION_WARNINGS_PATH`. Si el
-archivo falta o es inválido, el mapa publica explícitamente el análisis
-como no disponible sin bloquear la actualización general. Malha utiliza
-`cache/malha-pt.cookies` y `cache/malha-pt.json` dentro del directorio raíz
-del proyecto.
+Por defecto, SQLite almacénase en `MESH_STATE_DIR/mesh-noroeste.db` e
+os documentos públicos escríbense en `MESH_DATA_DIR`.
 
-La publicación aplica automáticamente la región formada por Galicia, Asturias,
-León, Zamora y cinco franjas de Portugal. La opción `--bounds SOUTH WEST NORTH
-EAST` sustituye ese ámbito por un rectángulo explícito.
+Tamén poden indicarse rutas explícitas:
 
-La respuesta JSON de `publish` informa del número de observaciones leídas,
-nodos regionales publicados y conexiones incluidas en `edges.json`.
-
-También pueden indicarse rutas explícitas:
-
-```console
-.venv/bin/mesh-noroeste collect-meshview \
-  --database /ruta/mesh-noroeste.db
-
+```bash
 .venv/bin/mesh-noroeste collect-malha \
   --database /ruta/mesh-noroeste.db \
   --cookie-file /ruta/privada/malha-pt.cookies \
@@ -207,6 +295,61 @@ También pueden indicarse rutas explícitas:
   --output /ruta/datos-publicos
 ```
 
-La versión funcional de este repositorio se publica en
-`https://mapa.mesh.gal/`. El proyecto anterior permanece separado y continúa
-sirviéndose en `https://mesh.tuiter.ovh/`.
+## Validación
+
+A comprobación completa do proxecto execútase con:
+
+```bash
+./scripts/check-project.sh
+```
+
+O script comproba a sintaxe, executa as probas automatizadas, valida
+os contratos públicos e revisa a integridade do diff de Git.
+
+## Documentación
+
+A documentación técnica principal está repartida entre:
+
+- `docs/FUNCTIONAL.md`: comportamento funcional;
+- `docs/SPEC.md`: especificación xeral;
+- `docs/DATA_CONTRACT.md`: contratos dos datos;
+- `docs/DATA_POLICY.md`: política de conservación e publicación;
+- `docs/RELATIONSHIP_MODEL.md`: modelo de relacións;
+- `docs/CLEAN_ROOM.md`: desenvolvemento clean-room;
+- `docs/OBSERVERS.md`: instalación de observers MeshCore.
+
+## Desenvolvemento clean-room
+
+Este repositorio é unha implementación independente escrita desde cero.
+
+Non contén código copiado de Meshtastic-es-map nin doutros mapas sen
+licenza compatible.
+
+## Licenzas
+
+O software propio deste repositorio distribúese baixo a GNU Affero
+General Public License v3.0 ou posterior (AGPL-3.0-or-later).
+
+A documentación propia distribúese baixo Creative Commons
+Atribución-CompartirIgual 4.0 Internacional (CC-BY-SA-4.0).
+
+Os compoñentes de terceiros conservan as súas respectivas licenzas. Os
+avisos e atribucións están recollidos en `THIRD_PARTY_NOTICES.md`.
+
+Estas licenzas non se aplican automaticamente aos datos, identificadores,
+posicións, observacións, teselas cartográficas nin outros materiais
+obtidos de fontes externas. Eses contidos permanecen sometidos ás
+condicións das súas fontes respectivas.
+
+A distribución de licenzas explícase con máis detalle en
+`LICENSES/README.md`.
+
+## Proxectos e despregamentos anteriores
+
+A versión actual de Mesh Noroeste publícase en:
+
+https://mapa.mesh.gal/
+
+O mapa anterior é un proxecto separado e continúa dispoñible en:
+
+https://mesh.tuiter.ovh/

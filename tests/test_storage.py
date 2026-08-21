@@ -49,7 +49,7 @@ class ObservationStoreTests(unittest.TestCase):
     def meshtastic_observation(
         self,
         *,
-        source: str = "meshview_es",
+        source: str = "ozulo_map",
         observed_at: str = "2026-07-25T10:00:00Z",
     ):
         return make_observation(
@@ -136,8 +136,8 @@ class ObservationStoreTests(unittest.TestCase):
     def test_same_node_accepts_multiple_sources(
         self,
     ) -> None:
-        meshview = self.meshtastic_observation(
-            source="meshview_es",
+        ozulo = self.meshtastic_observation(
+            source="ozulo_map",
             observed_at="2026-07-25T10:00:00Z",
         )
 
@@ -147,18 +147,18 @@ class ObservationStoreTests(unittest.TestCase):
         )
 
         inserted = self.store.save(
-            [malha, meshview]
+            [malha, ozulo]
         )
 
         loaded = self.store.load(
-            meshview.id
+            ozulo.id
         )
 
         self.assertEqual(inserted, 2)
         self.assertEqual(len(loaded), 2)
         self.assertEqual(
             [item.source for item in loaded],
-            ["meshview_es", "malha_pt"],
+            ["ozulo_map", "malha_pt"],
         )
         self.assertEqual(
             self.store.count(),
@@ -174,7 +174,7 @@ class ObservationStoreTests(unittest.TestCase):
         )
 
         earlier_meshtastic = self.meshtastic_observation(
-            source="meshview_es",
+            source="ozulo_map",
             observed_at="2026-07-25T10:00:00Z",
         )
 
@@ -211,7 +211,7 @@ class ObservationStoreTests(unittest.TestCase):
         self,
     ) -> None:
         old_details = make_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             source_id="a35b4144",
             observed_at="2026-07-20T09:00:00Z",
@@ -228,13 +228,13 @@ class ObservationStoreTests(unittest.TestCase):
             },
         )
         irrelevant_history = make_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             source_id="a35b4144",
             observed_at="2026-07-21T09:00:00Z",
         )
         latest_meshview = make_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             source_id="a35b4144",
             observed_at="2026-07-25T10:00:00Z",
@@ -482,7 +482,7 @@ class EdgeObservationStoreTests(unittest.TestCase):
         self,
     ) -> None:
         previous = make_edge_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             from_source_id="a35b4144",
             to_source_id="b1234567",
@@ -491,7 +491,7 @@ class EdgeObservationStoreTests(unittest.TestCase):
             observed_at="2026-07-25T11:00:00Z",
         )
         omitted = make_edge_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             from_source_id="a35b4144",
             to_source_id="d1111111",
@@ -500,7 +500,7 @@ class EdgeObservationStoreTests(unittest.TestCase):
             observed_at="2026-07-25T11:30:00Z",
         )
         current = make_edge_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             from_source_id="a35b4144",
             to_source_id="b1234567",
@@ -516,7 +516,7 @@ class EdgeObservationStoreTests(unittest.TestCase):
         )
 
         inserted = self.store.replace_edges(
-            "meshview_es",
+            "ozulo_map",
             [current],
         )
         loaded = self.store.load_all_edges()
@@ -526,7 +526,7 @@ class EdgeObservationStoreTests(unittest.TestCase):
             [
                 edge
                 for edge in loaded
-                if edge.source == "meshview_es"
+                if edge.source == "ozulo_map"
             ],
             [omitted, current],
         )
@@ -543,7 +543,7 @@ class EdgeObservationStoreTests(unittest.TestCase):
         self,
     ) -> None:
         meshview = make_edge_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             from_source_id="a35b4144",
             to_source_id="b1234567",
@@ -556,7 +556,7 @@ class EdgeObservationStoreTests(unittest.TestCase):
         self.store.save_edges([meshview, malha])
 
         inserted = self.store.replace_edges(
-            "meshview_es",
+            "ozulo_map",
             [],
         )
 
@@ -847,7 +847,7 @@ class SchemaMigrationTests(unittest.TestCase):
             store = ObservationStore(database_path)
 
             node = make_observation(
-                source="meshview_es",
+                source="malha_pt",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at="2026-07-25T10:00:00Z",
@@ -914,7 +914,7 @@ class SchemaMigrationTests(unittest.TestCase):
             store = ObservationStore(database_path)
 
             legacy = make_observation(
-                source="meshview_es",
+                source="malha_pt",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at="2026-07-25T10:00:00Z",
@@ -969,7 +969,7 @@ class SchemaMigrationTests(unittest.TestCase):
             )
 
             precise = make_observation(
-                source="meshview_es",
+                source="malha_pt",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at="2026-07-25T11:00:00Z",
@@ -996,7 +996,7 @@ class SchemaMigrationTests(unittest.TestCase):
             store = ObservationStore(database_path)
 
             existing_node = make_observation(
-                source="meshview_es",
+                source="malha_pt",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at="2026-07-25T10:00:00Z",
@@ -1015,7 +1015,7 @@ class SchemaMigrationTests(unittest.TestCase):
             store.save_edges([existing_edge])
 
             existing_run = store.begin_source_run(
-                "meshview_es",
+                "malha_pt",
                 "2026-07-25T09:59:00Z",
             )
             store.finish_source_run(
@@ -1055,6 +1055,11 @@ class SchemaMigrationTests(unittest.TestCase):
                         legacy_sql = create_sql.replace(
                             "'ozulo_map',",
                             "",
+                            1,
+                        )
+                        legacy_sql = legacy_sql.replace(
+                            "'malha_pt',",
+                            "'meshview_es', 'malha_pt',",
                             1,
                         )
                         legacy_sql = legacy_sql.replace(
@@ -1115,7 +1120,7 @@ class SchemaMigrationTests(unittest.TestCase):
             )
             self.assertEqual(
                 store.source_statistics()[
-                    "meshview_es"
+                    "malha_pt"
                 ]["records_received"],
                 1,
             )
@@ -1201,7 +1206,7 @@ class SchemaMigrationTests(unittest.TestCase):
             store = ObservationStore(database_path)
 
             old_node = make_observation(
-                source="meshview_es",
+                source="malha_pt",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at="2026-05-01T10:00:00Z",
@@ -1323,7 +1328,7 @@ class SchemaMigrationTests(unittest.TestCase):
             store = ObservationStore(database_path)
 
             existing_node = make_observation(
-                source="meshview_es",
+                source="malha_pt",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at="2026-08-05T08:00:00Z",
@@ -1348,7 +1353,7 @@ class SchemaMigrationTests(unittest.TestCase):
             )
 
             existing_run = store.begin_source_run(
-                "meshview_es",
+                "malha_pt",
                 "2026-08-05T07:59:00Z",
             )
             store.finish_source_run(
@@ -1392,6 +1397,12 @@ class SchemaMigrationTests(unittest.TestCase):
                         )
 
                         self.assertEqual(replacements, 1)
+
+                        legacy_sql = legacy_sql.replace(
+                            "'malha_pt',",
+                            "'meshview_es', 'malha_pt',",
+                            1,
+                        )
 
                         temporary = f"{table}_v6"
                         quoted_table = (
@@ -1577,6 +1588,317 @@ class SchemaMigrationTests(unittest.TestCase):
                 },
             )
             self.assertEqual(store.quick_check(), "ok")
+
+    def test_version_twelve_database_removes_meshview_source(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = (
+                Path(directory) / "migration-v12.db"
+            )
+            store = ObservationStore(database_path)
+
+            # Crear primeiro o esquema actual para obter unha
+            # estrutura completa e coherente.
+            store.initialize()
+
+            tables = (
+                "node_observations",
+                "edge_observations",
+                "neighbor_observations",
+                "node_observation_cursors",
+                "edge_observation_cursors",
+                "live_source_state",
+                "source_runs",
+            )
+
+            with closing(
+                sqlite3.connect(database_path)
+            ) as connection:
+                connection.row_factory = sqlite3.Row
+
+                with connection:
+                    # Reconstruír as sete táboas co contrato
+                    # inmediatamente anterior, que aínda admitía
+                    # meshview_es.
+                    for table in tables:
+                        row = connection.execute(
+                            """
+                            SELECT sql
+                            FROM sqlite_master
+                            WHERE type = 'table'
+                              AND name = ?
+                            """,
+                            (table,),
+                        ).fetchone()
+
+                        self.assertIsNotNone(row)
+                        assert row is not None
+
+                        create_sql = row["sql"]
+
+                        self.assertNotIn(
+                            "'meshview_es'",
+                            create_sql,
+                        )
+
+                        legacy_sql = create_sql.replace(
+                            "'malha_pt',",
+                            "'meshview_es', 'malha_pt',",
+                            1,
+                        )
+
+                        self.assertNotEqual(
+                            legacy_sql,
+                            create_sql,
+                        )
+
+                        temporary = f"{table}_v12"
+                        quoted_table = (
+                            storage_module._quote_identifier(
+                                table
+                            )
+                        )
+                        quoted_temporary = (
+                            storage_module._quote_identifier(
+                                temporary
+                            )
+                        )
+
+                        legacy_sql, replacements = (
+                            storage_module._CREATE_TABLE_HEAD.subn(
+                                (
+                                    "CREATE TABLE "
+                                    f"{quoted_temporary}"
+                                ),
+                                legacy_sql,
+                                count=1,
+                            )
+                        )
+
+                        self.assertEqual(
+                            replacements,
+                            1,
+                        )
+
+                        connection.execute(
+                            f"DROP TABLE IF EXISTS "
+                            f"{quoted_temporary}"
+                        )
+                        connection.execute(
+                            legacy_sql
+                        )
+
+                        columns = [
+                            item["name"]
+                            for item in connection.execute(
+                                (
+                                    "PRAGMA table_info("
+                                    f"{quoted_table}"
+                                    ")"
+                                )
+                            )
+                        ]
+
+                        self.assertTrue(columns)
+
+                        column_list = ", ".join(
+                            storage_module._quote_identifier(
+                                column
+                            )
+                            for column in columns
+                        )
+
+                        connection.execute(
+                            f"""
+                            INSERT INTO {quoted_temporary} (
+                                {column_list}
+                            )
+                            SELECT
+                                {column_list}
+                            FROM {quoted_table}
+                            """
+                        )
+                        connection.execute(
+                            f"DROP TABLE {quoted_table}"
+                        )
+                        connection.execute(
+                            f"""
+                            ALTER TABLE {quoted_temporary}
+                            RENAME TO {quoted_table}
+                            """
+                        )
+
+                    storage_module._create_indexes(
+                        connection
+                    )
+
+                    connection.execute(
+                        """
+                        INSERT INTO node_observations (
+                            canonical_id,
+                            network,
+                            source,
+                            source_id,
+                            observed_at,
+                            metrics_json,
+                            radio_json
+                        )
+                        VALUES (
+                            'meshtastic:!11111111',
+                            'meshtastic',
+                            'meshview_es',
+                            '11111111',
+                            '2026-08-20T10:00:00Z',
+                            '{}',
+                            '{}'
+                        )
+                        """
+                    )
+
+                    connection.execute(
+                        """
+                        INSERT INTO node_observations (
+                            canonical_id,
+                            network,
+                            source,
+                            source_id,
+                            observed_at,
+                            metrics_json,
+                            radio_json
+                        )
+                        VALUES (
+                            'meshtastic:!22222222',
+                            'meshtastic',
+                            'ozulo_map',
+                            '22222222',
+                            '2026-08-20T10:00:00Z',
+                            '{}',
+                            '{}'
+                        )
+                        """
+                    )
+
+                    connection.execute(
+                        """
+                        INSERT INTO source_runs (
+                            source,
+                            started_at,
+                            finished_at,
+                            success,
+                            records_received
+                        )
+                        VALUES (
+                            'meshview_es',
+                            '2026-08-20T10:00:00Z',
+                            '2026-08-20T10:01:00Z',
+                            1,
+                            1
+                        )
+                        """
+                    )
+
+                    connection.execute(
+                        """
+                        INSERT INTO source_runs (
+                            source,
+                            started_at,
+                            finished_at,
+                            success,
+                            records_received
+                        )
+                        VALUES (
+                            'ozulo_map',
+                            '2026-08-20T10:00:00Z',
+                            '2026-08-20T10:01:00Z',
+                            1,
+                            1
+                        )
+                        """
+                    )
+
+                    connection.execute(
+                        "PRAGMA user_version = 12"
+                    )
+
+            store.initialize()
+
+            self.assertEqual(
+                store.schema_version(),
+                SCHEMA_VERSION,
+            )
+            self.assertEqual(
+                SCHEMA_VERSION,
+                13,
+            )
+            self.assertEqual(
+                store.quick_check(),
+                "ok",
+            )
+
+            with closing(
+                sqlite3.connect(database_path)
+            ) as connection:
+                for table in tables:
+                    row = connection.execute(
+                        """
+                        SELECT sql
+                        FROM sqlite_master
+                        WHERE type = 'table'
+                          AND name = ?
+                        """,
+                        (table,),
+                    ).fetchone()
+
+                    self.assertIsNotNone(row)
+                    assert row is not None
+
+                    self.assertNotIn(
+                        "'meshview_es'",
+                        row[0],
+                    )
+
+                self.assertEqual(
+                    connection.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM node_observations
+                        WHERE source = 'meshview_es'
+                        """
+                    ).fetchone()[0],
+                    0,
+                )
+                self.assertEqual(
+                    connection.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM node_observations
+                        WHERE source = 'ozulo_map'
+                        """
+                    ).fetchone()[0],
+                    1,
+                )
+                self.assertEqual(
+                    connection.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM source_runs
+                        WHERE source = 'meshview_es'
+                        """
+                    ).fetchone()[0],
+                    0,
+                )
+                self.assertEqual(
+                    connection.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM source_runs
+                        WHERE source = 'ozulo_map'
+                        """
+                    ).fetchone()[0],
+                    1,
+                )
+
 
     def test_unknown_schema_version_is_rejected(
         self,
@@ -1839,7 +2161,7 @@ class NodePurgeTests(unittest.TestCase):
         )
         target_meshview = self.node(
             "!A35B4144",
-            source="meshview_es",
+            source="ozulo_map",
             observed_at="2026-07-25T12:01:00Z",
         )
         node_b = self.node(
@@ -2171,7 +2493,7 @@ class RetentionTests(unittest.TestCase):
             ),
         ]
         supporting_old = self.node(
-            source="meshview_es",
+            source="ozulo_map",
             source_id="a35b4144",
             observed_at="2026-05-01T10:00:00Z",
         )
@@ -2529,13 +2851,13 @@ class SourceRunTests(unittest.TestCase):
         self,
     ) -> None:
         self.store.begin_source_run(
-            "meshview_es",
+            "ozulo_map",
             "2026-07-25T12:00:00Z",
         )
 
         self.assertEqual(
             self.store.source_statistics()[
-                "meshview_es"
+                "ozulo_map"
             ],
             {
                 "last_success": None,

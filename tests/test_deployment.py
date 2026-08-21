@@ -191,7 +191,7 @@ class DeploymentConfigurationTests(unittest.TestCase):
         self,
     ) -> None:
         self.assertIn(
-            "meshview|malha|ozulo|meshcore",
+            "malha|ozulo|meshcore",
             self.update_script,
         )
         self.assertIn(
@@ -207,7 +207,7 @@ class DeploymentConfigurationTests(unittest.TestCase):
         self,
     ) -> None:
         self.assertIn(
-            "meshview|malha|ozulo|meshcore|meshcore-hub",
+            "malha|ozulo|meshcore|meshcore-hub",
             self.update_script,
         )
         self.assertIn(
@@ -276,7 +276,7 @@ class DeploymentConfigurationTests(unittest.TestCase):
                 )
 
         for expected in (
-            "https://meshview.meshtastic.es",
+            "https://meshview.mesh.comunidadeozulo.org",
             "def run_analysis(",
             "def atomic_write(",
         ):

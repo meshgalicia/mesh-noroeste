@@ -31,7 +31,7 @@ from mesh_noroeste.normalization import (
 )
 
 
-SCHEMA_VERSION = 12
+SCHEMA_VERSION = 13
 
 
 @contextmanager
@@ -593,6 +593,127 @@ def _migrate_meshcore_hub_source_constraints(
 
 
 
+def _migrate_remove_meshview_source_constraints(
+    connection: sqlite3.Connection,
+) -> None:
+    """Retira Meshview España das fontes admitidas por SQLite."""
+
+    tables = (
+        "node_observations",
+        "edge_observations",
+        "neighbor_observations",
+        "node_observation_cursors",
+        "edge_observation_cursors",
+        "live_source_state",
+        "source_runs",
+    )
+
+    migrated = False
+
+    for table in tables:
+        row = connection.execute(
+            """
+            SELECT sql
+            FROM sqlite_master
+            WHERE type = 'table'
+              AND name = ?
+            """,
+            (table,),
+        ).fetchone()
+
+        if row is None or row["sql"] is None:
+            raise RuntimeError(
+                f"Falta a táboa SQLite {table}"
+            )
+
+        create_sql = row["sql"]
+
+        if "'meshview_es'" not in create_sql:
+            continue
+
+        updated_sql = create_sql.replace(
+            "'meshview_es',",
+            "",
+        )
+
+        if updated_sql == create_sql:
+            raise RuntimeError(
+                "Non se puido retirar Meshview España "
+                f"da restrición de fonte de {table}"
+            )
+
+        temporary = f"{table}_source_v13"
+        quoted_table = _quote_identifier(table)
+        quoted_temporary = _quote_identifier(
+            temporary
+        )
+
+        connection.execute(
+            f"DROP TABLE IF EXISTS {quoted_temporary}"
+        )
+
+        temporary_sql, renamed = (
+            _CREATE_TABLE_HEAD.subn(
+                f"CREATE TABLE {quoted_temporary}",
+                updated_sql,
+                count=1,
+            )
+        )
+
+        if renamed != 1:
+            raise RuntimeError(
+                "Non se puido preparar a migración "
+                f"de {table}"
+            )
+
+        connection.execute(temporary_sql)
+
+        columns = [
+            item["name"]
+            for item in connection.execute(
+                f"PRAGMA table_info({quoted_table})"
+            )
+        ]
+
+        if not columns:
+            raise RuntimeError(
+                f"A táboa {table} non ten columnas"
+            )
+
+        column_list = ", ".join(
+            _quote_identifier(column)
+            for column in columns
+        )
+
+        connection.execute(
+            f"""
+            INSERT INTO {quoted_temporary} (
+                {column_list}
+            )
+            SELECT
+                {column_list}
+            FROM {quoted_table}
+            WHERE source <> 'meshview_es'
+            """
+        )
+
+        connection.execute(
+            f"DROP TABLE {quoted_table}"
+        )
+        connection.execute(
+            f"""
+            ALTER TABLE {quoted_temporary}
+            RENAME TO {quoted_table}
+            """
+        )
+
+        migrated = True
+
+    if migrated:
+        _create_indexes(connection)
+
+
+
 def _migrate_observer_reception_identity(
     connection: sqlite3.Connection,
 ) -> None:
@@ -863,6 +984,7 @@ class ObservationStore:
                 9,
                 10,
                 11,
+                12,
                 SCHEMA_VERSION,
             }:
                 raise RuntimeError(
@@ -889,7 +1011,6 @@ class ObservationStore:
                     source TEXT NOT NULL
                         CHECK (
                             source IN (
-                                'meshview_es',
                                 'malha_pt',
                                 'ozulo_map',
                                 'meshcore_map',
@@ -984,7 +1105,6 @@ class ObservationStore:
                     source TEXT NOT NULL
                         CHECK (
                             source IN (
-                                'meshview_es',
                                 'malha_pt',
                                 'ozulo_map',
                                 'meshcore_map',
@@ -1074,8 +1194,7 @@ class ObservationStore:
                         source TEXT NOT NULL
                             CHECK (
                                 source IN (
-                                    'meshview_es',
-                                    'malha_pt',
+                                        'malha_pt',
                                     'ozulo_map'
                                 )
                             ),
@@ -1175,8 +1294,7 @@ class ObservationStore:
                         source TEXT NOT NULL
                             CHECK (
                                 source IN (
-                                    'meshview_es',
-                                    'malha_pt',
+                                        'malha_pt',
                                     'ozulo_map',
                                     'meshcore_map',
                                     'meshcore_hub'
@@ -1198,8 +1316,7 @@ class ObservationStore:
                         source TEXT NOT NULL
                             CHECK (
                                 source IN (
-                                    'meshview_es',
-                                    'malha_pt',
+                                        'malha_pt',
                                     'ozulo_map',
                                     'meshcore_map',
                                     'meshcore_hub'
@@ -1243,7 +1360,6 @@ class ObservationStore:
                     source TEXT PRIMARY KEY
                         CHECK (
                             source IN (
-                                'meshview_es',
                                 'malha_pt',
                                 'ozulo_map',
                                 'meshcore_map',
@@ -1264,7 +1380,6 @@ class ObservationStore:
                     source TEXT NOT NULL
                         CHECK (
                             source IN (
-                                'meshview_es',
                                 'malha_pt',
                                 'ozulo_map',
                                 'meshcore_map',
@@ -1350,6 +1465,9 @@ class ObservationStore:
                 connection
             )
             _migrate_meshcore_hub_source_constraints(
+                connection
+            )
+            _migrate_remove_meshview_source_constraints(
                 connection
             )
             _migrate_observer_reception_identity(

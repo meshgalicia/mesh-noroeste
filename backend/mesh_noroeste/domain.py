@@ -17,11 +17,10 @@ from mesh_noroeste.normalization import (
 
 
 SOURCE_ORDER = {
-    "meshview_es": 0,
-    "malha_pt": 1,
-    "ozulo_map": 2,
-    "meshcore_map": 3,
-    "meshcore_hub": 4,
+    "malha_pt": 0,
+    "ozulo_map": 1,
+    "meshcore_map": 2,
+    "meshcore_hub": 3,
 }
 
 MESHCORE_SOURCES = frozenset({

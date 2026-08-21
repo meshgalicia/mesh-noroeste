@@ -106,7 +106,7 @@ def _eligible_node_ids(
 
         if (
             network == "meshtastic"
-            and "meshview_es" in sources
+            and "ozulo_map" in sources
         ):
             eligible.add(node_id)
 
@@ -191,7 +191,7 @@ def build_unavailable_configuration_warnings_document(
         "schema": SCHEMA_ID,
         "generated_at": normalize_timestamp(generated_at),
         "analysis": {
-            "source": "meshview_es",
+            "source": "ozulo_map",
             "available": False,
             "updated_at": None,
             "eligible_nodes": len(eligible),
@@ -287,7 +287,7 @@ def build_configuration_warnings_document(
         "schema": SCHEMA_ID,
         "generated_at": normalize_timestamp(generated_at),
         "analysis": {
-            "source": "meshview_es",
+            "source": "ozulo_map",
             "available": True,
             "updated_at": updated_at,
             "eligible_nodes": len(eligible),

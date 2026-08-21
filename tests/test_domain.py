@@ -22,7 +22,7 @@ class ObservationTests(unittest.TestCase):
         self,
     ) -> None:
         observation = make_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="Meshtastic",
             source_id="A35B4144",
             observed_at=NOW,
@@ -58,7 +58,7 @@ class ObservationTests(unittest.TestCase):
             "no es una fuente MeshCore",
         ):
             make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshcore",
                 source_id="02ab34cd",
                 observed_at=NOW,
@@ -94,7 +94,7 @@ class ObservationTests(unittest.TestCase):
             "no puede tener is_observer",
         ):
             make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at=NOW,
@@ -146,7 +146,7 @@ class ObservationTests(unittest.TestCase):
             "position_updated_at",
         ):
             make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at=NOW,
@@ -162,7 +162,7 @@ class ObservationTests(unittest.TestCase):
             "requiere coordenadas",
         ):
             make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at=NOW,
@@ -177,7 +177,7 @@ class ObservationTests(unittest.TestCase):
             "no puede superar 32",
         ):
             make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="a35b4144",
                 observed_at=NOW,
@@ -309,7 +309,7 @@ class MergeTests(unittest.TestCase):
         self,
     ) -> None:
         older = make_observation(
-            source="meshview_es",
+            source="malha_pt",
             network="meshtastic",
             source_id="a35b4144",
             observed_at="2026-07-25T10:00:00Z",
@@ -335,7 +335,7 @@ class MergeTests(unittest.TestCase):
         )
 
         newer = make_observation(
-            source="malha_pt",
+            source="ozulo_map",
             network="meshtastic",
             source_id="!A35B4144",
             observed_at="2026-07-25T11:00:00Z",
@@ -368,20 +368,20 @@ class MergeTests(unittest.TestCase):
         )
         self.assertEqual(
             node["sources"],
-            ["meshview_es", "malha_pt"],
+            ["malha_pt", "ozulo_map"],
         )
         self.assertEqual(
             node["source_ids"],
             {
-                "meshview_es": "!a35b4144",
                 "malha_pt": "!a35b4144",
+                "ozulo_map": "!a35b4144",
             },
         )
         self.assertEqual(
             node["source_last_seen"],
             {
-                "meshview_es": "2026-07-25T10:00:00Z",
-                "malha_pt": "2026-07-25T11:00:00Z",
+                "malha_pt": "2026-07-25T10:00:00Z",
+                "ozulo_map": "2026-07-25T11:00:00Z",
             },
         )
         self.assertEqual(
@@ -451,7 +451,7 @@ class MergeTests(unittest.TestCase):
         self,
     ) -> None:
         newer_observation = make_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             source_id="a35b4144",
             observed_at="2026-07-25T11:30:00Z",
@@ -502,14 +502,14 @@ class MergeTests(unittest.TestCase):
         self,
     ) -> None:
         first = make_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             source_id="a35b4144",
             observed_at=NOW,
         )
 
         second = make_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             source_id="b1234567",
             observed_at=NOW,
@@ -531,7 +531,7 @@ class MergeTests(unittest.TestCase):
         self,
     ) -> None:
         observation = make_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             source_id="a35b4144",
             observed_at="2026-06-01T12:00:00Z",
@@ -797,7 +797,7 @@ class EdgeObservationTests(unittest.TestCase):
         self,
     ) -> None:
         edge = make_edge_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             from_source_id="b1234567",
             to_source_id="a35b4144",
@@ -830,7 +830,7 @@ class EdgeObservationTests(unittest.TestCase):
             "neighbor no puede ser dirigida",
         ):
             make_edge_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 from_source_id="a35b4144",
                 to_source_id="b1234567",

@@ -46,7 +46,6 @@
       "properties": {
         "source": {
           "enum": [
-            "meshview_es",
             "malha_pt",
             "ozulo_map"
           ]

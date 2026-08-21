@@ -21,7 +21,7 @@ from mesh_noroeste.http_client import FetchError, fetch_json
 from mesh_noroeste.normalization import canonical_node_id
 
 
-DEFAULT_BASE_URL = "https://meshview.meshtastic.es"
+DEFAULT_BASE_URL = "https://meshview.mesh.comunidadeozulo.org"
 DEFAULT_TIMEOUT_SECONDS = 30.0
 DEFAULT_MAX_BYTES = 20 * 1024 * 1024
 DEFAULT_MAX_PACKETS = 10_000
@@ -89,7 +89,7 @@ class ConfigurationAnalysisError(RuntimeError):
 
 @dataclass(frozen=True, slots=True)
 class NodeMetadata:
-    """Metadatos mínimos publicados por Meshview."""
+    """Metadatos mínimos publicados por unha API Meshtastic."""
 
     node_id: int
     public_id: str
@@ -976,14 +976,14 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(
         description=(
-            "Analiza la actividad Meshtastic publicada "
-            "por Meshview España."
+            "Analiza a actividade Meshtastic publicada "
+            "pola API de Comunidade O Zulo."
         )
     )
     parser.add_argument(
         "--base-url",
         default=os.environ.get(
-            "MESHVIEW_URL",
+            "MESH_CONFIGURATION_SOURCE_URL",
             DEFAULT_BASE_URL,
         ),
     )

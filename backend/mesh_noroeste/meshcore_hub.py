@@ -180,15 +180,11 @@ def _coordinates(
             f"Nodo {index}: lat e lon deben ser finitas"
         )
 
-    if not -90 <= normalized_latitude <= 90:
-        raise MeshCoreHubError(
-            f"Nodo {index}: lat está fóra de rango"
-        )
-
-    if not -180 <= normalized_longitude <= 180:
-        raise MeshCoreHubError(
-            f"Nodo {index}: lon está fóra de rango"
-        )
+    if (
+        not -90 <= normalized_latitude <= 90
+        or not -180 <= normalized_longitude <= 180
+    ):
+        return None, None
 
     if normalized_latitude == 0 and normalized_longitude == 0:
         return None, None

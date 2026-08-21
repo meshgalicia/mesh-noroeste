@@ -109,15 +109,11 @@ class FrontendStaticTests(unittest.TestCase):
         self,
     ) -> None:
         self.assertIn(
-            "Datos: Meshview España, Malha Portugal,",
+            "Datos: Malha Portugal, Comunidade O Zulo,",
             self.html,
         )
         self.assertIn(
-            "Comunidade O Zulo, MeshCore Map e",
-            self.html,
-        )
-        self.assertIn(
-            "MeshCore Hub de Mesh Galicia.",
+            "MeshCore Map e MeshCore Hub de Mesh Galicia.",
             self.html,
         )
         self.assertIn(
@@ -209,7 +205,6 @@ class FrontendStaticTests(unittest.TestCase):
         self,
     ) -> None:
         for expected in (
-            'meshview_es: "Meshview España"',
             'malha_pt: "Malha Portugal"',
             'ozulo_map: "Comunidade O Zulo"',
             'meshcore_map: "MeshCore Map"',
@@ -396,8 +391,8 @@ class FrontendStaticTests(unittest.TestCase):
             "Non se detectaron avisos na análise dispoñible",
             "Isto non equivale a unha validación completa",
             "Análise non dispoñible para este nodo. ",
-            "As demais fontes non publican todos os ",
-            "parámetros de configuración necesarios.",
+            "O analizador utiliza os datos publicados ",
+            "pola Comunidade O Zulo.",
             "WARNING_SEVERITY_LABELS",
             "warningDocument?.analysis",
         ):
@@ -741,10 +736,6 @@ class FrontendStaticTests(unittest.TestCase):
             "!Array.isArray(node.sources)",
             r"/^meshtastic:!([0-9a-f]{8})$/",
             "Number.parseInt(idMatch[1], 16)",
-            'node.sources.includes("meshview_es")',
-            'sourceLinkIsRecent(node, "meshview_es")',
-            '"https://meshview.meshtastic.es/node/"',
-            '"Abrir en Meshview España"',
             'node.sources.includes("malha_pt")',
             'sourceLinkIsRecent(node, "malha_pt")',
             '"https://malha.meshtastic.pt/node/"',
@@ -892,8 +883,6 @@ class FrontendStaticTests(unittest.TestCase):
             'id="traceroute-source"',
             'value="ozulo_map"',
             "Comunidade O Zulo",
-            'value="meshview_es" selected',
-            "Meshview España",
             'value="malha_pt"',
             "Malha Portugal",
             'value="all"',

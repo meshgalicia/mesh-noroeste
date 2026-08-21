@@ -5,7 +5,7 @@
     {
       "id": "meshtastic:neighbor:!a35b4144:!b1234567",
       "network": "meshtastic",
-      "source": "meshview_es",
+      "source": "ozulo_map",
       "from_id": "meshtastic:!a35b4144",
       "to_id": "meshtastic:!b1234567",
       "edge_type": "neighbor",

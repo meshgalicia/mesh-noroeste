@@ -5,8 +5,8 @@
 El backend transforma las respuestas de cada fuente en un modelo común.
 
 El frontend solo consumirá este contrato y no conocerá la estructura interna
-de Meshview España, Malha Portugal, Comunidade O Zulo, MeshCore Map ni
-MeshCore Hub de Mesh Galicia.
+de Malha Portugal, Comunidade O Zulo, MeshCore Map ni MeshCore Hub de
+Mesh Galicia.
 
 Versión inicial:
 
@@ -37,7 +37,6 @@ El modo «Ambas» pertenece al frontend y no es una tercera red.
 
 El campo `source` admite:
 
-- `meshview_es`
 - `malha_pt`
 - `ozulo_map`
 - `meshcore_map`
@@ -67,47 +66,8 @@ Reglas:
 - letras minúsculas;
 - ceros iniciales conservados.
 
-Un nodo recibido desde Meshview España, Malha Portugal o Comunidade O Zulo
-debe generar el mismo identificador canónico y un único registro
-consolidado.
-
-### Adaptación de Meshview España
-
-El colector utiliza el documento público de nodos:
-
-    https://meshview.meshtastic.es/api/nodes
-
-La respuesta se descarga mediante HTTPS y se decodifica como JSON. La raíz
-debe ser un objeto con una lista `nodes`.
-
-Correspondencia inicial:
-
-| Origen | Campo normalizado |
-|---|---|
-| `id` y `node_id` | `source_id` e `id` |
-| `first_seen_us` | `first_seen` |
-| `last_seen_us` | `observed_at` |
-| `last_seen_us` | `position_updated_at`, cuando existe posición |
-| `short_name` | `short_name` |
-| `long_name` | `long_name` |
-| `hw_model` | `hardware` |
-| `role` | `role` |
-| `last_lat` | `latitude` |
-| `last_long` | `longitude` |
-| `channel` | `radio.channel` |
-| `firmware` | `radio.firmware` |
-| `is_mqtt_gateway` | `radio.mqtt_gateway` |
-
-`first_seen_us` y `last_seen_us` son timestamps Unix en microsegundos.
-`last_lat` y `last_long` son enteros en grados multiplicados por diez
-millones.
-
-Los campos `id` y `node_id` deben representar el mismo identificador de
-32 bits. Los identificadores duplicados dentro de una respuesta se rechazan.
-
-Las coordenadas pueden faltar ambas. Si solo falta una, el registro se
-considera inválido. Cuando no hay posición, tampoco se genera
-`position_updated_at`.
+Un nodo recibido desde Malha Portugal o Comunidade O Zulo debe generar el
+mismo identificador canónico y un único registro consolidado.
 
 ### Adaptación de Malha Portugal
 
@@ -185,7 +145,8 @@ La raíz de nodos debe ser un objeto con una lista `nodes`; la raíz de
 conexiones debe ser un objeto con una lista `edges`.
 
 Los nodos se identifican mediante `node_id` y se normalizan dentro del mismo
-espacio canónico Meshtastic utilizado por Meshview España y Malha Portugal.
+espacio canónico Meshtastic utilizado por Malha Portugal y el resto del
+proyecto.
 El adaptador puede conservar nombres, hardware, rol, posición, precisión,
 altitud, telemetría, parámetros de radio, saltos y condición de gateway MQTT
 cuando esos campos están presentes y son válidos.
@@ -363,12 +324,12 @@ Cada nodo tendrá esta forma general:
       "id": "meshtastic:!a35b4144",
       "network": "meshtastic",
       "source_ids": {
-        "meshview_es": "!a35b4144",
-        "malha_pt": "!a35b4144"
+        "malha_pt": "!a35b4144",
+        "ozulo_map": "!a35b4144"
       },
       "sources": [
-        "meshview_es",
-        "malha_pt"
+        "malha_pt",
+        "ozulo_map"
       ],
       "short_name": "BRUMA",
       "long_name": "Bruma Connection",
@@ -558,7 +519,7 @@ Ejemplo:
     {
       "id": "meshtastic:neighbor:!a35b4144:!b1234567",
       "network": "meshtastic",
-      "source": "meshview_es",
+      "source": "ozulo_map",
       "from_id": "meshtastic:!a35b4144",
       "to_id": "meshtastic:!b1234567",
       "edge_type": "neighbor",
@@ -713,7 +674,7 @@ Estructura superior:
       "schema": "mesh-noroeste.configuration-warnings/v1",
       "generated_at": "2026-07-28T03:16:06Z",
       "analysis": {
-        "source": "meshview_es",
+        "source": "ozulo_map",
         "available": true,
         "updated_at": "2026-07-27T23:04:17Z",
         "eligible_nodes": 306,
@@ -724,20 +685,21 @@ Estructura superior:
     }
 
 El documento de entrada se genera dentro del propio proyecto mediante el
-analizador de configuración. Este consulta la API pública de Meshview España,
-analiza la actividad reciente y sustituye
+analizador de configuración. Este consulta la API pública de Meshview de
+Comunidade O Zulo, analiza la actividad reciente y sustituye
 `cache/configuration-analysis.json` de forma atómica. La ejecución se programa
 cada seis horas y es independiente de las actualizaciones ordinarias del mapa.
 
 Solo son elegibles los nodos consolidados que:
 
 - pertenecen a la red `meshtastic`;
-- incluyen `meshview_es` dentro de `sources`.
+- incluyen `ozulo_map` dentro de `sources`.
 
-Un nodo presente simultáneamente en Meshview España y Malha Portugal conserva
-un único identificador canónico y puede recibir el análisis de Meshview. Los
-nodos exclusivos de Malha no se consideran analizados, porque el documento
-público de Malha no incluye todos los parámetros necesarios. Los nodos
+Un nodo presente simultáneamente en Comunidade O Zulo y Malha Portugal
+conserva un único identificador canónico y puede recibir el análisis de O
+Zulo. Los nodos exclusivos de Malha no se consideran analizados, porque el
+documento público de Malha no incluye todos los parámetros necesarios. Los
+nodos
 MeshCore tampoco forman parte de este contrato.
 
 Cada entrada analizada tiene esta forma:

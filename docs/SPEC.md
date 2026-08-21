@@ -10,7 +10,6 @@ El mapa debe admitir tres modos:
 
 ## Fuentes
 
-- Meshview España
 - Malha Portugal
 - Comunidade O Zulo
 - MeshCore Map
@@ -29,8 +28,6 @@ Estado actual:
   público compacto de MeshCore Map;
 - `meshcore_hub`: colector autenticado y paginado para los nodos y
   anuncios recibidos por observers de MeshCore Hub de Mesh Galicia;
-- `meshview_es`: colector implementado y probado contra la API pública
-  de nodos de Meshview España;
 - `malha_pt`: adaptador, cliente HTTP y colector implementados para los
   nodos y traceroutes del documento público de Malha Portugal;
 - `ozulo_map`: adaptador y colector implementados para los nodos y
@@ -51,8 +48,8 @@ Los colectores implementados:
 5. registran el inicio, el éxito o el error de la ejecución;
 6. conservan los últimos datos válidos si una ejecución posterior falla.
 
-Meshview España, Malha Portugal, Comunidade O Zulo y MeshCore Hub se
-consumen como JSON. MeshCore Map se solicita en su formato MessagePack
+Malha Portugal, Comunidade O Zulo y MeshCore Hub se consumen como JSON.
+MeshCore Map se solicita en su formato MessagePack
 compacto. MeshCore Hub requiere una clave de lectura y pagina mediante
 `limit` y `offset` tanto los nodos como los anuncios recibidos. Las
 recepciones atribuidas a observers se deduplican, normalizan y persisten como
@@ -109,7 +106,6 @@ El backend deberá:
 Operaciones disponibles actualmente:
 
 ```console
-mesh-noroeste collect-meshview
 mesh-noroeste collect-malha
 mesh-noroeste collect-ozulo
 mesh-noroeste collect-meshcore
@@ -210,7 +206,8 @@ número de conexiones finalmente publicadas.
 
 Mesh Noroeste genera el documento bruto de avisos mediante una implementación
 propia. El proceso consulta los endpoints públicos de nodos, paquetes y
-recepciones de Meshview España, analiza una ventana reciente de actividad y
+recepciones de Meshview de Comunidade O Zulo, analiza una ventana reciente
+de actividad y
 escribe atómicamente `cache/configuration-analysis.json`.
 
 La unidad `mesh-noroeste-analysis.service` se ejecuta cada seis horas mediante

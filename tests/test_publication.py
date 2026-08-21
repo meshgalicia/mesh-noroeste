@@ -51,7 +51,7 @@ class PublicationTests(unittest.TestCase):
 
     def observations(self):
         meshview = make_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             source_id="a35b4144",
             observed_at="2026-07-25T10:00:00Z",
@@ -143,7 +143,7 @@ class PublicationTests(unittest.TestCase):
 
         self.assertEqual(
             meshtastic["sources"],
-            ["meshview_es", "malha_pt"],
+            ["malha_pt", "ozulo_map"],
         )
         self.assertEqual(
             meshtastic["long_name"],
@@ -184,7 +184,7 @@ class PublicationTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            stats["sources"]["meshview_es"][
+            stats["sources"]["ozulo_map"][
                 "records_received"
             ],
             1,
@@ -213,7 +213,7 @@ class PublicationTests(unittest.TestCase):
         self,
     ) -> None:
         excluded = make_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             source_id="a35b4144",
             observed_at="2026-07-25T11:30:00Z",
@@ -224,7 +224,7 @@ class PublicationTests(unittest.TestCase):
             ),
         )
         included = make_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             source_id="b1234567",
             observed_at="2026-07-25T11:31:00Z",
@@ -235,7 +235,7 @@ class PublicationTests(unittest.TestCase):
             ),
         )
         edge = make_edge_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             from_source_id="a35b4144",
             to_source_id="b1234567",
@@ -303,7 +303,7 @@ class PublicationTests(unittest.TestCase):
         )
         self.assertEqual(
             documents["stats.json"]["sources"][
-                "meshview_es"
+                "ozulo_map"
             ]["records_received"],
             1,
         )
@@ -755,7 +755,7 @@ class PublicationTests(unittest.TestCase):
     ) -> None:
         observations = [
             make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="c1111111",
                 observed_at="2026-07-25T10:00:00Z",
@@ -766,7 +766,7 @@ class PublicationTests(unittest.TestCase):
                 ),
             ),
             make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="d2222222",
                 observed_at="2026-07-25T10:00:00Z",
@@ -777,7 +777,7 @@ class PublicationTests(unittest.TestCase):
                 ),
             ),
             make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="e3333333",
                 observed_at="2026-07-25T10:00:00Z",
@@ -788,7 +788,7 @@ class PublicationTests(unittest.TestCase):
                 ),
             ),
             make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="f4444444",
                 observed_at="2026-07-25T10:00:00Z",
@@ -823,7 +823,7 @@ class PublicationTests(unittest.TestCase):
         )
         self.assertEqual(
             documents["stats.json"]["sources"][
-                "meshview_es"
+                "ozulo_map"
             ]["records_received"],
             4,
         )
@@ -833,7 +833,7 @@ class PublicationTests(unittest.TestCase):
     ) -> None:
         observations = [
             make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="c1111111",
                 observed_at="2026-07-25T10:00:00Z",
@@ -844,7 +844,7 @@ class PublicationTests(unittest.TestCase):
                 ),
             ),
             make_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 source_id="d2222222",
                 observed_at="2026-07-25T10:00:00Z",
@@ -906,7 +906,7 @@ class PublicationTests(unittest.TestCase):
         )
         self.assertEqual(
             documents["stats.json"]["sources"][
-                "meshview_es"
+                "ozulo_map"
             ]["records_received"],
             2,
         )
@@ -921,14 +921,6 @@ class PublicationTests(unittest.TestCase):
         self,
     ) -> None:
         supplied = {
-            "meshview_es": {
-                "last_success": (
-                    "2026-07-25T11:58:00+00:00"
-                ),
-                "last_error_at": None,
-                "last_error": None,
-                "records_received": 85,
-            },
             "malha_pt": {
                 "last_success": (
                     "2026-07-25T11:57:00Z"
@@ -978,14 +970,6 @@ class PublicationTests(unittest.TestCase):
         self.assertEqual(
             documents["stats.json"]["sources"],
             {
-                "meshview_es": {
-                    "last_success": (
-                        "2026-07-25T11:58:00Z"
-                    ),
-                    "last_error_at": None,
-                    "last_error": None,
-                    "records_received": 85,
-                },
                 "malha_pt": {
                     "last_success": (
                         "2026-07-25T11:57:00Z"
@@ -1029,7 +1013,7 @@ class PublicationTests(unittest.TestCase):
         self,
     ) -> None:
         expired = make_observation(
-            source="meshview_es",
+            source="ozulo_map",
             network="meshtastic",
             source_id="b1234567",
             observed_at="2026-06-01T12:00:00Z",
@@ -1056,7 +1040,7 @@ class PublicationTests(unittest.TestCase):
         )
         self.assertEqual(
             documents["stats.json"]["sources"][
-                "meshview_es"
+                "ozulo_map"
             ]["records_received"],
             1,
         )
@@ -1267,7 +1251,7 @@ class PublicationTests(unittest.TestCase):
             root = Path(temporary)
 
             edge = make_edge_observation(
-                source="meshview_es",
+                source="ozulo_map",
                 network="meshtastic",
                 from_source_id="a35b4144",
                 to_source_id="b1234567",

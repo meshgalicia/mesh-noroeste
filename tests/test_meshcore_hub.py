@@ -562,6 +562,36 @@ class MeshCoreHubTests(unittest.TestCase):
         self.assertIsNone(observation.longitude)
         self.assertIsNone(observation.position_updated_at)
 
+    def test_out_of_range_latitude_is_discarded(self) -> None:
+        observation = parse_meshcore_hub_nodes(
+            document(
+                node(
+                    lat=161.163191,
+                    lon=-7.990788,
+                )
+            ),
+            source="meshcore_hub",
+        )[0]
+
+        self.assertIsNone(observation.latitude)
+        self.assertIsNone(observation.longitude)
+        self.assertIsNone(observation.position_updated_at)
+
+    def test_out_of_range_longitude_is_discarded(self) -> None:
+        observation = parse_meshcore_hub_nodes(
+            document(
+                node(
+                    lat=41.163191,
+                    lon=-207.990788,
+                )
+            ),
+            source="meshcore_hub",
+        )[0]
+
+        self.assertIsNone(observation.latitude)
+        self.assertIsNone(observation.longitude)
+        self.assertIsNone(observation.position_updated_at)
+
     def test_unknown_type_is_preserved_as_unknown(self) -> None:
         observation = parse_meshcore_hub_nodes(
             document(node(adv_type="future_role")),

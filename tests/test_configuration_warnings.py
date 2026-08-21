@@ -25,7 +25,7 @@ def published(
         "id": node_id,
         "network": network,
         "sources": (
-            ["meshview_es"]
+            ["ozulo_map"]
             if sources is None
             else sources
         ),
@@ -134,7 +134,7 @@ class ConfigurationWarningsTests(unittest.TestCase):
         )
         self.assertEqual(document["nodes"], [])
 
-    def test_only_meshview_meshtastic_is_eligible(self) -> None:
+    def test_only_ozulo_meshtastic_is_eligible(self) -> None:
         document = build_configuration_warnings_document(
             {
                 "updated": UPDATED,
