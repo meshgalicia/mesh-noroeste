@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="gl">
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <meta
+    name="description"
+    content="Consulta histórica do tráfico Meshtastic observado por Mesh Noroeste."
+  >
+
+  <meta name="theme-color" content="#006b8f">
+
+  <title>Histórico de tráfico · Mesh Noroeste</title>
+
+  <link
+    rel="icon"
+    href="../favicon.ico"
+    sizes="32x32"
+  >
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
+
+  <link
+    rel="stylesheet"
+    href="./history.css?v=20260819-history3"
+  >
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+    defer
+  ></script>
+
+  <script
+    src="./history.js?v=20260819-history3"
+    defer
+  ></script>
+</head>
+
+<body>
+  <noscript>
+    <p class="history-noscript">
+      Esta visualización precisa JavaScript.
+    </p>
+  </noscript>
+
+  <main class="history-app">
+    <aside class="history-sidebar">
+      <header class="history-brand">
+        <p class="history-eyebrow">
+          Mesh Noroeste
+        </p>
+
+        <h1>
+          Histórico de tráfico
+        </h1>
+
+        <p class="history-network">
+          Meshtastic · Comunidade O Zulo
+        </p>
+
+        <p
+          id="history-status"
+          class="history-status"
+          role="status"
+          aria-live="polite"
+        >
+          Cargando…
+        </p>
+      </header>
+
+      <section
+        class="history-section history-search-section"
+        data-history-mobile-panel="search"
+        aria-labelledby="history-search-title"
+      >
+        <h2 id="history-search-title">
+          Buscar nodo
+        </h2>
+
+        <div class="history-node-search">
+          <label class="history-control">
+            <span>Nome ou identificador</span>
+
+            <input
+              id="history-node-search"
+              type="search"
+              inputmode="search"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Ex. TCRobotics ou !bd5b4284"
+            >
+          </label>
+
+          <p
+            id="history-node-search-status"
+            class="history-search-status"
+            role="status"
+            aria-live="polite"
+          ></p>
+
+          <ul
+            id="history-node-search-results"
+            class="history-search-results"
+            hidden
+          ></ul>
+        </div>
+      </section>
+
+      <section
+        class="history-section"
+        data-history-mobile-panel="period"
+        aria-labelledby="history-period-title"
+      >
+        <h2 id="history-period-title">
+          Período
+        </h2>
+
+        <p
+          id="history-period-status"
+          class="history-period-status"
+          role="status"
+          aria-live="polite"
+        >
+          Bloque mostrado: —
+        </p>
+
+        <div class="history-period-grid">
+          <label class="history-control">
+            <span>Día (UTC)</span>
+
+            <select
+              id="history-day"
+              disabled
+            >
+              <option>Cargando…</option>
+            </select>
+          </label>
+
+          <label class="history-control">
+            <span>Hora</span>
+
+            <select
+              id="history-hour"
+              disabled
+            >
+              <option>—</option>
+            </select>
+          </label>
+        </div>
+
+        <div
+          class="history-day-timeline"
+          aria-labelledby="history-day-timeline-title"
+        >
+          <div class="history-day-timeline-heading">
+            <strong id="history-day-timeline-title">
+              Actividade do día
+            </strong>
+
+            <span
+              id="history-day-timeline-status"
+              class="history-day-timeline-status"
+            >
+              —
+            </span>
+          </div>
+
+          <div
+            id="history-day-timeline-bars"
+            class="history-day-timeline-bars"
+            role="group"
+            aria-label="Horas do día seleccionado"
+          ></div>
+
+          <div
+            id="history-day-timeline-tooltip"
+            class="history-day-timeline-tooltip"
+            role="status"
+            aria-live="polite"
+            hidden
+          ></div>
+
+          <div
+            class="history-day-timeline-scale"
+            aria-hidden="true"
+          >
+            <span>00</span>
+            <span>06</span>
+            <span>12</span>
+            <span>18</span>
+            <span>23</span>
+          </div>
+        </div>
+
+        <div
+          class="history-period-navigation"
+          aria-label="Navegación entre bloques históricos"
+        >
+          <button
+            id="history-previous"
+            class="history-secondary-button"
+            type="button"
+            disabled
+          >
+            ← Anterior
+          </button>
+
+          <button
+            id="history-next"
+            class="history-secondary-button"
+            type="button"
+            disabled
+          >
+            Seguinte →
+          </button>
+        </div>
+
+        <button
+          id="history-latest"
+          class="history-secondary-button history-latest-button"
+          type="button"
+          disabled
+        >
+          Ir á máis recente
+        </button>
+
+        <p class="history-hint">
+          Os bloques históricos están organizados por hora UTC.
+        </p>
+
+      </section>
+
+      <section
+        class="history-section"
+        data-history-mobile-panel="info"
+        aria-labelledby="history-info-title"
+      >
+        <h2 id="history-info-title">
+          Información
+        </h2>
+
+        <h3 class="history-subtitle">
+          Resumo do histórico
+        </h3>
+
+        <dl class="history-summary">
+          <div>
+            <dt>Eventos</dt>
+            <dd id="history-event-count">—</dd>
+          </div>
+
+          <div>
+            <dt>RouteDiscovery</dt>
+            <dd id="history-route-count">—</dd>
+          </div>
+
+          <div>
+            <dt>Horas dispoñibles</dt>
+            <dd id="history-hour-count">—</dd>
+          </div>
+
+          <div>
+            <dt>Retención</dt>
+            <dd id="history-retention">—</dd>
+          </div>
+        </dl>
+
+
+        <nav
+          class="history-links"
+          aria-label="Outras vistas do mapa"
+        >
+          <a href="../live/">
+            Tráfico en directo
+          </a>
+
+          <a href="../">
+            Mapa principal
+          </a>
+        </nav>
+
+      </section>
+
+      <section
+        class="history-section"
+        data-history-mobile-panel="events"
+        aria-labelledby="history-events-title"
+      >
+        <h2 id="history-events-title">
+          Eventos
+        </h2>
+
+        <div class="history-event-controls">
+          <p
+            id="history-event-status"
+            class="history-event-status"
+          >
+            —
+          </p>
+
+          <label class="history-route-filter">
+            <input
+              id="history-routes-only"
+              type="checkbox"
+            >
+            <span>Só RouteDiscovery</span>
+          </label>
+        </div>
+
+        <div
+          id="history-node-filter-banner"
+          class="history-node-filter-banner"
+          hidden
+        >
+          <span
+            id="history-node-filter-label"
+            class="history-node-filter-label"
+          ></span>
+
+          <button
+            id="history-node-filter-clear"
+            class="history-node-filter-clear"
+            type="button"
+          >
+            Mostrar todos
+          </button>
+        </div>
+
+        <ol
+          id="history-event-list"
+          class="history-event-list"
+        ></ol>
+      </section>
+
+    </aside>
+
+    <section
+      class="history-map-region"
+      aria-label="Mapa histórico"
+    >
+      <div
+        id="history-map"
+        class="history-map"
+      ></div>
+
+      <aside
+        id="history-selected-node-card"
+        class="history-selected-node-card"
+        aria-labelledby="history-selected-node-title"
+        hidden
+      >
+        <button
+          id="history-selected-node-close"
+          class="history-selected-node-close"
+          type="button"
+          aria-label="Pechar detalle do nodo"
+        >
+          ×
+        </button>
+
+        <strong
+          id="history-selected-node-title"
+          class="history-selected-node-title"
+        >
+          Nodo seleccionado
+        </strong>
+
+        <span
+          id="history-selected-node-name"
+          class="history-selected-node-name"
+        ></span>
+
+        <span
+          id="history-selected-node-id"
+          class="history-selected-node-id"
+        ></span>
+
+        <div
+          id="history-selected-node-history"
+          class="history-selected-node-history"
+        >
+          <strong>Presenza no histórico</strong>
+          <span
+            id="history-selected-node-history-summary"
+          >—</span>
+        </div>
+
+        <dl class="history-selected-node-stats">
+          <div>
+            <dt>Eventos</dt>
+            <dd id="history-selected-node-event-count">—</dd>
+          </div>
+
+          <div>
+            <dt>RouteDiscovery</dt>
+            <dd id="history-selected-node-route-count">—</dd>
+          </div>
+
+          <div>
+            <dt>Orixe</dt>
+            <dd id="history-selected-node-origin-count">—</dd>
+          </div>
+
+          <div>
+            <dt>Destino</dt>
+            <dd id="history-selected-node-destination-count">—</dd>
+          </div>
+
+          <div>
+            <dt>Gateway</dt>
+            <dd id="history-selected-node-gateway-count">—</dd>
+          </div>
+        </dl>
+
+        <button
+          id="history-selected-node-activity"
+          class="history-selected-node-activity"
+          type="button"
+          aria-pressed="false"
+        >
+          Ver actividade deste nodo
+        </button>
+
+        <button
+          id="history-selected-node-copy-link"
+          class="history-selected-node-copy-link"
+          type="button"
+        >
+          Copiar enlace
+        </button>
+
+        <span
+          id="history-selected-node-copy-status"
+          class="history-selected-node-copy-status"
+          role="status"
+          aria-live="polite"
+        ></span>
+
+        <div class="history-selected-node-hour-context">
+          <span>Actividade neste bloque</span>
+          <strong id="history-selected-node-current-hour">—</strong>
+        </div>
+
+        <div
+          class="history-selected-node-hour-navigation"
+          aria-label="Navegación polas horas con actividade deste nodo"
+        >
+          <button
+            id="history-selected-node-previous-hour"
+            class="history-selected-node-hour-button"
+            type="button"
+            disabled
+          >
+            ← Actividade anterior
+          </button>
+
+          <button
+            id="history-selected-node-next-hour"
+            class="history-selected-node-hour-button"
+            type="button"
+            disabled
+          >
+            Actividade seguinte →
+          </button>
+        </div>
+      </aside>
+
+      <article
+        id="history-selected-event-card"
+        class="history-selected-event-card"
+        aria-live="polite"
+        hidden
+      >
+        <button
+          id="history-selected-event-close"
+          class="history-selected-event-close"
+          type="button"
+          aria-label="Pechar detalle do evento"
+          title="Pechar"
+        >
+          ×
+        </button>
+
+        <strong class="history-selected-event-title">
+          Evento seleccionado
+        </strong>
+
+        <div
+          id="history-selected-event-route"
+          class="history-selected-event-route"
+        ></div>
+
+        <div
+          id="history-selected-event-meta"
+          class="history-selected-event-meta"
+        ></div>
+
+        <div
+          id="history-selected-event-state"
+          class="history-selected-event-state"
+        ></div>
+
+        <div
+          id="history-selected-event-evidence"
+          class="history-selected-event-evidence"
+        ></div>
+
+        <details
+          id="history-selected-event-route-details"
+          class="history-selected-event-route-details"
+          hidden
+        >
+          <summary
+            id="history-selected-event-route-summary"
+            class="history-selected-event-route-summary"
+          >
+            Percorrido da ruta
+          </summary>
+
+          <div class="history-selected-event-route-content">
+            <span
+              id="history-selected-event-towards"
+              class="history-selected-event-path"
+              hidden
+            ></span>
+
+            <span
+              id="history-selected-event-back"
+              class="history-selected-event-path"
+              hidden
+            ></span>
+          </div>
+        </details>
+      </article>
+
+      <div
+        id="history-loading"
+        class="history-overlay"
+      >
+        Cargando histórico…
+      </div>
+
+      <div
+        id="history-error"
+        class="history-overlay history-error"
+        role="alert"
+        hidden
+      ></div>
+    </section>
+
+    <div
+      id="history-mobile-backdrop"
+      class="history-mobile-backdrop"
+      hidden
+    ></div>
+
+    <nav
+      class="history-mobile-toolbar"
+      aria-label="Navegación do histórico"
+    >
+      <button
+        class="history-mobile-tab"
+        type="button"
+        data-history-mobile-target="search"
+        aria-label="Buscar nodo"
+        aria-pressed="false"
+      >
+        <span
+          class="history-mobile-tab-icon"
+          aria-hidden="true"
+        >
+          ⌕
+        </span>
+        <span>Buscar</span>
+      </button>
+
+      <button
+        class="history-mobile-tab"
+        type="button"
+        data-history-mobile-target="period"
+        aria-label="Período"
+        aria-pressed="false"
+      >
+        <span
+          class="history-mobile-tab-icon"
+          aria-hidden="true"
+        >
+          ◷
+        </span>
+        <span>Período</span>
+      </button>
+
+      <button
+        class="history-mobile-tab"
+        type="button"
+        data-history-mobile-target="events"
+        aria-label="Eventos"
+        aria-pressed="false"
+      >
+        <span
+          class="history-mobile-tab-icon"
+          aria-hidden="true"
+        >
+          ≡
+        </span>
+        <span>Eventos</span>
+      </button>
+
+      <button
+        class="history-mobile-tab"
+        type="button"
+        data-history-mobile-target="info"
+        aria-label="Información"
+        aria-pressed="false"
+      >
+        <span
+          class="history-mobile-tab-icon"
+          aria-hidden="true"
+        >
+          i
+        </span>
+        <span>Info</span>
+      </button>
+    </nav>
+  </main>
+</body>
+</html>

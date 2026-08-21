@@ -32,7 +32,7 @@
 
   <link
     rel="stylesheet"
-    href="./live.css?v=20260819-live31"
+    href="./live.css?v=20260820-live32"
   >
 
   <script
@@ -386,6 +386,32 @@
           <span>RouteDiscovery</span>
         </label>
 
+
+        <div
+          class="live-node-legend"
+          aria-label="Lenda dos nodos Meshtastic"
+        >
+          <strong class="live-node-legend-title">
+            Nodos Meshtastic
+          </strong>
+
+          <div class="live-node-legend-simple">
+            <span
+              class="live-node-symbol"
+              aria-hidden="true"
+            ></span>
+
+            <span>
+              Nodo con posición coñecida
+            </span>
+          </div>
+
+          <p class="live-node-legend-note">
+            O mapa non diferencia visualmente os roles:
+            nesta vista priorízase a lectura do tráfico.
+          </p>
+        </div>
+
         <div
           class="live-line-legend"
           aria-label="Lenda das liñas do mapa"
@@ -515,6 +541,23 @@
           pero non sempre permiten saber con certeza por que
           un paquete chegou ou deixou de chegar a un punto.
         </p>
+
+        <nav
+          class="live-help-links"
+          aria-label="Outras vistas do mapa"
+        >
+          <strong>Outras vistas</strong>
+
+          <div>
+            <a href="../">
+              Mapa principal
+            </a>
+
+            <a href="../history/">
+              Histórico de tráfico
+            </a>
+          </div>
+        </nav>
       </section>
 
       <section
@@ -721,6 +764,14 @@
         >
           Ver actividade deste nodo
         </button>
+
+        <a
+          id="selected-node-history-link"
+          class="live-selected-node-history-link"
+          href="../history/"
+        >
+          Abrir histórico deste nodo
+        </a>
       </aside>
 
       <aside

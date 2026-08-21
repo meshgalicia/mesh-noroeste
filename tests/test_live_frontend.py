@@ -30,7 +30,7 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "<title>Tráfico en directo · Mesh Noroeste</title>",
             'id="live-map"',
-            "./live.css?v=20260819-live31",
+            "./live.css?v=20260820-live32",
             "./live.js?v=20260819-live31",
             "../",
         ):
@@ -118,15 +118,17 @@ class LiveFrontendTests(unittest.TestCase):
             self.assertIn(expected, self.javascript)
 
 
-    def test_escape_closes_selected_event_on_desktop(
+    def test_escape_closes_selected_context_on_desktop(
         self,
     ) -> None:
         for expected in (
             'event.key !== "Escape"',
             "if (state.mobilePanel)",
-            "isLiveDesktopLayout()",
+            "if (!isLiveDesktopLayout())",
             "state.selectedEventId",
             "clearSelectedEvent();",
+            "state.selectedNodeId",
+            "clearSelectedNode();",
         ):
             self.assertIn(
                 expected,
@@ -195,7 +197,8 @@ class LiveFrontendTests(unittest.TestCase):
         for expected in (
             "const hitMarker = L.circleMarker(",
             "isLiveMobileLayout()",
-            "? 5.5",
+            "style.radius",
+            "? 0.8",
             "? 12",
             "fillOpacity: 0",
             "const selectThisNode = () => selectNode(node)",
@@ -207,6 +210,28 @@ class LiveFrontendTests(unittest.TestCase):
                 self.javascript,
             )
 
+
+
+    def test_selected_event_labels_origin_and_destination(
+        self,
+    ) -> None:
+        for expected in (
+            "function addLiveEventEndpointLabel(",
+            '"meshtastic:!ffffffff"',
+            'pane: "live-selection"',
+            "permanent: true",
+            '"Orixe"',
+            '"Destino"',
+            '"live-event-endpoint-label live-event-endpoint-origin"',
+            '"live-event-endpoint-label live-event-endpoint-destination"',
+            ".live-event-endpoint-label",
+            ".live-event-endpoint-origin",
+            ".live-event-endpoint-destination",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript + self.css,
+            )
 
 
     def test_nodes_can_be_selected_from_map(
@@ -246,6 +271,30 @@ class LiveFrontendTests(unittest.TestCase):
             )
 
 
+
+
+    def test_selected_node_can_open_history(
+        self,
+    ) -> None:
+        for expected in (
+            'id="selected-node-history-link"',
+            "Abrir histórico deste nodo",
+            'href="../history/"',
+            "selectedNodeHistoryLink: document.querySelector(",
+            '"#selected-node-history-link"',
+            "function liveHistoryNodeUrl(nodeId)",
+            'const prefix = "meshtastic:";',
+            'url.searchParams.set(',
+            '"node"',
+            "liveHistoryNodeUrl(node.id)",
+            ".live-selected-node-history-link",
+        ):
+            self.assertIn(
+                expected,
+                self.html
+                + self.javascript
+                + self.css,
+            )
 
 
     def test_filtered_node_events_show_node_roles(
@@ -415,6 +464,22 @@ class LiveFrontendTests(unittest.TestCase):
             "function eventHasRenderableTraceroute(event)",
             "selectedEventAnimationSegments(event).length > 0",
             "eventHasRenderableTraceroute(event)",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+
+    def test_live_marks_partial_traceroutes(
+        self,
+    ) -> None:
+        for expected in (
+            "function eventHasPartialTraceroute(event)",
+            "route.nodeIds.length < 2",
+            "!nodePoint(nodeId)",
+            '" · Ruta parcial"',
+            '" · ruta parcial por posicións non dispoñibles"',
         ):
             self.assertIn(
                 expected,
@@ -672,6 +737,25 @@ class LiveFrontendTests(unittest.TestCase):
             )
 
 
+    def test_help_has_global_navigation(self) -> None:
+        for expected in (
+            'class="live-help-links"',
+            'aria-label="Outras vistas do mapa"',
+            "Outras vistas",
+            'href="../"',
+            "Mapa principal",
+            'href="../history/"',
+            "Histórico de tráfico",
+            ".live-help-links",
+            ".live-help-links a",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.css,
+            )
+
+
+
     def test_live_event_type_filter_exists(self) -> None:
         for expected in (
             'id="event-type"',
@@ -911,6 +995,9 @@ class LiveFrontendTests(unittest.TestCase):
             "function tracerouteHopSummary(event)",
             "traceroute.towards?.length",
             "traceroute.back?.length",
+            "towardsLength < 2",
+            "backLength < 2",
+            '"sen percorrido"',
             "`ida ${towardsHops} `",
             "`volta ${backHops} `",
             '"volta non dispoñible"',
@@ -994,6 +1081,43 @@ class LiveFrontendTests(unittest.TestCase):
         self.assertNotIn(
             "visibleEvents().find(",
             block,
+        )
+
+
+    def test_traceroute_segments_do_not_bridge_missing_nodes(
+        self,
+    ) -> None:
+        for expected in (
+            "function routePointSegments(route)",
+            "if (!point)",
+            "current = [];",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+        animation_start = self.javascript.index(
+            "function selectedEventAnimationSegments(event)"
+        )
+
+        animation_end = self.javascript.index(
+            "\nfunction animationPointAtDistance(",
+            animation_start,
+        )
+
+        animation_code = self.javascript[
+            animation_start:animation_end
+        ]
+
+        self.assertIn(
+            "routePointSegments(route)",
+            animation_code,
+        )
+
+        self.assertNotIn(
+            ".filter(Boolean)",
+            animation_code,
         )
 
 
@@ -1203,6 +1327,166 @@ class LiveFrontendTests(unittest.TestCase):
             "@media (max-width: 760px)",
             self.css,
         )
+
+
+    def test_meshtastic_nodes_use_neutral_cartographic_style(
+        self,
+    ) -> None:
+        for expected in (
+            "const MESHTASTIC_NODE_STYLE = Object.freeze({",
+            'color: "#557965"',
+            'fillColor: "#7fa58a"',
+            "function nodeVisualStyle(node)",
+            "return MESHTASTIC_NODE_STYLE;",
+            'aria-label="Lenda dos nodos Meshtastic"',
+            "Nodo con posición coñecida",
+            "non diferencia visualmente os roles",
+            ".live-node-legend-simple",
+            ".live-node-legend-note",
+        ):
+            self.assertIn(
+                expected,
+                self.html + self.javascript + self.css,
+            )
+
+        for unexpected in (
+            ".live-node-symbol.role-client",
+            ".live-node-symbol.role-client-base",
+            ".live-node-symbol.role-client-mute",
+            ".live-node-symbol.role-router",
+            ".live-node-symbol.role-router-late",
+            ".live-node-symbol.role-tracker",
+        ):
+            self.assertNotIn(
+                unexpected,
+                self.css,
+            )
+
+
+    def test_meshtastic_node_legend_does_not_claim_meshcore(
+        self,
+    ) -> None:
+        start = self.html.index(
+            'class="live-node-legend"'
+        )
+
+        end = self.html.index(
+            'class="live-line-legend"',
+            start,
+        )
+
+        legend = self.html[start:end]
+
+        self.assertNotIn(
+            "MeshCore",
+            legend,
+        )
+
+        self.assertNotIn(
+            "meshcore",
+            legend.lower(),
+        )
+
+
+
+
+    def test_live_event_card_uses_human_readable_metadata(
+        self,
+    ) -> None:
+        for expected in (
+            "function eventPortnumLabel(portnum)",
+            '[70, "RouteDiscovery"]',
+            "function gatewayCountLabel(count)",
+            'value === 1 ? "gateway" : "gateways"',
+            "eventPortnumLabel(event.portnum)",
+            "gatewayCountLabel(",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
+        self.assertNotIn(
+            "`${gatewayIds(event).length} gateway(s)`",
+            self.javascript,
+        )
+
+
+    def test_selected_event_route_wraps_when_expanded(
+        self,
+    ) -> None:
+        start = self.css.index(
+            ".live-selected-event-card-route {"
+        )
+        end = self.css.index(
+            "}",
+            start,
+        )
+
+        block = self.css[start:end]
+
+        for expected in (
+            "min-width: 0;",
+            "overflow-wrap: anywhere;",
+            "white-space: normal;",
+        ):
+            self.assertIn(
+                expected,
+                block,
+            )
+
+        collapsed_start = self.css.index(
+            ".live-selected-event-card.is-collapsed",
+            end,
+        )
+
+        collapsed_route = self.css[
+            collapsed_start:
+        ]
+
+        self.assertIn(
+            "text-overflow: ellipsis;",
+            collapsed_route,
+        )
+        self.assertIn(
+            "white-space: nowrap;",
+            collapsed_route,
+        )
+
+
+
+    def test_live_timeline_uses_separate_pseudo_elements(
+        self,
+    ) -> None:
+        for expected in (
+            ".live-timeline-bar::before",
+            ".live-timeline-bar:hover::before",
+            ".live-timeline-bar:focus-visible::before",
+            ".live-timeline-bar.selected::before",
+            ".live-timeline-bar.has-traceroute::after",
+        ):
+            self.assertIn(
+                expected,
+                self.css,
+            )
+
+
+    def test_event_list_has_explicit_empty_state(
+        self,
+    ) -> None:
+        for expected in (
+            "function eventListEmptyMessage()",
+            '"Non hai eventos deste nodo cos filtros actuais."',
+            '"Non hai eventos cos filtros actuais."',
+            "if (events.length === 0)",
+            "empty.className = \"live-event-empty\";",
+            "empty.textContent = eventListEmptyMessage();",
+        ):
+            self.assertIn(
+                expected,
+                self.javascript,
+            )
+
 
 
 if __name__ == "__main__":

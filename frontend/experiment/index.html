@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="gl">
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <meta
+    name="description"
+    content="Resultados e series temporais da comparación experimental LongFast e NarrowFast en Mesh Noroeste."
+  >
+
+  <meta name="theme-color" content="#006b8f">
+
+  <title>
+    Experimento LongFast / NarrowFast · Mesh Noroeste
+  </title>
+
+  <link
+    rel="icon"
+    href="../favicon.ico"
+    sizes="32x32"
+  >
+
+  <link
+    rel="stylesheet"
+    href="./experiment.css?v=20260820-exp7"
+  >
+
+  <script
+    src="./experiment.js?v=20260820-exp7"
+    defer
+  ></script>
+</head>
+
+<body>
+  <noscript>
+    <p class="noscript">
+      Esta visualización precisa JavaScript.
+      Os datos tabulares seguen dispoñibles
+      en CSV e XLSX.
+    </p>
+  </noscript>
+
+  <header class="site-header">
+    <div class="site-header-inner">
+      <div>
+        <p class="eyebrow">
+          Mesh Noroeste
+        </p>
+
+        <h1>
+          Experimento LongFast / NarrowFast
+        </h1>
+
+        <p class="intro">
+          Recollida e análise de datos Meshtastic
+          para comparar ambos presets con medidas
+          observables e unha metodoloxía reproducible.
+        </p>
+      </div>
+
+      <nav
+        class="top-nav"
+        aria-label="Navegación principal"
+      >
+        <a href="../">
+          Mapa
+        </a>
+
+        <a href="../live/">
+          Tráfico en directo
+        </a>
+
+        <a href="../history/">
+          Histórico
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <section
+      class="status-panel"
+      aria-labelledby="status-title"
+    >
+      <div>
+        <p class="section-kicker">
+          Estado
+        </p>
+
+        <h2 id="status-title">
+          Datos experimentais
+        </h2>
+      </div>
+
+      <p
+        id="experiment-status"
+        class="status"
+        role="status"
+        aria-live="polite"
+      >
+        Cargando…
+      </p>
+    </section>
+
+
+    <nav
+      class="experiment-sections"
+      aria-label="Seccións do experimento"
+    >
+      <a href="#test-situation">
+        Situación
+      </a>
+
+      <a href="#evidence">
+        Evidencia
+      </a>
+
+      <a href="#comparison">
+        Comparación
+      </a>
+
+      <a href="#territories">
+        Territorios
+      </a>
+
+      <a href="#series">
+        Series
+      </a>
+
+      <a href="#methodology">
+        Metodoloxía
+      </a>
+    </nav>
+
+
+    <section
+      id="test-situation"
+      class="test-situation"
+      aria-labelledby="test-situation-title"
+    >
+      <div class="test-situation-heading">
+        <div>
+          <p class="section-kicker">
+            Proba comparativa
+          </p>
+
+          <h2 id="test-situation-title">
+            Situación da proba
+          </h2>
+        </div>
+
+        <span
+          id="test-situation-badge"
+          class="test-situation-badge"
+        >
+          Avaliando…
+        </span>
+      </div>
+
+      <p
+        id="test-situation-summary"
+        class="test-situation-summary"
+      >
+        Analizando a mostra dispoñible…
+      </p>
+
+      <div
+        id="test-situation-metrics"
+        class="test-situation-metrics"
+      ></div>
+
+      <p class="test-situation-note">
+        Esta páxina acompaña unha proba en curso.
+        Os datos serven para comprobar a metodoloxía,
+        detectar carencias da mostra e preparar unha
+        comparación posterior. Non representan por si
+        sós unha conclusión sobre que preset funciona mellor.
+      </p>
+    </section>
+
+
+    <section
+      class="downloads"
+      aria-labelledby="downloads-title"
+    >
+      <div>
+        <p class="section-kicker">
+          Datos abertos
+        </p>
+
+        <h2 id="downloads-title">
+          Descargar resultados
+        </h2>
+
+        <p>
+          Os tres formatos conteñen os datos derivados
+          da mesma base experimental.
+        </p>
+      </div>
+
+      <div class="download-actions">
+        <a
+          class="download-button primary"
+          href="../data/experiment.xlsx"
+          download
+        >
+          Descargar XLSX
+        </a>
+
+        <a
+          class="download-button"
+          href="../data/experiment.csv"
+          download
+        >
+          Descargar CSV
+        </a>
+
+        <a
+          class="download-button"
+          href="../data/experiment-territories.csv"
+          download
+        >
+          Descargar CSV territorial
+        </a>
+
+        <a
+          class="download-button secondary"
+          href="../data/experiment.json"
+        >
+          Ver JSON
+        </a>
+      </div>
+    </section>
+
+
+    <section
+      id="evidence"
+      class="evidence-panel"
+      aria-labelledby="evidence-title"
+    >
+      <div class="evidence-heading">
+        <div>
+          <p class="section-kicker">
+            Evidencia
+          </p>
+
+          <h2 id="evidence-title">
+            Que evidencia temos agora?
+          </h2>
+        </div>
+
+        <p
+          id="evidence-status"
+          class="evidence-status"
+          role="status"
+          aria-live="polite"
+        >
+          Avaliando…
+        </p>
+      </div>
+
+      <p class="evidence-intro">
+        A proba combina observación pasiva da rede
+        coa posibilidade de incorporar máis adiante
+        probas controladas. Son dous tipos de evidencia
+        distintos e non deben interpretarse do mesmo xeito.
+      </p>
+
+      <div
+        id="evidence-grid"
+        class="evidence-grid"
+      ></div>
+
+      <div
+        id="evidence-limitations"
+        class="evidence-limitations"
+      ></div>
+    </section>
+
+
+    <section
+      id="comparison"
+      aria-labelledby="comparison-title"
+    >
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">
+            Resumo
+          </p>
+
+          <h2 id="comparison-title">
+            Comparación actual
+          </h2>
+        </div>
+
+        <p class="section-note">
+          Os valores cambian automaticamente
+          segundo se incorporan novas observacións.
+        </p>
+      </div>
+
+      <div
+        id="sample-warning"
+        class="sample-warning"
+        hidden
+      ></div>
+
+      <section
+        class="sample-quality"
+        aria-labelledby="sample-quality-title"
+      >
+        <div class="sample-quality-heading">
+          <div>
+            <p class="section-kicker">
+              Calidade da mostra
+            </p>
+
+            <h3 id="sample-quality-title">
+              Preparación para comparar
+            </h3>
+          </div>
+
+          <p
+            id="comparison-readiness"
+            class="comparison-readiness"
+            role="status"
+            aria-live="polite"
+          >
+            Avaliando…
+          </p>
+        </div>
+
+        <div
+          id="sample-quality-grid"
+          class="sample-quality-grid"
+        ></div>
+
+        <p class="sample-quality-note">
+          Estes estados avalían a cantidade de evidencia
+          dispoñible para cada dimensión. Un estado
+          «razoable» non implica que o resultado sexa
+          estatisticamente concluínte.
+        </p>
+      </section>
+
+      <section
+        id="comparison-window-panel"
+        class="comparison-window"
+        aria-labelledby="comparison-window-title"
+      >
+        <div class="comparison-window-heading">
+          <div>
+            <p class="section-kicker">
+              Solapamento temporal
+            </p>
+
+            <h3 id="comparison-window-title">
+              Período con datos simultáneos
+            </h3>
+          </div>
+
+          <p
+            id="comparison-window-status"
+            class="comparison-window-status"
+            role="status"
+            aria-live="polite"
+          >
+            Avaliando…
+          </p>
+        </div>
+
+        <div
+          id="comparison-window-summary"
+          class="comparison-window-summary"
+        ></div>
+
+        <div
+          id="comparison-window-channels"
+          class="comparison-window-channels"
+        ></div>
+
+        <p class="comparison-window-note">
+          O solapamento temporal só confirma que existen
+          observacións dos dous presets durante ese período.
+          Non implica unha mostra equivalente: o volume,
+          a diversidade de nodos e a evidencia RF poden
+          seguir sendo moi diferentes.
+        </p>
+      </section>
+
+      <section
+        class="common-comparison"
+        aria-labelledby="common-comparison-title"
+      >
+        <div class="common-comparison-heading">
+          <div>
+            <p class="section-kicker">
+              Período comparable
+            </p>
+
+            <h3 id="common-comparison-title">
+              Mesma xanela temporal
+            </h3>
+          </div>
+
+          <p
+            id="common-comparison-period"
+            class="common-comparison-period"
+          >
+            Calculando…
+          </p>
+        </div>
+
+        <p class="common-comparison-intro">
+          Esta é a comparación correcta entre presets:
+          só inclúe observacións pertencentes ao período
+          no que existen datos de LongFast e NarrowFast.
+        </p>
+
+        <div
+          id="comparison-summary-grid"
+          class="summary-grid comparison-summary-grid"
+          aria-live="polite"
+        ></div>
+
+        <p
+          id="common-comparison-note"
+          class="common-comparison-note"
+        ></p>
+
+        <section
+          class="derived-indicators"
+          aria-labelledby="derived-indicators-title"
+        >
+          <div class="derived-indicators-heading">
+            <div>
+              <p class="section-kicker">
+                Indicadores derivados
+              </p>
+
+              <h4 id="derived-indicators-title">
+                Proporcións dentro da xanela comparable
+              </h4>
+            </div>
+          </div>
+
+          <p class="derived-indicators-intro">
+            Estes valores derívanse directamente dos
+            paquetes observados no mesmo período temporal.
+            Describen a mostra dispoñible, pero non son
+            unha taxa de entrega nin unha medida directa
+            do rendemento do preset.
+          </p>
+
+          <div
+            id="derived-indicators-grid"
+            class="derived-indicators-grid"
+          ></div>
+        </section>
+      </section>
+
+
+      <section
+        class="accumulated-coverage"
+        aria-labelledby="accumulated-coverage-title"
+      >
+        <div class="accumulated-coverage-heading">
+          <div>
+            <p class="section-kicker">
+              Cobertura acumulada
+            </p>
+
+            <h3 id="accumulated-coverage-title">
+              Todo o recollido
+            </h3>
+          </div>
+        </div>
+
+        <p class="accumulated-coverage-intro">
+          Estes totais describen todo o almacenado desde
+          o inicio da recollida de cada preset. Os períodos
+          poden ser distintos e, por tanto, estes valores
+          non deben empregarse como comparación directa.
+        </p>
+
+        <div
+          id="summary-grid"
+          class="summary-grid"
+          aria-live="polite"
+        ></div>
+      </section>
+    </section>
+
+
+    <section
+      id="territories"
+      class="territories"
+      aria-labelledby="territories-title"
+    >
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">
+            Distribución territorial
+          </p>
+
+          <h2 id="territories-title">
+            Onde se observa cada preset?
+          </h2>
+        </div>
+
+        <p class="section-note">
+          A clasificación usa a posición publicada do nodo
+          e conserva a incerteza cando Meshtastic reduce
+          a precisión das coordenadas.
+        </p>
+      </div>
+
+      <p class="territories-intro">
+        Estes datos describen onde se atopan os emisores
+        observados. Non miden cobertura radioeléctrica nin
+        permiten atribuír diferenzas xeográficas ao preset.
+      </p>
+
+      <section
+        class="territory-comparison"
+        aria-labelledby="territory-comparison-title"
+      >
+        <div class="territory-comparison-heading">
+          <div>
+            <p class="section-kicker">
+              Comparación territorial
+            </p>
+
+            <h3 id="territory-comparison-title">
+              LongFast / NarrowFast no mesmo territorio
+            </h3>
+          </div>
+        </div>
+
+        <p class="territory-comparison-intro">
+          Escolle unha provincia ou un concello para ver
+          ambos presets sobre o mesmo ámbito xeográfico.
+          Os valores seguen sendo observacionais e non
+          implican que as mostras sexan equivalentes.
+        </p>
+
+        <div class="territory-comparison-controls">
+          <label>
+            <span>
+              Nivel territorial
+            </span>
+
+            <select
+              id="territory-comparison-level"
+            >
+              <option value="province">
+                Provincia
+              </option>
+
+              <option value="municipality">
+                Concello
+              </option>
+            </select>
+          </label>
+
+          <label>
+            <span>
+              Territorio
+            </span>
+
+            <select
+              id="territory-comparison-select"
+            >
+              <option value="">
+                Selecciona un territorio
+              </option>
+            </select>
+          </label>
+        </div>
+
+        <p
+          id="territory-comparison-status"
+          class="territory-comparison-status"
+          role="status"
+          aria-live="polite"
+        >
+          Selecciona un territorio para comparar.
+        </p>
+
+        <div
+          id="territory-comparison-grid"
+          class="territory-comparison-grid"
+          aria-live="polite"
+        ></div>
+      </section>
+
+      <div
+        id="territories-grid"
+        class="territories-grid"
+        aria-live="polite"
+      ></div>
+
+      <p class="territories-note">
+        «Compatible» significa que a cela de precisión
+        publicada é compatible cun único concello aínda que
+        o punto truncado non caia dentro do polígono.
+        Os casos compatibles con varios concellos consérvanse
+        como ambiguos e non se reparten artificialmente.
+      </p>
+    </section>
+
+
+    <section
+      id="series"
+      aria-labelledby="charts-title"
+    >
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">
+            Evolución
+          </p>
+
+          <h2 id="charts-title">
+            Series temporais
+          </h2>
+        </div>
+
+        <p
+          id="bucket-description"
+          class="section-note"
+        >
+          —
+        </p>
+      </div>
+
+      <div class="chart-grid">
+
+        <article class="chart-card">
+          <div class="chart-heading">
+            <h3>
+              Paquetes observados
+            </h3>
+
+            <p>
+              Volume de paquetes por intervalo.
+            </p>
+          </div>
+
+          <div
+            id="chart-packets"
+            class="chart"
+          ></div>
+        </article>
+
+
+        <article class="chart-card">
+          <div class="chart-heading">
+            <h3>
+              SNR
+            </h3>
+
+            <p>
+              Media de SNR das recepcións válidas.
+            </p>
+          </div>
+
+          <div
+            id="chart-snr"
+            class="chart"
+          ></div>
+        </article>
+
+
+        <article class="chart-card">
+          <div class="chart-heading">
+            <h3>
+              RSSI
+            </h3>
+
+            <p>
+              Media de RSSI das recepcións válidas.
+            </p>
+          </div>
+
+          <div
+            id="chart-rssi"
+            class="chart"
+          ></div>
+        </article>
+
+
+        <article class="chart-card">
+          <div class="chart-heading">
+            <h3>
+              Gateways observadores
+            </h3>
+
+            <p>
+              Media de gateways que observaron cada paquete.
+            </p>
+          </div>
+
+          <div
+            id="chart-gateways"
+            class="chart"
+          ></div>
+        </article>
+
+
+        <article class="chart-card">
+          <div class="chart-heading">
+            <h3>
+              Ocupación do canal
+            </h3>
+
+            <p>
+              Channel utilization procedente de Telemetry.
+            </p>
+          </div>
+
+          <div
+            id="chart-utilization"
+            class="chart"
+          ></div>
+        </article>
+
+
+        <article class="chart-card">
+          <div class="chart-heading">
+            <h3>
+              Air util TX
+            </h3>
+
+            <p>
+              Tempo de emisión informado por Telemetry.
+            </p>
+          </div>
+
+          <div
+            id="chart-air-tx"
+            class="chart"
+          ></div>
+        </article>
+
+      </div>
+    </section>
+
+
+    <section
+      id="methodology"
+      class="methodology"
+      aria-labelledby="methodology-title"
+    >
+      <div>
+        <p class="section-kicker">
+          Metodoloxía
+        </p>
+
+        <h2 id="methodology-title">
+          Que estamos medindo
+        </h2>
+      </div>
+
+      <div
+        id="methodology-grid"
+        class="methodology-grid"
+      ></div>
+    </section>
+
+
+    <section
+      id="limitations"
+      class="limitations"
+      aria-labelledby="limitations-title"
+    >
+      <div>
+        <p class="section-kicker">
+          Interpretación
+        </p>
+
+        <h2 id="limitations-title">
+          Límites dos datos
+        </h2>
+      </div>
+
+      <div class="limitations-copy">
+        <p>
+          RSSI e SNR son medidas de recepción.
+          Os valores 0/0 que a fonte usa cando
+          non existe unha medida RF válida non
+          se incorporan ás estatísticas.
+        </p>
+
+        <p>
+          A taxa de entrega require unha proba
+          controlada na que coñezamos cantos
+          paquetes se enviaron deliberadamente
+          e cantos chegaron a observarse.
+        </p>
+
+        <p>
+          As recepcións duplicadas permiten estudar
+          como se propaga un paquete entre gateways,
+          pero non demostran por si mesmas unha colisión
+          física de radio.
+        </p>
+
+        <p>
+          A ocupación procede de Telemetry.
+          Para evitar introducir carga innecesaria
+          na rede, non é necesario que todos os nodos
+          publiquen telemetría con alta frecuencia.
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      Mesh Noroeste · datos experimentais Meshtastic
+    </p>
+
+    <p>
+      <a href="../">
+        Volver ao mapa principal
+      </a>
+      ·
+      <a href="../live/">
+        Tráfico en directo
+      </a>
+    </p>
+  </footer>
+
+</body>
+</html>

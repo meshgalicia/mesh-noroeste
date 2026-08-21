@@ -709,6 +709,30 @@ input:focus-visible {
 }
 
 
+/* Etiquetas dos extremos do evento seleccionado. */
+.leaflet-tooltip.live-event-endpoint-label {
+  padding: 0.18rem 0.38rem;
+  border: 1px solid #9faeb3;
+  border-radius: 0.35rem;
+  background: rgb(255 255 255 / 0.94);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.14);
+  color: #34444a;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.leaflet-tooltip.live-event-endpoint-origin {
+  border-color: #88aa95;
+  color: #315c43;
+}
+
+.leaflet-tooltip.live-event-endpoint-destination {
+  border-color: #8baeb5;
+  color: #315e67;
+}
+
+
 /* Semántica visual do tráfico live. */
 
 .live-event-tooltip-content {
@@ -1025,11 +1049,12 @@ input:focus-visible {
 }
 
 .live-selected-event-card-route {
-  overflow: hidden;
+  min-width: 0;
   font-size: 0.94rem;
   font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .live-selected-event-card-meta,
@@ -1113,7 +1138,7 @@ input:focus-visible {
   overflow: hidden;
 }
 
-.live-timeline-bar::after {
+.live-timeline-bar::before {
   content: "";
   position: absolute;
   right: 0;
@@ -1127,8 +1152,8 @@ input:focus-visible {
     background 160ms ease;
 }
 
-.live-timeline-bar:hover::after,
-.live-timeline-bar:focus-visible::after {
+.live-timeline-bar:hover::before,
+.live-timeline-bar:focus-visible::before {
   background: #42636b;
 }
 
@@ -1137,7 +1162,7 @@ input:focus-visible {
   outline-offset: 1px;
 }
 
-.live-timeline-bar.selected::after {
+.live-timeline-bar.selected::before {
   background: #087f8c;
 }
 
@@ -1316,6 +1341,55 @@ input:focus-visible {
   line-height: 1.45;
 }
 
+
+.live-help-links {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.live-help-links > strong {
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
+.live-help-links > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.live-help-links a {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: #fff;
+  color: var(--accent-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+
+.live-help-links a:hover,
+.live-help-links a:focus-visible {
+  border-color: #8fb4bf;
+  background: #edf7f8;
+  text-decoration: underline;
+}
+
+@media (max-width: 380px) {
+  .live-help-links > div {
+    grid-template-columns: 1fr;
+  }
+}
+
 .live-mobile-tab-help-icon {
   border: 2px solid currentColor;
   border-radius: 50%;
@@ -1436,6 +1510,30 @@ input:focus-visible {
 .live-selected-node-activity[aria-pressed="true"] {
   border-color: var(--accent);
   background: #dff1f5;
+}
+
+.live-selected-node-history-link {
+  display: flex;
+  min-height: 2.45rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.05rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: #fff;
+  color: var(--accent-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+
+.live-selected-node-history-link:hover,
+.live-selected-node-history-link:focus-visible {
+  border-color: #8fb4bf;
+  background: #f3f9fa;
+  text-decoration: underline;
 }
 
 @media (max-width: 760px) {
@@ -2060,5 +2158,51 @@ input:focus-visible {
   .live-app {
     transition: none !important;
   }
+}
+
+
+
+
+/* Representación cartográfica neutral dos nodos Meshtastic. */
+.live-node-legend {
+  display: grid;
+  gap: 0.55rem;
+  margin: 1rem 0;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  background: #f8fafb;
+}
+
+.live-node-legend-title {
+  color: var(--text);
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.live-node-legend-simple {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text);
+  font-size: 0.76rem;
+}
+
+.live-node-symbol {
+  display: block;
+  flex: 0 0 auto;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid #557965;
+  border-radius: 50%;
+  background: #7fa58a;
+  opacity: 0.72;
+}
+
+.live-node-legend-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
 }
 

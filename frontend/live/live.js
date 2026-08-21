@@ -129,6 +129,9 @@ const elements = {
   selectedNodeActivity: document.querySelector(
     "#selected-node-activity"
   ),
+  selectedNodeHistoryLink: document.querySelector(
+    "#selected-node-history-link"
+  ),
   selectedEventCard: document.querySelector(
     "#selected-event-card"
   ),
@@ -545,11 +548,17 @@ function initializeLiveMobileNavigation() {
         return;
       }
 
-      if (
-        isLiveDesktopLayout()
-        && state.selectedEventId
-      ) {
+      if (!isLiveDesktopLayout()) {
+        return;
+      }
+
+      if (state.selectedEventId) {
         clearSelectedEvent();
+        return;
+      }
+
+      if (state.selectedNodeId) {
+        clearSelectedNode();
       }
     }
   );
@@ -574,6 +583,38 @@ function initializeLiveMobileNavigation() {
 
 function formatNumber(value) {
   return new Intl.NumberFormat("gl-ES").format(value);
+}
+
+
+function eventPortnumLabel(portnum) {
+  const value = Number(portnum);
+
+  const labels = new Map([
+    [1, "Mensaxe"],
+    [2, "Hardware remoto"],
+    [3, "Posición"],
+    [4, "Información do nodo"],
+    [5, "Routing"],
+    [8, "Waypoint"],
+    [67, "Telemetría"],
+    [70, "RouteDiscovery"],
+    [71, "Veciñanza"],
+  ]);
+
+  return (
+    labels.get(value)
+    || `portnum ${portnum}`
+  );
+}
+
+
+function gatewayCountLabel(count) {
+  const value = Number(count) || 0;
+
+  return (
+    `${formatNumber(value)} `
+    + (value === 1 ? "gateway" : "gateways")
+  );
 }
 
 function eventDate(event) {
@@ -815,6 +856,31 @@ function nodeActivitySummary(nodeId) {
 }
 
 
+function liveHistoryNodeUrl(nodeId) {
+  const url = new URL(
+    "../history/",
+    window.location.href
+  );
+
+  if (!nodeId) {
+    return url.href;
+  }
+
+  const prefix = "meshtastic:";
+
+  const value = nodeId.startsWith(prefix)
+    ? nodeId.slice(prefix.length)
+    : nodeId;
+
+  url.searchParams.set(
+    "node",
+    value
+  );
+
+  return url.href;
+}
+
+
 function renderSelectedNodeCard() {
   const node = selectedNode();
 
@@ -874,6 +940,10 @@ function renderSelectedNodeCard() {
   elements.selectedNodeActivity.setAttribute(
     "aria-pressed",
     String(filtering)
+  );
+
+  elements.selectedNodeHistoryLink.href = (
+    liveHistoryNodeUrl(node.id)
   );
 
   elements.selectedNodeCard.hidden = false;
@@ -1273,6 +1343,30 @@ function createMap() {
   );
 }
 
+
+const MESHTASTIC_NODE_STYLE = Object.freeze({
+  color: "#557965",
+  fillColor: "#7fa58a",
+  radius: 4.8,
+  weight: 1.4,
+});
+
+
+function nodeVisualStyle(node) {
+  return MESHTASTIC_NODE_STYLE;
+}
+
+
+function nodeDisplayName(node) {
+  return (
+    node.long_name
+    || node.short_name
+    || node.id
+    || "Nodo"
+  );
+}
+
+
 function positionedNode(node) {
   return (
     node.network === "meshtastic"
@@ -1360,20 +1454,25 @@ function renderNodes() {
       Number(node.longitude),
     ];
 
+    const style = nodeVisualStyle(node);
+
     const marker = L.circleMarker(
       point,
       {
         pane: "live-nodes",
         radius: (
-          isLiveMobileLayout()
-            ? 5.5
-            : 4.5
+          style.radius
+          + (
+            isLiveMobileLayout()
+              ? 0.8
+              : 0
+          )
         ),
-        color: "#175632",
-        weight: 1.3,
-        opacity: 0.72,
-        fillColor: "#267a4d",
-        fillOpacity: 0.55,
+        color: style.color,
+        weight: style.weight,
+        opacity: 0.58,
+        fillColor: style.fillColor,
+        fillOpacity: 0.34,
         bubblingMouseEvents: false,
       }
     );
@@ -1394,11 +1493,7 @@ function renderNodes() {
       }
     );
 
-    const name = (
-      node.long_name
-      || node.short_name
-      || node.id
-    );
+    const name = nodeDisplayName(node);
 
     marker.bindTooltip(
       `<div class="live-node-tooltip">`
@@ -1481,6 +1576,52 @@ function traceroutePaths(event) {
   ];
 }
 
+function routePointSegments(route) {
+  const segments = [];
+  let current = [];
+
+  for (const nodeId of route.nodeIds) {
+    const point = nodePoint(nodeId);
+
+    if (!point) {
+      if (current.length >= 2) {
+        segments.push(current);
+      }
+
+      current = [];
+      continue;
+    }
+
+    current.push(point);
+  }
+
+  if (current.length >= 2) {
+    segments.push(current);
+  }
+
+  return segments;
+}
+
+
+function eventHasPartialTraceroute(event) {
+  for (const route of traceroutePaths(event)) {
+    if (route.nodeIds.length < 2) {
+      continue;
+    }
+
+    if (
+      route.nodeIds.some(
+        (nodeId) => !nodePoint(nodeId)
+      )
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
 function addTraceroute(
   event,
   {
@@ -1491,53 +1632,47 @@ function addTraceroute(
   let rendered = false;
 
   for (const route of traceroutePaths(event)) {
-    const points = route.nodeIds
-      .map(nodePoint)
-      .filter(Boolean);
-
-    if (points.length < 2) {
-      continue;
-    }
-
     const routeColor = (
       route.key === "back"
         ? "#087f8c"
         : "#5f3dc4"
     );
 
-    L.polyline(
-      points,
-      {
-        pane: "live-routes",
-        color: selected
-          ? "#a61e4d"
-          : routeColor,
-        weight: (
-          selected
-            ? 4
-            : route.key === "back"
-              ? 2.8
-              : 2.2
-        ),
-        opacity: (
-          dimmed
-            ? 0.1
-            : selected
-              ? 1
+    for (const points of routePointSegments(route)) {
+      L.polyline(
+        points,
+        {
+          pane: "live-routes",
+          color: selected
+            ? "#a61e4d"
+            : routeColor,
+          weight: (
+            selected
+              ? 4
               : route.key === "back"
-                ? 0.92
-                : 0.68
-        ),
-        dashArray: (
-          route.key === "back"
-            ? "8 5"
-            : null
-        ),
-        interactive: false,
-      }
-    ).addTo(state.eventLayer);
+                ? 2.8
+                : 2.2
+          ),
+          opacity: (
+            dimmed
+              ? 0.1
+              : selected
+                ? 1
+                : route.key === "back"
+                  ? 0.92
+                  : 0.68
+          ),
+          dashArray: (
+            route.key === "back"
+              ? "8 5"
+              : null
+          ),
+          interactive: false,
+        }
+      ).addTo(state.eventLayer);
 
-    rendered = true;
+      rendered = true;
+    }
   }
 
   return rendered;
@@ -2249,31 +2384,46 @@ function tracerouteHopSummary(event) {
     return "";
   }
 
+  const towardsLength = (
+    traceroute.towards?.length || 0
+  );
+
+  const backLength = (
+    traceroute.back?.length || 0
+  );
+
+  if (
+    towardsLength < 2
+    && backLength < 2
+  ) {
+    return "sen percorrido";
+  }
+
   const towardsHops = Math.max(
     0,
-    (traceroute.towards?.length || 0) - 1
+    towardsLength - 1
   );
 
   const backHops = Math.max(
     0,
-    (traceroute.back?.length || 0) - 1
+    backLength - 1
   );
 
   const parts = [];
 
-  if (traceroute.towards?.length >= 2) {
+  if (towardsLength >= 2) {
     parts.push(
       `ida ${towardsHops} `
       + (towardsHops === 1 ? "salto" : "saltos")
     );
   }
 
-  if (traceroute.back?.length >= 2) {
+  if (backLength >= 2) {
     parts.push(
       `volta ${backHops} `
       + (backHops === 1 ? "salto" : "saltos")
     );
-  } else {
+  } else if (towardsLength >= 2) {
     parts.push("volta non dispoñible");
   }
 
@@ -2361,8 +2511,10 @@ function renderSelectedEventCard() {
   elements.selectedEventCardMeta.textContent = [
     formatEventTime(event),
     event.channel || "Canal descoñecido",
-    `portnum ${event.portnum}`,
-    `${gatewayIds(event).length} gateway(s)`,
+    eventPortnumLabel(event.portnum),
+    gatewayCountLabel(
+      gatewayIds(event).length
+    ),
   ].join(" · ");
 
   elements.selectedEventCardEvidence.textContent = (
@@ -2371,6 +2523,11 @@ function renderSelectedEventCard() {
           "RouteDiscovery · "
           + tracerouteHopSummary(event)
           + " · percorrido indicado polo paquete"
+          + (
+            eventHasPartialTraceroute(event)
+              ? " · ruta parcial por posicións non dispoñibles"
+              : ""
+          )
         )
       : (
           "Paquete observado · "
@@ -2510,6 +2667,47 @@ function eventNodeIds(event) {
   return [...ids];
 }
 
+function addLiveEventEndpointLabel(
+  nodeId,
+  label,
+  className
+) {
+  if (
+    !nodeId
+    || nodeId === "meshtastic:!ffffffff"
+  ) {
+    return;
+  }
+
+  const point = nodePoint(nodeId);
+
+  if (!point) {
+    return;
+  }
+
+  L.circleMarker(
+    point,
+    {
+      pane: "live-selection",
+      radius: 1,
+      stroke: false,
+      fillOpacity: 0,
+      interactive: false,
+    }
+  )
+    .bindTooltip(
+      label,
+      {
+        permanent: true,
+        direction: "top",
+        offset: [0, -11],
+        className,
+      }
+    )
+    .addTo(state.selectionLayer);
+}
+
+
 function renderEventSelection() {
   state.selectionLayer.clearLayers();
 
@@ -2546,6 +2744,18 @@ function renderEventSelection() {
       }
     ).addTo(state.selectionLayer);
   }
+
+  addLiveEventEndpointLabel(
+    event.from_id,
+    "Orixe",
+    "live-event-endpoint-label live-event-endpoint-origin"
+  );
+
+  addLiveEventEndpointLabel(
+    event.to_id,
+    "Destino",
+    "live-event-endpoint-label live-event-endpoint-destination"
+  );
 }
 
 function prefersReducedMotion() {
@@ -2571,28 +2781,33 @@ function selectedEventAnimationSegments(event) {
   const segments = [];
 
   for (const route of traceroutePaths(event)) {
-    const points = route.nodeIds
-      .map(nodePoint)
-      .filter(Boolean);
-
-    for (let index = 0; index < points.length - 1; index += 1) {
-      const from = points[index];
-      const to = points[index + 1];
-
-      const length = state.map.distance(from, to);
-
-      if (
-        !Number.isFinite(length)
-        || length <= 0
+    for (const points of routePointSegments(route)) {
+      for (
+        let index = 0;
+        index < points.length - 1;
+        index += 1
       ) {
-        continue;
-      }
+        const from = points[index];
+        const to = points[index + 1];
 
-      segments.push({
-        from,
-        to,
-        length,
-      });
+        const length = state.map.distance(
+          from,
+          to
+        );
+
+        if (
+          !Number.isFinite(length)
+          || length <= 0
+        ) {
+          continue;
+        }
+
+        segments.push({
+          from,
+          to,
+          length,
+        });
+      }
     }
   }
 
@@ -3991,20 +4206,26 @@ function renderEventListMode() {
 }
 
 
+function eventListEmptyMessage() {
+  if (state.nodeEventFilterId) {
+    return (
+      "Non hai eventos deste nodo cos filtros actuais."
+    );
+  }
+
+  return "Non hai eventos cos filtros actuais.";
+}
+
+
 function renderEventList() {
   const fragment = document.createDocumentFragment();
   const events = eventListEvents();
 
-  if (
-    state.nodeEventFilterId
-    && events.length === 0
-  ) {
+  if (events.length === 0) {
     const empty = document.createElement("li");
 
     empty.className = "live-event-empty";
-    empty.textContent = (
-      "Non hai eventos deste nodo cos filtros actuais."
-    );
+    empty.textContent = eventListEmptyMessage();
 
     fragment.append(empty);
   }
@@ -4064,7 +4285,14 @@ function renderEventList() {
 
     type.textContent = (
       hasRoute
-        ? "RouteDiscovery"
+        ? (
+            "RouteDiscovery"
+            + (
+              eventHasPartialTraceroute(event)
+                ? " · Ruta parcial"
+                : ""
+            )
+          )
         : "Paquete observado"
     );
 
